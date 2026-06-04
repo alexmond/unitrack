@@ -5,7 +5,7 @@ coverage** over time — think Allure Report meets Codecov, for the JVM. CI uplo
 XML and JaCoCo XML after each build; UniTrack stores every run keyed by project/branch/commit and
 renders trends, failures, and per-file coverage on a dashboard.
 
-Built with **Spring Boot 4** and **Java 25**.
+Built with **Spring Boot 4** and **Java 21**, as a multi-module Maven project (`org.alexmond`).
 
 > See [`doc/competitor-analysis.md`](doc/competitor-analysis.md) for the feature comparison against
 > Allure, Codecov, ReportPortal, SonarQube, Datadog Test Optimization, Trunk, and others, plus the
@@ -25,25 +25,33 @@ Built with **Spring Boot 4** and **Java 25**.
 
 ## Architecture
 
+A multi-module Maven build (`org.alexmond:unitrack-parent`), structured like
+[`jhelm`](https://github.com/alexmond/jhelm):
+
 ```
-io.github.alexmond.unitrack
-├── domain        JPA entities (Project, TestRun, TestSuiteResult, TestCaseResult,
-│                 CoverageReport, CoverageFileEntry)
-├── repository    Spring Data JPA repositories
-├── ingest        XML parsers (JUnit, JaCoCo) + IngestService (parse → persist)
-├── report        ReportingService (read-side queries shared by API + UI)
-└── web
-    ├── api        IngestController, QueryController, ApiResponses (JSON DTOs)
-    └── ui         DashboardController (Thymeleaf)
+unitrack-parent (pom)
+├── unitrack-core          domain + persistence + ingestion (a plain library, no web)
+│   org.alexmond.unitrack
+│   ├── domain             JPA entities (Project, TestRun, TestSuiteResult, TestCaseResult,
+│   │                      CoverageReport, CoverageFileEntry)
+│   ├── repository         Spring Data JPA repositories
+│   ├── ingest             XML parsers (JUnit, JaCoCo) + IngestService (parse → persist)
+│   └── report             ReportingService (read-side queries shared by API + UI)
+└── unitrack-web           Spring Boot application (depends on unitrack-core)
+    org.alexmond.unitrack
+    ├── UnitrackApplication
+    └── web
+        ├── api            IngestController, QueryController, ApiResponses, ApiExceptionHandler
+        └── ui             DashboardController (Thymeleaf) + templates/static + db/migration
 ```
 
 ## Running locally
 
-Requires JDK 25 and Docker (for Postgres). Spring Boot's Docker Compose support starts Postgres
-automatically from `compose.yaml`:
+Requires JDK 21+ and Docker (for Postgres). Spring Boot's Docker Compose support starts Postgres
+automatically from `compose.yaml`. Run the web module (`-am` also builds `unitrack-core`):
 
 ```bash
-./mvnw spring-boot:run
+./mvnw -pl unitrack-web -am spring-boot:run
 ```
 
 Then open <http://localhost:8080>. Health: <http://localhost:8080/actuator/health>.
@@ -91,9 +99,12 @@ into your project and set a `UNITRACK_URL` repository variable.
 ## Build & test
 
 ```bash
-./mvnw verify          # compile + run tests (uses H2 in PostgreSQL mode)
-./mvnw spring-boot:run # run against Postgres via Docker Compose
+./mvnw verify                              # build all modules + run tests (H2 in PostgreSQL mode)
+./mvnw -pl unitrack-web -am spring-boot:run  # run against Postgres via Docker Compose
 ```
+
+The boot jar is produced at `unitrack-web/target/unitrack.jar`. Each module also emits a JaCoCo
+report at `<module>/target/site/jacoco/jacoco.xml` — UniTrack can ingest its own coverage.
 
 ## Roadmap
 

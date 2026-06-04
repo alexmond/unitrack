@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.CalculatorTest" tests="4" failures="1" errors="1" skipped="1" time="0.512">
+    <testcase name="adds" classname="com.example.CalculatorTest" time="0.012"/>
+    <testcase name="subtracts" classname="com.example.CalculatorTest" time="0.004">
+        <failure message="expected:&lt;2&gt; but was:&lt;3&gt;" type="org.opentest4j.AssertionFailedError">
+            org.opentest4j.AssertionFailedError: expected:&lt;2&gt; but was:&lt;3&gt;
+                at com.example.CalculatorTest.subtracts(CalculatorTest.java:21)
+        </failure>
+    </testcase>
+    <testcase name="divides" classname="com.example.CalculatorTest" time="0.003">
+        <error message="/ by zero" type="java.lang.ArithmeticException">
+            java.lang.ArithmeticException: / by zero
+                at com.example.Calculator.divide(Calculator.java:14)
+        </error>
+    </testcase>
+    <testcase name="todo" classname="com.example.CalculatorTest" time="0.0">
+        <skipped/>
+    </testcase>
+</testsuite>
