@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/common :: head('UniTrack — Run #' + ${run.id})}"></head>
+<body>
+<header th:replace="~{fragments/common :: topbar}"></header>
+
+<main class="container">
+    <p class="crumbs">
+        <a th:href="@{/}">Projects</a> /
+        <a th:href="@{/projects/{id}(id=${run.project.id})}" th:text="${run.project.name}">project</a> /
+        Run #<span th:text="${run.id}">1</span>
+    </p>
+    <h1>
+        Run #<span th:text="${run.id}">1</span>
+        <span class="badge" th:classappend="${run.status == 'PASSED'} ? 'pass' : 'fail'"
+              th:text="${run.status}">PASSED</span>
+    </h1>
+    <p class="muted">
+        <span th:text="${run.branch} ?: 'no branch'">main</span> ·
+        <code class="mono" th:text="${run.shortSha} ?: '—'">abc1234</code> ·
+        <span th:text="${#temporals.format(run.createdAt, 'yyyy-MM-dd HH:mm')}">date</span>
+        <a th:if="${run.buildUrl != null}" th:href="${run.buildUrl}">· build</a>
+    </p>
+
+    <div class="stat-row">
+        <div class="stat"><div class="label">Tests</div><div class="value" th:text="${run.totalTests}">0</div></div>
+        <div class="stat"><div class="label">Passed</div><div class="value" style="color:var(--green)" th:text="${run.passed}">0</div></div>
+        <div class="stat"><div class="label">Failed</div><div class="value" style="color:var(--red)" th:text="${run.failed + run.errors}">0</div></div>
+        <div class="stat"><div class="label">Skipped</div><div class="value" style="color:var(--amber)" th:text="${run.skipped}">0</div></div>
+        <div class="stat"><div class="label">Duration</div><div class="value" th:text="${#numbers.formatDecimal(run.durationMs / 1000.0,1,1)} + 's'">0s</div></div>
+        <div class="stat" th:if="${coverage != null}"><div class="label">Line cov</div><div class="value" style="color:var(--blue)" th:text="${#numbers.formatDecimal(coverage.linePct,1,1)} + '%'">0%</div></div>
+    </div>
+
+    <h2>Failures <span class="muted" th:text="'(' + ${failures.size()} + ')'">(0)</span></h2>
+    <div th:if="${failures.isEmpty()}" class="empty">No failed tests. 🎉</div>
+    <div th:each="c : ${failures}">
+        <details class="failure">
+            <summary>
+                <span class="badge" th:classappend="${c.status.name() == 'ERROR'} ? 'error' : 'fail'"
+                      th:text="${c.status}">FAILED</span>
+                <code class="mono" th:text="${c.className} + '#' + ${c.name}">Test#method</code>
+                <span class="muted" th:if="${c.failureMessage != null}" th:text="' — ' + ${c.failureMessage}"></span>
+            </summary>
+            <pre th:if="${c.failureStacktrace != null}" th:text="${c.failureStacktrace}">stacktrace</pre>
+        </details>
+    </div>
+
+    <h2>Suites</h2>
+    <table th:unless="${suites.isEmpty()}">
+        <thead>
+        <tr><th>Suite</th><th class="num">Tests</th><th class="num">Failures</th>
+            <th class="num">Errors</th><th class="num">Skipped</th><th class="num">Time</th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="s : ${suites}">
+            <td><code class="mono" th:text="${s.name}">suite</code></td>
+            <td class="num" th:text="${s.tests}">0</td>
+            <td class="num" th:text="${s.failures}">0</td>
+            <td class="num" th:text="${s.errors}">0</td>
+            <td class="num" th:text="${s.skipped}">0</td>
+            <td class="num" th:text="${#numbers.formatDecimal(s.durationMs / 1000.0,1,2)} + 's'">0s</td>
+        </tr>
+        </tbody>
+    </table>
+
+    <div th:if="${coverage != null}">
+        <h2>Coverage by file <span class="muted">(most missed first)</span></h2>
+        <table>
+            <thead>
+            <tr><th>File</th><th class="num">Line %</th><th>&nbsp;</th>
+                <th class="num">Covered</th><th class="num">Missed</th></tr>
+            </thead>
+            <tbody>
+            <tr th:each="f : ${coverageFiles}">
+                <td><code class="mono" th:text="${f.path}">path</code></td>
+                <td class="num pct" th:text="${#numbers.formatDecimal(f.linePct,1,1)} + '%'">0%</td>
+                <td style="width:120px">
+                    <div class="bar"
+                         th:classappend="${f.linePct < 50} ? 'low' : (${f.linePct < 80} ? 'mid' : '')">
+                        <span th:style="'width:' + ${f.linePct} + '%'"></span>
+                    </div>
+                </td>
+                <td class="num" th:text="${f.lineCovered}">0</td>
+                <td class="num" th:text="${f.lineMissed}">0</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+</body>
+</html>

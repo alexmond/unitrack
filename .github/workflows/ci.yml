@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+
+      - name: Build & test
+        run: ./mvnw -B verify
+
+      - name: Upload test & coverage reports (artifacts)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports
+          path: |
+            target/surefire-reports/*.xml
+            target/site/jacoco/jacoco.xml
+          if-no-files-found: ignore
+
+      # Self-reporting: push this build's own results to a UniTrack server.
+      # Configure the UNITRACK_URL repo variable to enable.
+      - name: Report to UniTrack
+        if: always() && vars.UNITRACK_URL != ''
+        env:
+          UNITRACK_URL: ${{ vars.UNITRACK_URL }}
+        run: |
+          bash scripts/unitrack-upload.sh \
+            --project unitrack \
+            --branch  "${GITHUB_REF_NAME}" \
+            --commit  "${GITHUB_SHA}" \
+            --build   "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+            --repo    "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}" \
+            --ci      github-actions \
+            --junit   'target/surefire-reports/TEST-*.xml' \
+            --jacoco  'target/site/jacoco/jacoco.xml'

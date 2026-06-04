@@ -1,0 +1,11 @@
+package io.github.alexmond.unitrack.ingest;
+
+/** Metadata describing the origin of an uploaded set of reports. */
+public record IngestRequest(
+        String project,
+        String repoUrl,
+        String branch,
+        String commit,
+        String buildUrl,
+        String ciProvider) {
+}

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/common :: head('UniTrack — Projects')}"></head>
+<body>
+<header th:replace="~{fragments/common :: topbar}"></header>
+
+<main class="container">
+    <h1>Projects</h1>
+    <p class="crumbs">Test &amp; coverage tracking across your repositories.</p>
+
+    <div th:if="${projects.isEmpty()}" class="empty">
+        No projects yet. Upload results with
+        <code class="mono">POST /api/v1/ingest</code> to get started.
+    </div>
+
+    <div class="cards" th:unless="${projects.isEmpty()}">
+        <a class="card" th:each="p : ${projects}" th:href="@{/projects/{id}(id=${p.id})}"
+           style="color:inherit">
+            <h3 th:text="${p.name}">project</h3>
+            <div class="meta">
+                <span th:text="${runCounts.get(p.id)} + ' runs'">0 runs</span>
+            </div>
+            <div class="stat-row" th:with="run=${latest.get(p.id)}" th:if="${run != null}">
+                <span class="badge"
+                      th:classappend="${run.status == 'PASSED'} ? 'pass' : 'fail'"
+                      th:text="${run.status}">PASSED</span>
+                <span class="muted" th:text="${run.passed} + '/' + ${run.totalTests} + ' passed'">0/0</span>
+                <span class="muted pct" th:if="${run.lineCoveragePct != null}"
+                      th:text="'cov ' + ${#numbers.formatDecimal(run.lineCoveragePct,1,1)} + '%'">cov</span>
+            </div>
+            <div class="meta" th:unless="${latest.get(p.id) != null}">No runs yet</div>
+        </a>
+    </div>
+</main>
+</body>
+</html>
