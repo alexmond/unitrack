@@ -1,5 +1,6 @@
 package org.alexmond.unitrack.web;
 
+import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -32,38 +33,47 @@ class IngestIntegrationTest {
 		byte[] junit = getClass().getResourceAsStream("/samples/surefire-sample.xml").readAllBytes();
 		byte[] jacoco = getClass().getResourceAsStream("/samples/jacoco-sample.xml").readAllBytes();
 
-		mvc.perform(multipart("/api/v1/ingest").file(new MockMultipartFile("junit", "TEST-Calc.xml", "text/xml", junit))
-			.file(new MockMultipartFile("jacoco", "jacoco.xml", "text/xml", jacoco))
-			.param("project", "demo")
-			.param("branch", "main")
-			.param("commit", "abcdef1234567890"))
+		// A unique project name keeps this test independent of others sharing the
+		// in-memory DB.
+		String content = mvc
+			.perform(
+					multipart("/api/v1/ingest").file(new MockMultipartFile("junit", "TEST-Calc.xml", "text/xml", junit))
+						.file(new MockMultipartFile("jacoco", "jacoco.xml", "text/xml", jacoco))
+						.param("project", "ingest-demo")
+						.param("branch", "main")
+						.param("commit", "abcdef1234567890"))
 			.andExpect(status().isCreated())
-			.andExpect(jsonPath("$.project").value("demo"))
+			.andExpect(jsonPath("$.project").value("ingest-demo"))
 			.andExpect(jsonPath("$.total").value(4))
 			.andExpect(jsonPath("$.passed").value(1))
 			.andExpect(jsonPath("$.failed").value(1))
 			.andExpect(jsonPath("$.errors").value(1))
 			.andExpect(jsonPath("$.skipped").value(1))
 			.andExpect(jsonPath("$.status").value("FAILED"))
-			.andExpect(jsonPath("$.lineCoveragePct", greaterThan(70.0)));
+			.andExpect(jsonPath("$.lineCoveragePct", greaterThan(70.0)))
+			.andReturn()
+			.getResponse()
+			.getContentAsString();
+		long projectId = ((Number) JsonPath.read(content, "$.projectId")).longValue();
+		long runId = ((Number) JsonPath.read(content, "$.runId")).longValue();
 
-		mvc.perform(get("/api/v1/projects"))
+		mvc.perform(get("/api/v1/projects/{id}", projectId))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$[0].name").value("demo"))
-			.andExpect(jsonPath("$[0].runCount").value(1));
+			.andExpect(jsonPath("$.name").value("ingest-demo"))
+			.andExpect(jsonPath("$.runCount").value(1));
 
-		mvc.perform(get("/api/v1/runs/1"))
+		mvc.perform(get("/api/v1/runs/{id}", runId))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.run.total").value(4))
 			.andExpect(jsonPath("$.failures.length()").value(2))
 			.andExpect(jsonPath("$.coverage.files.length()").value(2));
 
 		// The Thymeleaf dashboard pages render without error.
-		mvc.perform(get("/")).andExpect(status().isOk()).andExpect(content().string(containsString("demo")));
-		mvc.perform(get("/projects/1"))
+		mvc.perform(get("/")).andExpect(status().isOk()).andExpect(content().string(containsString("ingest-demo")));
+		mvc.perform(get("/projects/{id}", projectId))
 			.andExpect(status().isOk())
 			.andExpect(content().string(containsString("Recent runs")));
-		mvc.perform(get("/runs/1"))
+		mvc.perform(get("/runs/{id}", runId))
 			.andExpect(status().isOk())
 			.andExpect(content().string(containsString("Coverage by file")));
 	}

@@ -18,6 +18,8 @@ Built with **Spring Boot 4** and **Java 21**, as a multi-module Maven project (`
   (e.g. sharded CI) are merged into one run.
 - **Storage** — PostgreSQL via Spring Data JPA, schema managed by Flyway.
 - **Trends & history** — pass-rate and line-coverage trend charts per project; full run history.
+- **Flaky-test detection** — flags tests that both passed and failed for the same commit, with
+  failure-rate and flaky-commit metrics and a quarantine toggle.
 - **Dashboard** — server-rendered Thymeleaf UI: projects → runs → run detail (failures with
   stacktraces, suite breakdown, coverage by file).
 - **REST API** — JSON endpoints for projects, runs, and run detail.
@@ -95,6 +97,8 @@ into your project and set a `UNITRACK_URL` repository variable.
 | `GET`  | `/api/v1/projects/{id}` | Single project |
 | `GET`  | `/api/v1/projects/{id}/runs?limit=50` | Recent runs for a project |
 | `GET`  | `/api/v1/runs/{id}` | Run detail: totals, suites, failures, coverage |
+| `GET`  | `/api/v1/projects/{id}/flaky` | Detected flaky tests with metrics + quarantine state |
+| `POST` | `/api/v1/projects/{id}/flaky/status` | Set a test's state (`ACTIVE`/`QUARANTINED`/`RESOLVED`) |
 
 ## Build & test
 
