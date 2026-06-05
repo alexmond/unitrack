@@ -30,6 +30,8 @@ Built with **Spring Boot 4** and **Java 21**, as a multi-module Maven project (`
   test results and coverage into a single run instead of fragmenting into many.
 - **Failure clustering** — groups recurring failures by a normalized signature (type, message, top
   stack frame; numbers/hex/UUIDs masked) so triage sees root causes, not a wall of failures.
+- **Triage rules** — per-project rules that match a failure's text and assign a category
+  (product defect / test defect / infrastructure / …); categories show on the run page.
 - **Dashboard** — server-rendered Thymeleaf UI: projects → runs → run detail (failures with
   stacktraces, captured `system-out`/`system-err` and `[[ATTACHMENT|…]]` links, suite breakdown,
   coverage by file).
@@ -110,6 +112,9 @@ into your project and set a `UNITRACK_URL` repository variable.
 | `GET`  | `/api/v1/projects/{id}/runs?limit=50` | Recent runs for a project |
 | `GET`  | `/api/v1/projects/{id}/flags` | Latest coverage/status per coverage flag (component) |
 | `GET`  | `/api/v1/projects/{id}/failure-clusters` | Recent failures grouped by normalized signature |
+| `GET`/`POST` | `/api/v1/projects/{id}/triage-rules` | List / create triage rules |
+| `DELETE` | `/api/v1/triage-rules/{ruleId}` | Delete a triage rule |
+| `GET`  | `/api/v1/runs/{id}/triage` | Categorize a run's failures + per-category counts |
 | `GET`  | `/api/v1/runs/{id}` | Run detail: totals, suites, failures, coverage |
 | `GET`  | `/api/v1/projects/{id}/flaky` | Detected flaky tests with metrics + quarantine state |
 | `POST` | `/api/v1/projects/{id}/flaky/status` | Set a test's state (`ACTIVE`/`QUARANTINED`/`RESOLVED`) |

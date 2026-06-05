@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/common :: head('UniTrack — Triage rules: ' + ${project.name})}"></head>
+<body>
+<header th:replace="~{fragments/common :: topbar}"></header>
+
+<main class="container">
+    <p class="crumbs">
+        <a th:href="@{/}">Projects</a> /
+        <a th:href="@{/projects/{id}(id=${project.id})}" th:text="${project.name}">project</a> /
+        Triage rules
+    </p>
+    <h1>Triage rules</h1>
+    <p class="muted">Rules categorize failures by matching the failure text (type, message, stacktrace).
+        Lowest priority wins; the first match assigns the category.</p>
+
+    <div th:if="${rules.isEmpty()}" class="empty">No rules yet — add one below.</div>
+    <table th:unless="${rules.isEmpty()}">
+        <thead>
+        <tr><th class="num">Priority</th><th>Name</th><th>Category</th><th>Pattern</th><th></th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="r : ${rules}">
+            <td class="num" th:text="${r.priority()}">100</td>
+            <td th:text="${r.name()}">name</td>
+            <td><span class="badge" style="background:rgba(68,147,248,.15);color:var(--blue)"
+                      th:text="${r.category()}">category</span></td>
+            <td><code class="mono" th:text="${r.pattern()}">pattern</code></td>
+            <td>
+                <form method="post" th:action="@{/projects/{id}/triage/rules/{ruleId}/delete(id=${project.id},ruleId=${r.id()})}">
+                    <button class="btn">Delete</button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+
+    <h2>Add rule</h2>
+    <form method="post" th:action="@{/projects/{id}/triage/rules(id=${project.id})}" class="rule-form">
+        <input type="text" name="name" placeholder="Name (e.g. OOM)" required/>
+        <input type="text" name="category" placeholder="Category (e.g. INFRASTRUCTURE)" required/>
+        <input type="text" name="pattern" placeholder="Pattern / regex (e.g. OutOfMemoryError)" required/>
+        <input type="number" name="priority" placeholder="Priority" value="100"/>
+        <button class="btn btn-muted" type="submit">Add</button>
+    </form>
+</main>
+</body>
+</html>
