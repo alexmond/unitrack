@@ -3,6 +3,8 @@ package org.alexmond.unitrack.web.api;
 import org.alexmond.unitrack.domain.CoverageReport;
 import org.alexmond.unitrack.domain.Project;
 import org.alexmond.unitrack.domain.TestRun;
+import org.alexmond.unitrack.report.FailureCluster;
+import org.alexmond.unitrack.report.FailureClusteringService;
 import org.alexmond.unitrack.report.FlagSummary;
 import org.alexmond.unitrack.report.ReportingService;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +25,8 @@ import java.util.Optional;
 public class QueryController {
 
 	private final ReportingService reporting;
+
+	private final FailureClusteringService clustering;
 
 	@GetMapping("/projects")
 	public List<ApiResponses.ProjectJson> projects() {
@@ -45,6 +49,14 @@ public class QueryController {
 			return ResponseEntity.notFound().build();
 		}
 		return ResponseEntity.ok(reporting.flagSummaries(id));
+	}
+
+	@GetMapping("/projects/{id}/failure-clusters")
+	public ResponseEntity<List<FailureCluster>> failureClusters(@PathVariable Long id) {
+		if (reporting.findProject(id).isEmpty()) {
+			return ResponseEntity.notFound().build();
+		}
+		return ResponseEntity.ok(clustering.cluster(id));
 	}
 
 	@GetMapping("/projects/{id}/runs")

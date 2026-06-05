@@ -129,6 +129,10 @@ code.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-si
 .gate-rules { margin: 0; padding-left: 18px; }
 .gate-rules li { margin: 3px 0; }
 
+.cluster-body { padding: 10px 16px; border-top: 1px solid var(--border); }
+.cluster-body ul { margin: 6px 0; padding-left: 18px; }
+.cluster-body pre { background: #0b0f14; color: #d6dee7; padding: 10px; overflow-x: auto; font-size: 12.5px; border-radius: 6px; }
+
 .attachments { padding: 10px 14px; border-top: 1px solid var(--border); font-size: 13px; }
 .attachments a { display: inline-block; margin-left: 8px; }
 details.output { border-top: 1px solid var(--border); }
