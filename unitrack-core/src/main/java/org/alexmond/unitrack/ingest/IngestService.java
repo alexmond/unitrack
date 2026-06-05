@@ -61,11 +61,23 @@ public class IngestService {
 		}
 
 		Project project = findOrCreateProject(meta.project(), meta.repoUrl());
-		TestRun run = new TestRun(project, blankToNull(meta.branch()), meta.flag(), blankToNull(meta.commit()),
-				blankToNull(meta.buildUrl()), blankToNull(meta.ciProvider()));
+		String runKey = blankToNull(meta.runKey());
+		TestRun existing = (runKey != null) ? runs.findByProjectIdAndRunKey(project.getId(), runKey).orElse(null)
+				: null;
+		boolean merging = existing != null;
 
 		JUnitResults merged = parseJUnit(junitStreams);
-		run.applyTotals(merged.passed(), merged.failures(), merged.errors(), merged.skipped(), merged.durationMs());
+		TestRun run;
+		if (merging) {
+			run = existing;
+			run.addTotals(merged.passed(), merged.failures(), merged.errors(), merged.skipped(), merged.durationMs());
+		}
+		else {
+			run = new TestRun(project, blankToNull(meta.branch()), meta.flag(), blankToNull(meta.commit()),
+					blankToNull(meta.buildUrl()), blankToNull(meta.ciProvider()));
+			run.setRunKey(runKey);
+			run.applyTotals(merged.passed(), merged.failures(), merged.errors(), merged.skipped(), merged.durationMs());
+		}
 		runs.save(run);
 
 		persistTests(run, merged);
@@ -75,8 +87,9 @@ public class IngestService {
 			runs.save(run);
 		}
 
-		log.info("Ingested run {} for project '{}' ({} tests, {} failed, {} errors)", run.getId(), project.getName(),
-				run.getTotalTests(), run.getFailed(), run.getErrors());
+		log.info("{} run {} for project '{}' ({} tests, {} failed, {} errors, {} uploads)",
+				merging ? "Merged into" : "Ingested", run.getId(), project.getName(), run.getTotalTests(),
+				run.getFailed(), run.getErrors(), run.getUploads());
 		return run;
 	}
 
@@ -153,9 +166,16 @@ public class IngestService {
 	}
 
 	private void persistCoverage(TestRun run, CoverageResults cov) {
-		CoverageReport report = new CoverageReport(run);
-		report.setCounters(cov.lineCovered(), cov.lineMissed(), cov.branchCovered(), cov.branchMissed(),
-				cov.instructionCovered(), cov.instructionMissed(), cov.methodCovered(), cov.methodMissed());
+		// Merge into an existing report (sharded coverage uploads) or create a new one.
+		CoverageReport report = coverageReports.findByRunId(run.getId()).orElseGet(() -> new CoverageReport(run));
+		if (report.getId() == null) {
+			report.setCounters(cov.lineCovered(), cov.lineMissed(), cov.branchCovered(), cov.branchMissed(),
+					cov.instructionCovered(), cov.instructionMissed(), cov.methodCovered(), cov.methodMissed());
+		}
+		else {
+			report.addCounters(cov.lineCovered(), cov.lineMissed(), cov.branchCovered(), cov.branchMissed(),
+					cov.instructionCovered(), cov.instructionMissed(), cov.methodCovered(), cov.methodMissed());
+		}
 		coverageReports.save(report);
 
 		List<CoverageFileEntry> fileRows = new ArrayList<>();

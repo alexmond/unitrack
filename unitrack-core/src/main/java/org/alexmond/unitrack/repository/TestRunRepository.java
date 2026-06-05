@@ -30,4 +30,7 @@ public interface TestRunRepository extends JpaRepository<TestRun, Long> {
 
 	Optional<TestRun> findFirstByProjectIdAndFlagOrderByCreatedAtDesc(Long projectId, String flag);
 
+	/** Existing run for a merge key, so sharded uploads accumulate into one run. */
+	Optional<TestRun> findByProjectIdAndRunKey(Long projectId, String runKey);
+
 }

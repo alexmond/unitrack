@@ -68,6 +68,21 @@ public class CoverageReport {
 		this.methodMissed = methodMissed;
 	}
 
+	/**
+	 * Adds another coverage upload's counters into this report (sharded/merged ingest).
+	 */
+	public void addCounters(int lineCovered, int lineMissed, int branchCovered, int branchMissed,
+			int instructionCovered, int instructionMissed, int methodCovered, int methodMissed) {
+		this.lineCovered += lineCovered;
+		this.lineMissed += lineMissed;
+		this.branchCovered += branchCovered;
+		this.branchMissed += branchMissed;
+		this.instructionCovered += instructionCovered;
+		this.instructionMissed += instructionMissed;
+		this.methodCovered += methodCovered;
+		this.methodMissed += methodMissed;
+	}
+
 	public static double pct(int covered, int missed) {
 		int total = covered + missed;
 		return (total == 0) ? 0.0 : (covered * 100.0) / total;
