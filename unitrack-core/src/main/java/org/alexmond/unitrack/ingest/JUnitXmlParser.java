@@ -8,6 +8,8 @@ import org.w3c.dom.Element;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Parses Surefire / JUnit XML reports. Handles both a {@code <testsuites>} root
@@ -15,6 +17,12 @@ import java.util.List;
  */
 @Component
 public class JUnitXmlParser {
+
+	/**
+	 * JUnit 5 {@code publishEntry} attachment marker, e.g.
+	 * {@code [[ATTACHMENT|screenshot.png]]}.
+	 */
+	private static final Pattern ATTACHMENT_MARKER = Pattern.compile("\\[\\[ATTACHMENT\\|([^\\]]+)\\]\\]");
 
 	public JUnitResults parse(InputStream in) {
 		try {
@@ -64,30 +72,52 @@ public class JUnitXmlParser {
 		String name = caseEl.getAttribute("name");
 		long durationMs = XmlSupport.attrSecondsToMillis(caseEl, "time");
 
+		String systemOut = firstText(caseEl, "system-out");
+		String systemErr = firstText(caseEl, "system-err");
+		List<String> attachments = extractAttachments(systemOut, systemErr);
+
 		List<Element> failures = XmlSupport.children(caseEl, "failure");
 		List<Element> errors = XmlSupport.children(caseEl, "error");
 		List<Element> skipped = XmlSupport.children(caseEl, "skipped");
 
+		TestStatus status = TestStatus.PASSED;
+		Element detail = null;
 		if (!errors.isEmpty()) {
-			Element error = errors.getFirst();
-			return failureCase(suiteName, className, name, durationMs, TestStatus.ERROR, error);
+			status = TestStatus.ERROR;
+			detail = errors.getFirst();
 		}
-		if (!failures.isEmpty()) {
-			Element failure = failures.getFirst();
-			return failureCase(suiteName, className, name, durationMs, TestStatus.FAILED, failure);
+		else if (!failures.isEmpty()) {
+			status = TestStatus.FAILED;
+			detail = failures.getFirst();
 		}
-		if (!skipped.isEmpty()) {
-			return new ParsedCase(suiteName, className, name, TestStatus.SKIPPED, durationMs, null, null, null);
+		else if (!skipped.isEmpty()) {
+			status = TestStatus.SKIPPED;
 		}
-		return new ParsedCase(suiteName, className, name, TestStatus.PASSED, durationMs, null, null, null);
+
+		String type = (detail != null) ? emptyToNull(detail.getAttribute("type")) : null;
+		String message = (detail != null) ? emptyToNull(detail.getAttribute("message")) : null;
+		String stacktrace = (detail != null) ? emptyToNull(detail.getTextContent()) : null;
+		return new ParsedCase(suiteName, className, name, status, durationMs, type, message, stacktrace, systemOut,
+				systemErr, attachments);
 	}
 
-	private ParsedCase failureCase(String suiteName, String className, String name, long durationMs, TestStatus status,
-			Element detail) {
-		String type = emptyToNull(detail.getAttribute("type"));
-		String message = emptyToNull(detail.getAttribute("message"));
-		String stacktrace = emptyToNull(detail.getTextContent());
-		return new ParsedCase(suiteName, className, name, status, durationMs, type, message, stacktrace);
+	private String firstText(Element caseEl, String tag) {
+		List<Element> els = XmlSupport.children(caseEl, tag);
+		return els.isEmpty() ? null : emptyToNull(els.getFirst().getTextContent());
+	}
+
+	private List<String> extractAttachments(String... texts) {
+		List<String> urls = new ArrayList<>();
+		for (String text : texts) {
+			if (text == null) {
+				continue;
+			}
+			Matcher matcher = ATTACHMENT_MARKER.matcher(text);
+			while (matcher.find()) {
+				urls.add(matcher.group(1).trim());
+			}
+		}
+		return urls;
 	}
 
 	private static long count(List<ParsedCase> cases, TestStatus status) {

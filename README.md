@@ -29,7 +29,8 @@ Built with **Spring Boot 4** and **Java 21**, as a multi-module Maven project (`
 - **Report merging** — pass a `runKey` (e.g. a CI build id) so parallel/sharded jobs accumulate
   test results and coverage into a single run instead of fragmenting into many.
 - **Dashboard** — server-rendered Thymeleaf UI: projects → runs → run detail (failures with
-  stacktraces, suite breakdown, coverage by file).
+  stacktraces, captured `system-out`/`system-err` and `[[ATTACHMENT|…]]` links, suite breakdown,
+  coverage by file).
 - **REST API** — JSON endpoints for projects, runs, and run detail.
 - **CI integration** — a `curl`-based uploader script and ready-to-copy GitHub Actions workflows.
 

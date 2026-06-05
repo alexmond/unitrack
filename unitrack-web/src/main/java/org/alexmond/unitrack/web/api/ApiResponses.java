@@ -42,10 +42,11 @@ public interface ApiResponses {
 	}
 
 	public record CaseJson(String suite, String className, String name, String status, long durationMs,
-			String failureType, String failureMessage) {
+			String failureType, String failureMessage, String systemOut, String systemErr, List<String> attachments) {
 		public static CaseJson of(TestCaseResult c) {
 			return new CaseJson(c.getSuiteName(), c.getClassName(), c.getName(), c.getStatus().name(),
-					c.getDurationMs(), c.getFailureType(), c.getFailureMessage());
+					c.getDurationMs(), c.getFailureType(), c.getFailureMessage(), c.getSystemOut(), c.getSystemErr(),
+					c.attachmentList());
 		}
 	}
 

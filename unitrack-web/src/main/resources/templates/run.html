@@ -61,6 +61,18 @@
                 <span class="muted" th:if="${c.failureMessage != null}" th:text="' — ' + ${c.failureMessage}"></span>
             </summary>
             <pre th:if="${c.failureStacktrace != null}" th:text="${c.failureStacktrace}">stacktrace</pre>
+            <div th:if="${!c.attachmentList().isEmpty()}" class="attachments">
+                <strong>Attachments:</strong>
+                <a th:each="a : ${c.attachmentList()}" th:href="${a}" th:text="${a}" class="mono">file</a>
+            </div>
+            <details th:if="${c.systemOut != null}" class="output">
+                <summary>system-out</summary>
+                <pre th:text="${c.systemOut}">stdout</pre>
+            </details>
+            <details th:if="${c.systemErr != null}" class="output">
+                <summary>system-err</summary>
+                <pre th:text="${c.systemErr}">stderr</pre>
+            </details>
         </details>
     </div>
 

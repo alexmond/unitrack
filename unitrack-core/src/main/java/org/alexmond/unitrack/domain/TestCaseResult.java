@@ -15,6 +15,8 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 /** A single &lt;testcase&gt; outcome within a run. */
 @Entity
 @Table(name = "test_case_result")
@@ -55,6 +57,16 @@ public class TestCaseResult {
 	@Column(name = "failure_stacktrace", length = 100_000)
 	private String failureStacktrace;
 
+	@Column(name = "system_out", length = 100_000)
+	private String systemOut;
+
+	@Column(name = "system_err", length = 100_000)
+	private String systemErr;
+
+	/** Attachment URLs (from {@code [[ATTACHMENT|...]]} markers), newline-separated. */
+	@Column(length = 8000)
+	private String attachments;
+
 	public TestCaseResult(TestRun run, String suiteName, String className, String name, TestStatus status,
 			long durationMs) {
 		this.run = run;
@@ -69,6 +81,17 @@ public class TestCaseResult {
 		this.failureType = failureType;
 		this.failureMessage = truncate(failureMessage);
 		this.failureStacktrace = failureStacktrace;
+	}
+
+	public void setOutputs(String systemOut, String systemErr, List<String> attachments) {
+		this.systemOut = systemOut;
+		this.systemErr = systemErr;
+		this.attachments = (attachments == null || attachments.isEmpty()) ? null : String.join("\n", attachments);
+	}
+
+	/** Attachment URLs as a list (empty when none). */
+	public List<String> attachmentList() {
+		return (attachments == null || attachments.isBlank()) ? List.of() : List.of(attachments.split("\n"));
 	}
 
 	private static String truncate(String value) {
