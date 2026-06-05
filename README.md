@@ -24,6 +24,8 @@ Built with **Spring Boot 4** and **Java 21**, as a multi-module Maven project (`
   branch, and new test failures relative to the baseline (quarantined flaky tests are excluded).
 - **GitHub commit status** — on ingest, posts the gate verdict + coverage delta as a commit status
   (`unitrack/quality-gate`), so it surfaces on the commit and any associated PR.
+- **Coverage flags / components** — tag an upload with a `flag` (e.g. `frontend`/`backend`) to
+  track coverage per area; the quality-gate baseline is scoped to the same flag.
 - **Dashboard** — server-rendered Thymeleaf UI: projects → runs → run detail (failures with
   stacktraces, suite breakdown, coverage by file).
 - **REST API** — JSON endpoints for projects, runs, and run detail.
@@ -74,6 +76,7 @@ UNITRACK_URL=http://localhost:8080 \
 scripts/unitrack-upload.sh \
   --project myapp \
   --branch  main \
+  --flag    backend \
   --commit  "$(git rev-parse HEAD)" \
   --junit   'target/surefire-reports/TEST-*.xml' \
   --jacoco  'target/site/jacoco/jacoco.xml'
@@ -100,6 +103,7 @@ into your project and set a `UNITRACK_URL` repository variable.
 | `GET`  | `/api/v1/projects` | List projects with run counts |
 | `GET`  | `/api/v1/projects/{id}` | Single project |
 | `GET`  | `/api/v1/projects/{id}/runs?limit=50` | Recent runs for a project |
+| `GET`  | `/api/v1/projects/{id}/flags` | Latest coverage/status per coverage flag (component) |
 | `GET`  | `/api/v1/runs/{id}` | Run detail: totals, suites, failures, coverage |
 | `GET`  | `/api/v1/projects/{id}/flaky` | Detected flaky tests with metrics + quarantine state |
 | `POST` | `/api/v1/projects/{id}/flaky/status` | Set a test's state (`ACTIVE`/`QUARANTINED`/`RESOLVED`) |

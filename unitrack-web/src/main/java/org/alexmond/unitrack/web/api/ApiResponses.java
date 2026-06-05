@@ -22,14 +22,15 @@ public interface ApiResponses {
 		}
 	}
 
-	public record RunJson(Long id, Long projectId, String branch, String commit, String buildUrl, Instant createdAt,
-			int total, int passed, int failed, int errors, int skipped, long durationMs, String status, double passRate,
-			Double lineCoveragePct, Double branchCoveragePct) {
+	public record RunJson(Long id, Long projectId, String branch, String flag, String commit, String buildUrl,
+			Instant createdAt, int total, int passed, int failed, int errors, int skipped, long durationMs,
+			String status, double passRate, Double lineCoveragePct, Double branchCoveragePct) {
 
 		public static RunJson of(TestRun r) {
-			return new RunJson(r.getId(), r.getProject().getId(), r.getBranch(), r.getCommitSha(), r.getBuildUrl(),
-					r.getCreatedAt(), r.getTotalTests(), r.getPassed(), r.getFailed(), r.getErrors(), r.getSkipped(),
-					r.getDurationMs(), r.getStatus(), r.passRate(), r.getLineCoveragePct(), r.getBranchCoveragePct());
+			return new RunJson(r.getId(), r.getProject().getId(), r.getBranch(), r.getFlag(), r.getCommitSha(),
+					r.getBuildUrl(), r.getCreatedAt(), r.getTotalTests(), r.getPassed(), r.getFailed(), r.getErrors(),
+					r.getSkipped(), r.getDurationMs(), r.getStatus(), r.passRate(), r.getLineCoveragePct(),
+					r.getBranchCoveragePct());
 		}
 	}
 

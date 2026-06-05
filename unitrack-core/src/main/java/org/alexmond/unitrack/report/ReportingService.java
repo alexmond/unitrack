@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 /** Read-side queries shared by the REST API and the web dashboard. */
@@ -64,6 +65,17 @@ public class ReportingService {
 
 	public Optional<TestRun> findRun(Long id) {
 		return runs.findById(id);
+	}
+
+	/** Latest coverage/status per coverage flag (component) for a project. */
+	public List<FlagSummary> flagSummaries(Long projectId) {
+		return runs.findDistinctFlags(projectId)
+			.stream()
+			.map((flag) -> runs.findFirstByProjectIdAndFlagOrderByCreatedAtDesc(projectId, flag).orElse(null))
+			.filter(Objects::nonNull)
+			.map((r) -> new FlagSummary(r.getFlag(), r.getLineCoveragePct(), r.getId(), r.getCreatedAt(),
+					r.getStatus()))
+			.toList();
 	}
 
 	public List<TestSuiteResult> suitesFor(Long runId) {

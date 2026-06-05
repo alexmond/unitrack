@@ -30,7 +30,8 @@ class GitHubStatusServiceTest {
 	}
 
 	private TestRun run() {
-		TestRun run = new TestRun(new Project("demo", "https://github.com/octo/repo"), "main", "abc123", null, null);
+		TestRun run = new TestRun(new Project("demo", "https://github.com/octo/repo"), "main", "default", "abc123",
+				null, null);
 		run.applyTotals(3, 1, 0, 0, 100);
 		run.setLineCoveragePct(80.0);
 		return run;
