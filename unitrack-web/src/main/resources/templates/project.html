@@ -10,6 +10,7 @@
     <p class="muted" th:if="${project.repoUrl != null}">
         <a th:href="${project.repoUrl}" th:text="${project.repoUrl}">repo</a>
     </p>
+    <p><a th:href="@{/projects/{id}/flaky(id=${project.id})}">🔁 Flaky tests &rarr;</a></p>
 
     <h2>Trends</h2>
     <div class="chart-wrap">

@@ -101,3 +101,16 @@ details.failure pre {
     overflow-x: auto; font-size: 12.5px; border-top: 1px solid var(--border);
 }
 code.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
+
+.btn {
+    background: var(--red);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 5px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.btn:hover { filter: brightness(1.1); }
+.btn.btn-muted { background: var(--panel-2); color: var(--text); border: 1px solid var(--border); }

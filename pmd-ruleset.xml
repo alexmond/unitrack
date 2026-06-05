@@ -37,6 +37,7 @@
         <exclude name="FieldDeclarationsShouldBeAtStartOfClass"/>
         <exclude name="FieldNamingConventions"/>
         <exclude name="OneDeclarationPerLine"/>
+        <exclude name="LinguisticNaming"/>
     </rule>
     <rule ref="category/java/codestyle.xml/ClassNamingConventions">
         <properties>
@@ -86,6 +87,8 @@
         <exclude name="AssignmentInOperand"/>
         <!-- Domain entities TestRun/TestCaseResult/TestSuiteResult are not test classes -->
         <exclude name="TestClassWithoutTestCases"/>
+        <!-- java.sql.Timestamp is unavoidable for native-query projections -->
+        <exclude name="ReplaceJavaUtilDate"/>
     </rule>
 
     <!-- Multithreading -->
