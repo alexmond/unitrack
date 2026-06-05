@@ -12,8 +12,8 @@ import org.alexmond.unitrack.repository.ProjectRepository;
 import org.alexmond.unitrack.repository.TestCaseResultRepository;
 import org.alexmond.unitrack.repository.TestRunRepository;
 import org.alexmond.unitrack.repository.TestSuiteResultRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,150 +25,152 @@ import java.util.function.Supplier;
 
 /** Orchestrates parsing and persistence of an uploaded set of JUnit + JaCoCo reports. */
 @Service
+@Slf4j
+@RequiredArgsConstructor
 public class IngestService {
 
-    private static final Logger log = LoggerFactory.getLogger(IngestService.class);
+	private final ProjectRepository projects;
 
-    private final ProjectRepository projects;
-    private final TestRunRepository runs;
-    private final TestSuiteResultRepository suites;
-    private final TestCaseResultRepository cases;
-    private final CoverageReportRepository coverageReports;
-    private final CoverageFileEntryRepository coverageFiles;
-    private final JUnitXmlParser junitParser;
-    private final JacocoXmlParser jacocoParser;
+	private final TestRunRepository runs;
 
-    public IngestService(ProjectRepository projects, TestRunRepository runs,
-                         TestSuiteResultRepository suites, TestCaseResultRepository cases,
-                         CoverageReportRepository coverageReports, CoverageFileEntryRepository coverageFiles,
-                         JUnitXmlParser junitParser, JacocoXmlParser jacocoParser) {
-        this.projects = projects;
-        this.runs = runs;
-        this.suites = suites;
-        this.cases = cases;
-        this.coverageReports = coverageReports;
-        this.coverageFiles = coverageFiles;
-        this.junitParser = junitParser;
-        this.jacocoParser = jacocoParser;
-    }
+	private final TestSuiteResultRepository suites;
 
-    /**
-     * Parses and stores a run. {@code junitStreams} and {@code jacocoStreams} are suppliers of input
-     * streams so the caller controls resource lifecycle; at least one JUnit stream is required.
-     */
-    @Transactional
-    public TestRun ingest(IngestRequest meta,
-                          List<Supplier<InputStream>> junitStreams,
-                          List<Supplier<InputStream>> jacocoStreams) {
-        if (meta.project() == null || meta.project().isBlank()) {
-            throw new IngestException("'project' is required");
-        }
-        if (junitStreams.isEmpty()) {
-            throw new IngestException("At least one JUnit XML file is required");
-        }
+	private final TestCaseResultRepository cases;
 
-        Project project = findOrCreateProject(meta.project(), meta.repoUrl());
-        TestRun run = new TestRun(project, blankToNull(meta.branch()), blankToNull(meta.commit()),
-                blankToNull(meta.buildUrl()), blankToNull(meta.ciProvider()));
+	private final CoverageReportRepository coverageReports;
 
-        JUnitResults merged = parseJUnit(junitStreams);
-        run.applyTotals(merged.passed(), merged.failures(), merged.errors(), merged.skipped(),
-                merged.durationMs());
-        runs.save(run);
+	private final CoverageFileEntryRepository coverageFiles;
 
-        persistTests(run, merged);
+	private final JUnitXmlParser junitParser;
 
-        if (!jacocoStreams.isEmpty()) {
-            persistCoverage(run, parseCoverage(jacocoStreams));
-            runs.save(run);
-        }
+	private final JacocoXmlParser jacocoParser;
 
-        log.info("Ingested run {} for project '{}' ({} tests, {} failed, {} errors)",
-                run.getId(), project.getName(), run.getTotalTests(), run.getFailed(), run.getErrors());
-        return run;
-    }
+	/**
+	 * Parses and stores a run. {@code junitStreams} and {@code jacocoStreams} are
+	 * suppliers of input streams so the caller controls resource lifecycle; at least one
+	 * JUnit stream is required.
+	 */
+	@Transactional
+	public TestRun ingest(IngestRequest meta, List<Supplier<InputStream>> junitStreams,
+			List<Supplier<InputStream>> jacocoStreams) {
+		if (meta.project() == null || meta.project().isBlank()) {
+			throw new IngestException("'project' is required");
+		}
+		if (junitStreams.isEmpty()) {
+			throw new IngestException("At least one JUnit XML file is required");
+		}
 
-    private Project findOrCreateProject(String name, String repoUrl) {
-        return projects.findByName(name).map(existing -> {
-            if (repoUrl != null && !repoUrl.isBlank() && existing.getRepoUrl() == null) {
-                existing.setRepoUrl(repoUrl);
-            }
-            return existing;
-        }).orElseGet(() -> projects.save(new Project(name, blankToNull(repoUrl))));
-    }
+		Project project = findOrCreateProject(meta.project(), meta.repoUrl());
+		TestRun run = new TestRun(project, blankToNull(meta.branch()), blankToNull(meta.commit()),
+				blankToNull(meta.buildUrl()), blankToNull(meta.ciProvider()));
 
-    private JUnitResults parseJUnit(List<Supplier<InputStream>> streams) {
-        List<ParsedSuite> all = new ArrayList<>();
-        for (Supplier<InputStream> supplier : streams) {
-            try (InputStream in = supplier.get()) {
-                all.addAll(junitParser.parse(in).suites());
-            } catch (IOException e) {
-                throw new IngestException("Failed reading JUnit upload: " + e.getMessage(), e);
-            }
-        }
-        return new JUnitResults(all);
-    }
+		JUnitResults merged = parseJUnit(junitStreams);
+		run.applyTotals(merged.passed(), merged.failures(), merged.errors(), merged.skipped(), merged.durationMs());
+		runs.save(run);
 
-    private void persistTests(TestRun run, JUnitResults merged) {
-        List<TestSuiteResult> suiteRows = new ArrayList<>();
-        List<TestCaseResult> caseRows = new ArrayList<>();
-        for (ParsedSuite suite : merged.suites()) {
-            suiteRows.add(new TestSuiteResult(run, suite.name(), suite.tests(), suite.failures(),
-                    suite.errors(), suite.skipped(), suite.durationMs()));
-            for (ParsedCase c : suite.cases()) {
-                TestCaseResult row = new TestCaseResult(run, c.suiteName(), c.className(), c.name(),
-                        c.status(), c.durationMs());
-                if (c.failureMessage() != null || c.failureStacktrace() != null || c.failureType() != null) {
-                    row.setFailure(c.failureType(), c.failureMessage(), c.failureStacktrace());
-                }
-                caseRows.add(row);
-            }
-        }
-        suites.saveAll(suiteRows);
-        cases.saveAll(caseRows);
-    }
+		persistTests(run, merged);
 
-    private CoverageResults parseCoverage(List<Supplier<InputStream>> streams) {
-        // Merge multiple JaCoCo reports by summing counters and concatenating file rows.
-        int lc = 0, lm = 0, bc = 0, bm = 0, ic = 0, im = 0, mc = 0, mm = 0;
-        List<CoverageResults.ParsedFileCoverage> files = new ArrayList<>();
-        for (Supplier<InputStream> supplier : streams) {
-            try (InputStream in = supplier.get()) {
-                CoverageResults r = jacocoParser.parse(in);
-                lc += r.lineCovered();
-                lm += r.lineMissed();
-                bc += r.branchCovered();
-                bm += r.branchMissed();
-                ic += r.instructionCovered();
-                im += r.instructionMissed();
-                mc += r.methodCovered();
-                mm += r.methodMissed();
-                files.addAll(r.files());
-            } catch (IOException e) {
-                throw new IngestException("Failed reading JaCoCo upload: " + e.getMessage(), e);
-            }
-        }
-        return new CoverageResults(lc, lm, bc, bm, ic, im, mc, mm, files);
-    }
+		if (!jacocoStreams.isEmpty()) {
+			persistCoverage(run, parseCoverage(jacocoStreams));
+			runs.save(run);
+		}
 
-    private void persistCoverage(TestRun run, CoverageResults cov) {
-        CoverageReport report = new CoverageReport(run);
-        report.setCounters(cov.lineCovered(), cov.lineMissed(), cov.branchCovered(), cov.branchMissed(),
-                cov.instructionCovered(), cov.instructionMissed(), cov.methodCovered(), cov.methodMissed());
-        coverageReports.save(report);
+		log.info("Ingested run {} for project '{}' ({} tests, {} failed, {} errors)", run.getId(), project.getName(),
+				run.getTotalTests(), run.getFailed(), run.getErrors());
+		return run;
+	}
 
-        List<CoverageFileEntry> fileRows = new ArrayList<>();
-        for (CoverageResults.ParsedFileCoverage f : cov.files()) {
-            fileRows.add(new CoverageFileEntry(report, f.packageName(), f.fileName(),
-                    f.lineCovered(), f.lineMissed(), f.branchCovered(), f.branchMissed()));
-        }
-        coverageFiles.saveAll(fileRows);
+	private Project findOrCreateProject(String name, String repoUrl) {
+		return projects.findByName(name).map((existing) -> {
+			if (repoUrl != null && !repoUrl.isBlank() && existing.getRepoUrl() == null) {
+				existing.setRepoUrl(repoUrl);
+			}
+			return existing;
+		}).orElseGet(() -> projects.save(new Project(name, blankToNull(repoUrl))));
+	}
 
-        run.setLineCoveragePct(report.getLinePct());
-        run.setBranchCoveragePct(report.getBranchPct());
-    }
+	private JUnitResults parseJUnit(List<Supplier<InputStream>> streams) {
+		List<ParsedSuite> all = new ArrayList<>();
+		for (Supplier<InputStream> supplier : streams) {
+			try (InputStream in = supplier.get()) {
+				all.addAll(junitParser.parse(in).suites());
+			}
+			catch (IOException ex) {
+				throw new IngestException("Failed reading JUnit upload: " + ex.getMessage(), ex);
+			}
+		}
+		return new JUnitResults(all);
+	}
 
-    private static String blankToNull(String value) {
-        return (value == null || value.isBlank()) ? null : value.trim();
-    }
+	private void persistTests(TestRun run, JUnitResults merged) {
+		List<TestSuiteResult> suiteRows = new ArrayList<>();
+		List<TestCaseResult> caseRows = new ArrayList<>();
+		for (ParsedSuite suite : merged.suites()) {
+			suiteRows.add(new TestSuiteResult(run, suite.name(), suite.tests(), suite.failures(), suite.errors(),
+					suite.skipped(), suite.durationMs()));
+			for (ParsedCase c : suite.cases()) {
+				TestCaseResult row = new TestCaseResult(run, c.suiteName(), c.className(), c.name(), c.status(),
+						c.durationMs());
+				if (c.failureMessage() != null || c.failureStacktrace() != null || c.failureType() != null) {
+					row.setFailure(c.failureType(), c.failureMessage(), c.failureStacktrace());
+				}
+				caseRows.add(row);
+			}
+		}
+		suites.saveAll(suiteRows);
+		cases.saveAll(caseRows);
+	}
+
+	private CoverageResults parseCoverage(List<Supplier<InputStream>> streams) {
+		// Merge multiple JaCoCo reports by summing counters and concatenating file rows.
+		int lc = 0;
+		int lm = 0;
+		int bc = 0;
+		int bm = 0;
+		int ic = 0;
+		int im = 0;
+		int mc = 0;
+		int mm = 0;
+		List<CoverageResults.ParsedFileCoverage> files = new ArrayList<>();
+		for (Supplier<InputStream> supplier : streams) {
+			try (InputStream in = supplier.get()) {
+				CoverageResults r = jacocoParser.parse(in);
+				lc += r.lineCovered();
+				lm += r.lineMissed();
+				bc += r.branchCovered();
+				bm += r.branchMissed();
+				ic += r.instructionCovered();
+				im += r.instructionMissed();
+				mc += r.methodCovered();
+				mm += r.methodMissed();
+				files.addAll(r.files());
+			}
+			catch (IOException ex) {
+				throw new IngestException("Failed reading JaCoCo upload: " + ex.getMessage(), ex);
+			}
+		}
+		return new CoverageResults(lc, lm, bc, bm, ic, im, mc, mm, files);
+	}
+
+	private void persistCoverage(TestRun run, CoverageResults cov) {
+		CoverageReport report = new CoverageReport(run);
+		report.setCounters(cov.lineCovered(), cov.lineMissed(), cov.branchCovered(), cov.branchMissed(),
+				cov.instructionCovered(), cov.instructionMissed(), cov.methodCovered(), cov.methodMissed());
+		coverageReports.save(report);
+
+		List<CoverageFileEntry> fileRows = new ArrayList<>();
+		for (CoverageResults.ParsedFileCoverage f : cov.files()) {
+			fileRows.add(new CoverageFileEntry(report, f.packageName(), f.fileName(), f.lineCovered(), f.lineMissed(),
+					f.branchCovered(), f.branchMissed()));
+		}
+		coverageFiles.saveAll(fileRows);
+
+		run.setLineCoveragePct(report.getLinePct());
+		run.setBranchCoveragePct(report.getBranchPct());
+	}
+
+	private static String blankToNull(String value) {
+		return (value == null || value.isBlank()) ? null : value.trim();
+	}
+
 }

@@ -7,5 +7,6 @@ import java.util.List;
 
 public interface TestSuiteResultRepository extends JpaRepository<TestSuiteResult, Long> {
 
-    List<TestSuiteResult> findByRunIdOrderByNameAsc(Long runId);
+	List<TestSuiteResult> findByRunIdOrderByNameAsc(Long runId);
+
 }

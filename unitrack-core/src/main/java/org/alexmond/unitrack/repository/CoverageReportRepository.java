@@ -7,5 +7,6 @@ import java.util.Optional;
 
 public interface CoverageReportRepository extends JpaRepository<CoverageReport, Long> {
 
-    Optional<CoverageReport> findByRunId(Long runId);
+	Optional<CoverageReport> findByRunId(Long runId);
+
 }

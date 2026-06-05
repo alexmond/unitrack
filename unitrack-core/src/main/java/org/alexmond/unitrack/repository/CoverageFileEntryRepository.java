@@ -7,5 +7,6 @@ import java.util.List;
 
 public interface CoverageFileEntryRepository extends JpaRepository<CoverageFileEntry, Long> {
 
-    List<CoverageFileEntry> findByReportIdOrderByLineMissedDescPackageNameAsc(Long reportId);
+	List<CoverageFileEntry> findByReportIdOrderByLineMissedDescPackageNameAsc(Long reportId);
+
 }

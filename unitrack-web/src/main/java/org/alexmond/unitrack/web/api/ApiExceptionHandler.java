@@ -10,10 +10,11 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class ApiExceptionHandler {
 
-    @ExceptionHandler(IngestException.class)
-    public ProblemDetail handleIngest(IngestException ex) {
-        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
-        problem.setTitle("Invalid report upload");
-        return problem;
-    }
+	@ExceptionHandler(IngestException.class)
+	public ProblemDetail handleIngest(IngestException ex) {
+		ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+		problem.setTitle("Invalid report upload");
+		return problem;
+	}
+
 }

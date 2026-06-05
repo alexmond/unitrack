@@ -13,6 +13,7 @@ import org.alexmond.unitrack.repository.ProjectRepository;
 import org.alexmond.unitrack.repository.TestCaseResultRepository;
 import org.alexmond.unitrack.repository.TestRunRepository;
 import org.alexmond.unitrack.repository.TestSuiteResultRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,72 +24,68 @@ import java.util.Optional;
 /** Read-side queries shared by the REST API and the web dashboard. */
 @Service
 @Transactional(readOnly = true)
+@RequiredArgsConstructor
 public class ReportingService {
 
-    private final ProjectRepository projects;
-    private final TestRunRepository runs;
-    private final TestSuiteResultRepository suites;
-    private final TestCaseResultRepository cases;
-    private final CoverageReportRepository coverageReports;
-    private final CoverageFileEntryRepository coverageFiles;
+	private final ProjectRepository projects;
 
-    public ReportingService(ProjectRepository projects, TestRunRepository runs,
-                            TestSuiteResultRepository suites, TestCaseResultRepository cases,
-                            CoverageReportRepository coverageReports, CoverageFileEntryRepository coverageFiles) {
-        this.projects = projects;
-        this.runs = runs;
-        this.suites = suites;
-        this.cases = cases;
-        this.coverageReports = coverageReports;
-        this.coverageFiles = coverageFiles;
-    }
+	private final TestRunRepository runs;
 
-    public List<Project> listProjects() {
-        return projects.findAllByOrderByNameAsc();
-    }
+	private final TestSuiteResultRepository suites;
 
-    public Optional<Project> findProject(Long id) {
-        return projects.findById(id);
-    }
+	private final TestCaseResultRepository cases;
 
-    public long runCount(Long projectId) {
-        return runs.countByProjectId(projectId);
-    }
+	private final CoverageReportRepository coverageReports;
 
-    /** Most recent runs first — for run lists. */
-    public List<TestRun> recentRuns(Long projectId, int limit) {
-        return runs.findByProjectIdOrderByCreatedAtDesc(projectId, PageRequest.ofSize(limit));
-    }
+	private final CoverageFileEntryRepository coverageFiles;
 
-    /** Oldest first — for trend charts. */
-    public List<TestRun> trendRuns(Long projectId, int limit) {
-        List<TestRun> recent = runs.findByProjectIdOrderByCreatedAtDesc(projectId, PageRequest.ofSize(limit));
-        return recent.reversed();
-    }
+	public List<Project> listProjects() {
+		return projects.findAllByOrderByNameAsc();
+	}
 
-    public Optional<TestRun> findRun(Long id) {
-        return runs.findById(id);
-    }
+	public Optional<Project> findProject(Long id) {
+		return projects.findById(id);
+	}
 
-    public List<TestSuiteResult> suitesFor(Long runId) {
-        return suites.findByRunIdOrderByNameAsc(runId);
-    }
+	public long runCount(Long projectId) {
+		return runs.countByProjectId(projectId);
+	}
 
-    public List<TestCaseResult> failedCasesFor(Long runId) {
-        return cases.findByRunIdAndStatusInOrderByClassNameAscNameAsc(
-                runId, List.of(TestStatus.FAILED, TestStatus.ERROR));
-    }
+	/** Most recent runs first — for run lists. */
+	public List<TestRun> recentRuns(Long projectId, int limit) {
+		return runs.findByProjectIdOrderByCreatedAtDesc(projectId, PageRequest.ofSize(limit));
+	}
 
-    public List<TestCaseResult> allCasesFor(Long runId) {
-        return cases.findByRunIdOrderByStatusAscClassNameAscNameAsc(runId);
-    }
+	/** Oldest first — for trend charts. */
+	public List<TestRun> trendRuns(Long projectId, int limit) {
+		List<TestRun> recent = runs.findByProjectIdOrderByCreatedAtDesc(projectId, PageRequest.ofSize(limit));
+		return recent.reversed();
+	}
 
-    public Optional<CoverageReport> coverageFor(Long runId) {
-        return coverageReports.findByRunId(runId);
-    }
+	public Optional<TestRun> findRun(Long id) {
+		return runs.findById(id);
+	}
 
-    public List<CoverageFileEntry> coverageFiles(Long reportId, int limit) {
-        List<CoverageFileEntry> all = coverageFiles.findByReportIdOrderByLineMissedDescPackageNameAsc(reportId);
-        return all.size() > limit ? all.subList(0, limit) : all;
-    }
+	public List<TestSuiteResult> suitesFor(Long runId) {
+		return suites.findByRunIdOrderByNameAsc(runId);
+	}
+
+	public List<TestCaseResult> failedCasesFor(Long runId) {
+		return cases.findByRunIdAndStatusInOrderByClassNameAscNameAsc(runId,
+				List.of(TestStatus.FAILED, TestStatus.ERROR));
+	}
+
+	public List<TestCaseResult> allCasesFor(Long runId) {
+		return cases.findByRunIdOrderByStatusAscClassNameAscNameAsc(runId);
+	}
+
+	public Optional<CoverageReport> coverageFor(Long runId) {
+		return coverageReports.findByRunId(runId);
+	}
+
+	public List<CoverageFileEntry> coverageFiles(Long reportId, int limit) {
+		List<CoverageFileEntry> all = coverageFiles.findByReportIdOrderByLineMissedDescPackageNameAsc(reportId);
+		return (all.size() > limit) ? all.subList(0, limit) : all;
+	}
+
 }

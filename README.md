@@ -106,6 +106,20 @@ into your project and set a `UNITRACK_URL` repository variable.
 The boot jar is produced at `unitrack-web/target/unitrack.jar`. Each module also emits a JaCoCo
 report at `<module>/target/site/jacoco/jacoco.xml` — UniTrack can ingest its own coverage.
 
+### Code quality
+
+Mirroring [`jhelm`](https://github.com/alexmond/jhelm), the build enforces quality gates in the
+`validate` phase and uses Lombok to cut boilerplate:
+
+- **spring-javaformat** — Spring code style. Run `./mvnw spring-javaformat:apply` to auto-format.
+- **Checkstyle** — `SpringChecks` plus file/method length limits (`checkstyle.xml`, `checkstyle-suppressions.xml`).
+- **PMD** — `pmd-ruleset.xml`.
+- **Lombok** — `@Getter`/`@Setter`/`@NoArgsConstructor` on entities, `@RequiredArgsConstructor`/`@Slf4j` on services.
+- **JaCoCo** — XML + HTML coverage reports per module.
+
+Releasing (signed artifacts to Maven Central) is wired behind the `release` profile
+(`./mvnw -Prelease deploy`) and requires a GPG key and Central credentials; it is inert otherwise.
+
 ## Roadmap
 
 See the [epic and issues](https://github.com/alexmond/unitrack/issues) and the

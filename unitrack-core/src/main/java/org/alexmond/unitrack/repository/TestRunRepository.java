@@ -8,9 +8,10 @@ import java.util.List;
 
 public interface TestRunRepository extends JpaRepository<TestRun, Long> {
 
-    List<TestRun> findByProjectIdOrderByCreatedAtDesc(Long projectId, Pageable pageable);
+	List<TestRun> findByProjectIdOrderByCreatedAtDesc(Long projectId, Pageable pageable);
 
-    List<TestRun> findByProjectIdOrderByCreatedAtAsc(Long projectId, Pageable pageable);
+	List<TestRun> findByProjectIdOrderByCreatedAtAsc(Long projectId, Pageable pageable);
 
-    long countByProjectId(Long projectId);
+	long countByProjectId(Long projectId);
+
 }

@@ -38,6 +38,12 @@
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+
         <!-- Database migrations (Flyway auto-config lives in its own module in Spring Boot 4) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

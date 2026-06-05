@@ -4,6 +4,7 @@ import org.alexmond.unitrack.domain.TestRun;
 import org.alexmond.unitrack.ingest.IngestException;
 import org.alexmond.unitrack.ingest.IngestRequest;
 import org.alexmond.unitrack.ingest.IngestService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -30,47 +31,42 @@ import java.util.function.Supplier;
  */
 @RestController
 @RequestMapping("/api/v1")
+@RequiredArgsConstructor
 public class IngestController {
 
-    private final IngestService ingestService;
+	private final IngestService ingestService;
 
-    public IngestController(IngestService ingestService) {
-        this.ingestService = ingestService;
-    }
+	@PostMapping(path = "/ingest", consumes = "multipart/form-data")
+	public ResponseEntity<ApiResponses.IngestResultJson> ingest(@RequestParam String project,
+			@RequestParam(required = false) String repoUrl, @RequestParam(required = false) String branch,
+			@RequestParam(required = false) String commit, @RequestParam(required = false) String buildUrl,
+			@RequestParam(required = false) String ciProvider, @RequestParam(name = "junit") List<MultipartFile> junit,
+			@RequestParam(name = "jacoco", required = false) List<MultipartFile> jacoco) {
 
-    @PostMapping(path = "/ingest", consumes = "multipart/form-data")
-    public ResponseEntity<ApiResponses.IngestResultJson> ingest(
-            @RequestParam String project,
-            @RequestParam(required = false) String repoUrl,
-            @RequestParam(required = false) String branch,
-            @RequestParam(required = false) String commit,
-            @RequestParam(required = false) String buildUrl,
-            @RequestParam(required = false) String ciProvider,
-            @RequestParam(name = "junit") List<MultipartFile> junit,
-            @RequestParam(name = "jacoco", required = false) List<MultipartFile> jacoco) {
+		IngestRequest meta = new IngestRequest(project, repoUrl, branch, commit, buildUrl, ciProvider);
+		TestRun run = ingestService.ingest(meta, toSuppliers(junit), toSuppliers(jacoco));
+		return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponses.IngestResultJson.of(run));
+	}
 
-        IngestRequest meta = new IngestRequest(project, repoUrl, branch, commit, buildUrl, ciProvider);
-        TestRun run = ingestService.ingest(meta, toSuppliers(junit), toSuppliers(jacoco));
-        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponses.IngestResultJson.of(run));
-    }
+	private static List<Supplier<InputStream>> toSuppliers(List<MultipartFile> files) {
+		List<Supplier<InputStream>> suppliers = new ArrayList<>();
+		if (files == null) {
+			return suppliers;
+		}
+		for (MultipartFile file : files) {
+			if (file == null || file.isEmpty()) {
+				continue;
+			}
+			suppliers.add(() -> {
+				try {
+					return file.getInputStream();
+				}
+				catch (IOException ex) {
+					throw new IngestException("Could not read upload '" + file.getOriginalFilename() + "'", ex);
+				}
+			});
+		}
+		return suppliers;
+	}
 
-    private static List<Supplier<InputStream>> toSuppliers(List<MultipartFile> files) {
-        List<Supplier<InputStream>> suppliers = new ArrayList<>();
-        if (files == null) {
-            return suppliers;
-        }
-        for (MultipartFile file : files) {
-            if (file == null || file.isEmpty()) {
-                continue;
-            }
-            suppliers.add(() -> {
-                try {
-                    return file.getInputStream();
-                } catch (IOException e) {
-                    throw new IngestException("Could not read upload '" + file.getOriginalFilename() + "'", e);
-                }
-            });
-        }
-        return suppliers;
-    }
 }

@@ -8,7 +8,8 @@ import java.util.List;
 
 public interface TestCaseResultRepository extends JpaRepository<TestCaseResult, Long> {
 
-    List<TestCaseResult> findByRunIdOrderByStatusAscClassNameAscNameAsc(Long runId);
+	List<TestCaseResult> findByRunIdOrderByStatusAscClassNameAscNameAsc(Long runId);
 
-    List<TestCaseResult> findByRunIdAndStatusInOrderByClassNameAscNameAsc(Long runId, List<TestStatus> statuses);
+	List<TestCaseResult> findByRunIdAndStatusInOrderByClassNameAscNameAsc(Long runId, List<TestStatus> statuses);
+
 }
