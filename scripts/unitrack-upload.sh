@@ -18,7 +18,7 @@
 set -euo pipefail
 
 URL="${UNITRACK_URL:-http://localhost:8080}"
-PROJECT="" BRANCH="" COMMIT="" BUILD="" REPO="" FLAG="" CI_PROVIDER="${UNITRACK_CI:-}"
+PROJECT="" BRANCH="" COMMIT="" BUILD="" REPO="" FLAG="" RUN_KEY="" CI_PROVIDER="${UNITRACK_CI:-}"
 JUNIT_GLOBS=()
 JACOCO_GLOBS=()
 
@@ -27,6 +27,7 @@ while [[ $# -gt 0 ]]; do
     --project)  PROJECT="$2"; shift 2 ;;
     --branch)   BRANCH="$2"; shift 2 ;;
     --flag)     FLAG="$2"; shift 2 ;;
+    --run-key)  RUN_KEY="$2"; shift 2 ;;
     --commit)   COMMIT="$2"; shift 2 ;;
     --build)    BUILD="$2"; shift 2 ;;
     --repo)     REPO="$2"; shift 2 ;;
@@ -47,6 +48,7 @@ fi
 FORM=(-F "project=$PROJECT")
 [[ -n "$BRANCH" ]]      && FORM+=(-F "branch=$BRANCH")
 [[ -n "$FLAG" ]]        && FORM+=(-F "flag=$FLAG")
+[[ -n "$RUN_KEY" ]]     && FORM+=(-F "runKey=$RUN_KEY")
 [[ -n "$COMMIT" ]]      && FORM+=(-F "commit=$COMMIT")
 [[ -n "$BUILD" ]]       && FORM+=(-F "buildUrl=$BUILD")
 [[ -n "$REPO" ]]        && FORM+=(-F "repoUrl=$REPO")

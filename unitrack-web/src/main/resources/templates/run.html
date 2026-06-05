@@ -20,6 +20,7 @@
         flag <code class="mono" th:text="${run.flag}">default</code> ·
         <code class="mono" th:text="${run.shortSha} ?: '—'">abc1234</code> ·
         <span th:text="${#temporals.format(run.createdAt, 'yyyy-MM-dd HH:mm')}">date</span>
+        <span th:if="${run.uploads > 1}" class="muted" th:text="'· merged from ' + ${run.uploads} + ' uploads'"></span>
         <a th:if="${run.buildUrl != null}" th:href="${run.buildUrl}">· build</a>
     </p>
 

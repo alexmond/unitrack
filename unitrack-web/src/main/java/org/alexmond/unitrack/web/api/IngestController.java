@@ -48,10 +48,10 @@ public class IngestController {
 			@RequestParam(required = false) String repoUrl, @RequestParam(required = false) String branch,
 			@RequestParam(required = false) String flag, @RequestParam(required = false) String commit,
 			@RequestParam(required = false) String buildUrl, @RequestParam(required = false) String ciProvider,
-			@RequestParam(name = "junit") List<MultipartFile> junit,
+			@RequestParam(required = false) String runKey, @RequestParam(name = "junit") List<MultipartFile> junit,
 			@RequestParam(name = "jacoco", required = false) List<MultipartFile> jacoco) {
 
-		IngestRequest meta = new IngestRequest(project, repoUrl, branch, flag, commit, buildUrl, ciProvider);
+		IngestRequest meta = new IngestRequest(project, repoUrl, branch, flag, commit, buildUrl, ciProvider, runKey);
 		TestRun run = ingestService.ingest(meta, toSuppliers(junit), toSuppliers(jacoco));
 		publishGitHubStatus(run);
 		return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponses.IngestResultJson.of(run));

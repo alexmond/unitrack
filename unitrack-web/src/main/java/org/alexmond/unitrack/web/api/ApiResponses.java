@@ -24,13 +24,13 @@ public interface ApiResponses {
 
 	public record RunJson(Long id, Long projectId, String branch, String flag, String commit, String buildUrl,
 			Instant createdAt, int total, int passed, int failed, int errors, int skipped, long durationMs,
-			String status, double passRate, Double lineCoveragePct, Double branchCoveragePct) {
+			String status, double passRate, Double lineCoveragePct, Double branchCoveragePct, int uploads) {
 
 		public static RunJson of(TestRun r) {
 			return new RunJson(r.getId(), r.getProject().getId(), r.getBranch(), r.getFlag(), r.getCommitSha(),
 					r.getBuildUrl(), r.getCreatedAt(), r.getTotalTests(), r.getPassed(), r.getFailed(), r.getErrors(),
 					r.getSkipped(), r.getDurationMs(), r.getStatus(), r.passRate(), r.getLineCoveragePct(),
-					r.getBranchCoveragePct());
+					r.getBranchCoveragePct(), r.getUploads());
 		}
 	}
 
@@ -68,10 +68,11 @@ public interface ApiResponses {
 	}
 
 	public record IngestResultJson(Long runId, Long projectId, String project, int total, int passed, int failed,
-			int errors, int skipped, String status, Double lineCoveragePct) {
+			int errors, int skipped, String status, Double lineCoveragePct, int uploads) {
 		public static IngestResultJson of(TestRun r) {
 			return new IngestResultJson(r.getId(), r.getProject().getId(), r.getProject().getName(), r.getTotalTests(),
-					r.getPassed(), r.getFailed(), r.getErrors(), r.getSkipped(), r.getStatus(), r.getLineCoveragePct());
+					r.getPassed(), r.getFailed(), r.getErrors(), r.getSkipped(), r.getStatus(), r.getLineCoveragePct(),
+					r.getUploads());
 		}
 	}
 

@@ -80,6 +80,15 @@ public class TestRun {
 	@Column(name = "branch_coverage_pct")
 	private Double branchCoveragePct;
 
+	/** Merge key for sharded uploads (e.g. a CI build id); null = standalone run. */
+	@Setter
+	@Column(name = "run_key")
+	private String runKey;
+
+	/** Number of uploads merged into this run. */
+	@Column(nullable = false)
+	private int uploads = 1;
+
 	public TestRun(Project project, String branch, String flag, String commitSha, String buildUrl, String ciProvider) {
 		this.project = project;
 		this.branch = branch;
@@ -97,6 +106,18 @@ public class TestRun {
 		this.totalTests = passed + failed + errors + skipped;
 		this.durationMs = durationMs;
 		this.status = ((failed + errors) == 0) ? "PASSED" : "FAILED";
+	}
+
+	/** Accumulates another upload's totals into this run (sharded/merged ingest). */
+	public void addTotals(int passed, int failed, int errors, int skipped, long durationMs) {
+		this.passed += passed;
+		this.failed += failed;
+		this.errors += errors;
+		this.skipped += skipped;
+		this.totalTests += passed + failed + errors + skipped;
+		this.durationMs += durationMs;
+		this.status = ((this.failed + this.errors) == 0) ? "PASSED" : "FAILED";
+		this.uploads += 1;
 	}
 
 	public double passRate() {
