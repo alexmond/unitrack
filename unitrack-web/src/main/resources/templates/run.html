@@ -31,6 +31,23 @@
         <div class="stat" th:if="${coverage != null}"><div class="label">Line cov</div><div class="value" style="color:var(--blue)" th:text="${#numbers.formatDecimal(coverage.linePct,1,1)} + '%'">0%</div></div>
     </div>
 
+    <div th:if="${gate != null and !gate.rules().isEmpty()}" class="gate"
+         th:classappend="${gate.passed()} ? 'gate-pass' : 'gate-fail'">
+        <div class="gate-head">
+            Quality gate
+            <span class="badge" th:classappend="${gate.passed()} ? 'pass' : 'fail'"
+                  th:text="${gate.status()}">PASSED</span>
+        </div>
+        <ul class="gate-rules">
+            <li th:each="r : ${gate.rules()}">
+                <span th:text="${r.passed()} ? '✓' : '✗'"
+                      th:style="${r.passed()} ? 'color:var(--green)' : 'color:var(--red)'">✓</span>
+                <code class="mono" th:text="${r.name()}">rule</code>
+                <span class="muted" th:text="' — ' + ${r.detail()}">detail</span>
+            </li>
+        </ul>
+    </div>
+
     <h2>Failures <span class="muted" th:text="'(' + ${failures.size()} + ')'">(0)</span></h2>
     <div th:if="${failures.isEmpty()}" class="empty">No failed tests. 🎉</div>
     <div th:each="c : ${failures}">
