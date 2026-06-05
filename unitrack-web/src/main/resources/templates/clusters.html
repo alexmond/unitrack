@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/common :: head('UniTrack — Failure clusters: ' + ${project.name})}"></head>
+<body>
+<header th:replace="~{fragments/common :: topbar}"></header>
+
+<main class="container">
+    <p class="crumbs">
+        <a th:href="@{/}">Projects</a> /
+        <a th:href="@{/projects/{id}(id=${project.id})}" th:text="${project.name}">project</a> /
+        Failure clusters
+    </p>
+    <h1>Failure clusters</h1>
+    <p class="muted">Recent failures grouped by a normalized signature (type, message, top stack frame) — most frequent first.</p>
+
+    <div th:if="${clusters.isEmpty()}" class="empty">No recent failures to cluster. 🎉</div>
+
+    <div th:each="c : ${clusters}" class="cluster">
+        <details class="failure">
+            <summary>
+                <span class="badge fail" th:text="${c.occurrences()} + '×'">3×</span>
+                <code class="mono" th:text="${c.failureType()} ?: 'failure'">java.lang.AssertionError</code>
+                <span class="muted" th:if="${c.sampleMessage() != null}" th:text="' — ' + ${c.sampleMessage()}"></span>
+                <span class="muted" th:text="' · ' + ${c.distinctTests()} + ' test(s)'"></span>
+            </summary>
+            <div class="cluster-body">
+                <div class="muted" th:if="${c.lastSeen() != null}"
+                     th:text="'Last seen ' + ${#temporals.format(c.lastSeen(), 'yyyy-MM-dd HH:mm')}">last seen</div>
+                <ul>
+                    <li th:each="t : ${c.tests()}"><code class="mono" th:text="${t}">Test#method</code></li>
+                </ul>
+                <details>
+                    <summary class="muted">signature</summary>
+                    <pre th:text="${c.signature()}">sig</pre>
+                </details>
+            </div>
+        </details>
+    </div>
+</main>
+</body>
+</html>

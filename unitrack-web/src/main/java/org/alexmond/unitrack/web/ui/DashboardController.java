@@ -3,6 +3,7 @@ package org.alexmond.unitrack.web.ui;
 import org.alexmond.unitrack.domain.CoverageReport;
 import org.alexmond.unitrack.domain.Project;
 import org.alexmond.unitrack.domain.TestRun;
+import org.alexmond.unitrack.report.FailureClusteringService;
 import org.alexmond.unitrack.report.QualityGateService;
 import org.alexmond.unitrack.report.ReportingService;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +36,8 @@ public class DashboardController {
 
 	private final QualityGateService qualityGate;
 
+	private final FailureClusteringService clustering;
+
 	@GetMapping("/")
 	public String index(Model model) {
 		List<Project> projects = reporting.listProjects();
@@ -64,6 +67,15 @@ public class DashboardController {
 		model.addAttribute("trendPassRate", toJson(trend.stream().map((r) -> round(r.passRate())).toList()));
 		model.addAttribute("trendCoverage", toJson(trend.stream().map(TestRun::getLineCoveragePct).toList()));
 		return "project";
+	}
+
+	@GetMapping("/projects/{id}/clusters")
+	public String clusters(@PathVariable Long id, Model model) {
+		Project project = reporting.findProject(id)
+			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found"));
+		model.addAttribute("project", project);
+		model.addAttribute("clusters", clustering.cluster(id));
+		return "clusters";
 	}
 
 	@GetMapping("/runs/{id}")
