@@ -58,6 +58,10 @@
                 <span class="badge" th:classappend="${c.status.name() == 'ERROR'} ? 'error' : 'fail'"
                       th:text="${c.status}">FAILED</span>
                 <code class="mono" th:text="${c.className} + '#' + ${c.name}">Test#method</code>
+                <span class="badge"
+                      th:if="${categories.get(c.id) != null and categories.get(c.id) != 'untriaged'}"
+                      style="background:rgba(68,147,248,.15);color:var(--blue)"
+                      th:text="${categories.get(c.id)}">category</span>
                 <span class="muted" th:if="${c.failureMessage != null}" th:text="' — ' + ${c.failureMessage}"></span>
             </summary>
             <pre th:if="${c.failureStacktrace != null}" th:text="${c.failureStacktrace}">stacktrace</pre>
