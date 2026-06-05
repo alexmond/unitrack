@@ -127,6 +127,9 @@ public class IngestService {
 				if (c.failureMessage() != null || c.failureStacktrace() != null || c.failureType() != null) {
 					row.setFailure(c.failureType(), c.failureMessage(), c.failureStacktrace());
 				}
+				if (c.systemOut() != null || c.systemErr() != null || !c.attachments().isEmpty()) {
+					row.setOutputs(c.systemOut(), c.systemErr(), c.attachments());
+				}
 				caseRows.add(row);
 			}
 		}
