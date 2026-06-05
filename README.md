@@ -179,6 +179,19 @@ Override the tag or publish to a registry:
 The image pins `BP_JVM_VERSION` to the project's Java version. Only `unitrack-web` produces an
 image; the profile is inert for normal builds.
 
+Sample Compose stacks live in [`deploy/`](deploy) (build the image first):
+
+```bash
+# Full stack — app + PostgreSQL (production-style):
+docker compose -f deploy/compose.postgres.yaml up -d        # cp deploy/.env.example deploy/.env to customize
+
+# Standalone — app on embedded H2, no external DB (quick demo):
+docker compose -f deploy/compose.h2.yaml up -d
+```
+
+H2 is a `runtime` dependency so the same image runs on either backend — Postgres is the default;
+it only uses H2 when `UNITRACK_DB_URL` points at an `h2:` URL (as the H2 compose does).
+
 ### Code quality
 
 Mirroring [`jhelm`](https://github.com/alexmond/jhelm), the build enforces quality gates in the

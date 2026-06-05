@@ -1,0 +1,45 @@
+# UniTrack full stack: the app image + PostgreSQL (production-style).
+#
+#   1. Build the image:  ./mvnw -Pdocker -pl unitrack-web -am package
+#   2. (optional) config: cp deploy/.env.example deploy/.env  and edit
+#   3. Run:              docker compose -f deploy/compose.postgres.yaml --env-file deploy/.env up -d
+#
+# App: http://localhost:8080   ·   Health: http://localhost:8080/actuator/health
+
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-unitrack}
+      POSTGRES_USER: ${POSTGRES_USER:-unitrack}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-unitrack}
+    volumes:
+      - unitrack-pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-unitrack} -d ${POSTGRES_DB:-unitrack}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  unitrack:
+    image: ${UNITRACK_IMAGE:-unitrack:0.1.0-SNAPSHOT}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      UNITRACK_DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-unitrack}
+      UNITRACK_DB_USER: ${POSTGRES_USER:-unitrack}
+      UNITRACK_DB_PASSWORD: ${POSTGRES_PASSWORD:-unitrack}
+      # The app's dev-time Docker Compose support must be off inside the container.
+      SPRING_DOCKER_COMPOSE_ENABLED: "false"
+      # Optional GitHub commit-status integration (see deploy/.env.example):
+      # UNITRACK_GITHUB_ENABLED: "true"
+      # UNITRACK_GITHUB_TOKEN: ${UNITRACK_GITHUB_TOKEN:-}
+      # UNITRACK_GITHUB_SERVERBASEURL: http://localhost:8080
+    ports:
+      - "${UNITRACK_PORT:-8080}:8080"
+    restart: unless-stopped
+
+volumes:
+  unitrack-pg:

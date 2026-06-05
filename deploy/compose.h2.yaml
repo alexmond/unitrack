@@ -1,0 +1,27 @@
+# UniTrack standalone: the app on embedded H2, no external database.
+# Good for a quick demo/eval. Data persists in a named volume.
+#
+#   1. Build the image:  ./mvnw -Pdocker -pl unitrack-web -am package
+#   2. Run:              docker compose -f deploy/compose.h2.yaml up -d
+#
+# App: http://localhost:8080   ·   Health: http://localhost:8080/actuator/health
+#
+# Note: H2 is fine for evaluation; use the Postgres compose for anything real.
+
+services:
+  unitrack:
+    image: ${UNITRACK_IMAGE:-unitrack:0.1.0-SNAPSHOT}
+    environment:
+      # File-backed H2 in PostgreSQL-compatibility mode (matches the Flyway migrations).
+      UNITRACK_DB_URL: "jdbc:h2:file:/data/unitrack;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE"
+      UNITRACK_DB_USER: sa
+      UNITRACK_DB_PASSWORD: ""
+      SPRING_DOCKER_COMPOSE_ENABLED: "false"
+    volumes:
+      - unitrack-h2:/data
+    ports:
+      - "${UNITRACK_PORT:-8080}:8080"
+    restart: unless-stopped
+
+volumes:
+  unitrack-h2:
