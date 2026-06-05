@@ -20,6 +20,8 @@ Built with **Spring Boot 4** and **Java 21**, as a multi-module Maven project (`
 - **Trends & history** — pass-rate and line-coverage trend charts per project; full run history.
 - **Flaky-test detection** — flags tests that both passed and failed for the same commit, with
   failure-rate and flaky-commit metrics and a quarantine toggle.
+- **Quality gate** — PASS/FAIL verdict per run: minimum coverage, coverage drop vs the baseline
+  branch, and new test failures relative to the baseline (quarantined flaky tests are excluded).
 - **Dashboard** — server-rendered Thymeleaf UI: projects → runs → run detail (failures with
   stacktraces, suite breakdown, coverage by file).
 - **REST API** — JSON endpoints for projects, runs, and run detail.
@@ -99,6 +101,20 @@ into your project and set a `UNITRACK_URL` repository variable.
 | `GET`  | `/api/v1/runs/{id}` | Run detail: totals, suites, failures, coverage |
 | `GET`  | `/api/v1/projects/{id}/flaky` | Detected flaky tests with metrics + quarantine state |
 | `POST` | `/api/v1/projects/{id}/flaky/status` | Set a test's state (`ACTIVE`/`QUARANTINED`/`RESOLVED`) |
+| `GET`  | `/api/v1/runs/{id}/quality-gate` | Evaluate the quality gate for a run (PASS/FAIL + per-rule detail) |
+
+### Quality gate configuration
+
+Tune via `unitrack.quality-gate.*` (defaults shown):
+
+```yaml
+unitrack:
+  quality-gate:
+    base-branch: main          # run on this branch is the comparison baseline
+    min-line-coverage:         # absolute floor (unset = disabled)
+    max-coverage-drop-pct: 1.0 # max allowed drop vs baseline, in percentage points
+    fail-on-new-failures: true # fail on failures not present in the baseline (excl. quarantined)
+```
 
 ## Build & test
 

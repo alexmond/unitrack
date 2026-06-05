@@ -3,6 +3,7 @@ package org.alexmond.unitrack.web.ui;
 import org.alexmond.unitrack.domain.CoverageReport;
 import org.alexmond.unitrack.domain.Project;
 import org.alexmond.unitrack.domain.TestRun;
+import org.alexmond.unitrack.report.QualityGateService;
 import org.alexmond.unitrack.report.ReportingService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -31,6 +32,8 @@ public class DashboardController {
 	private static final int COVERAGE_FILE_LIMIT = 200;
 
 	private final ReportingService reporting;
+
+	private final QualityGateService qualityGate;
 
 	@GetMapping("/")
 	public String index(Model model) {
@@ -67,6 +70,7 @@ public class DashboardController {
 		TestRun run = reporting.findRun(id)
 			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Run not found"));
 		model.addAttribute("run", run);
+		model.addAttribute("gate", qualityGate.evaluate(id).orElse(null));
 		model.addAttribute("suites", reporting.suitesFor(id));
 		model.addAttribute("failures", reporting.failedCasesFor(id));
 
