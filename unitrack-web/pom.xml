@@ -79,10 +79,12 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- runtime (not just test) so the app can run on embedded H2 for demos;
+             inert unless UNITRACK_DB_URL points at an h2: URL (Postgres is the default) -->
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
-            <scope>test</scope>
+            <scope>runtime</scope>
         </dependency>
     </dependencies>
 
