@@ -1,0 +1,12 @@
+package org.alexmond.unitrack.repository;
+
+import org.alexmond.unitrack.domain.CoverageFileEntry;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.List;
+
+public interface CoverageFileEntryRepository extends JpaRepository<CoverageFileEntry, Long> {
+
+	List<CoverageFileEntry> findByReportIdOrderByLineMissedDescPackageNameAsc(Long reportId);
+
+}

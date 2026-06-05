@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:fragment="head(title)">
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title th:text="${title}">UniTrack</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}"/>
+</head>
+<body>
+<header th:fragment="topbar" class="topbar">
+    <a class="brand" th:href="@{/}">Uni<span>Track</span></a>
+    <div class="spacer"></div>
+    <nav>
+        <a th:href="@{/}">Projects</a>
+        <a th:href="@{/actuator/health}">Health</a>
+    </nav>
+</header>
+</body>
+</html>

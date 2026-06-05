@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<report name="example">
+    <package name="com/example">
+        <sourcefile name="Calculator.java">
+            <counter type="INSTRUCTION" missed="4" covered="36"/>
+            <counter type="BRANCH" missed="1" covered="3"/>
+            <counter type="LINE" missed="2" covered="18"/>
+            <counter type="METHOD" missed="0" covered="4"/>
+            <counter type="CLASS" missed="0" covered="1"/>
+        </sourcefile>
+        <sourcefile name="Helper.java">
+            <counter type="INSTRUCTION" missed="10" covered="10"/>
+            <counter type="BRANCH" missed="2" covered="2"/>
+            <counter type="LINE" missed="5" covered="5"/>
+            <counter type="METHOD" missed="1" covered="1"/>
+            <counter type="CLASS" missed="0" covered="1"/>
+        </sourcefile>
+    </package>
+    <counter type="INSTRUCTION" missed="14" covered="46"/>
+    <counter type="BRANCH" missed="3" covered="5"/>
+    <counter type="LINE" missed="7" covered="23"/>
+    <counter type="METHOD" missed="1" covered="5"/>
+    <counter type="CLASS" missed="0" covered="2"/>
+</report>

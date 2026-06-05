@@ -1,0 +1,106 @@
+package org.alexmond.unitrack.domain;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+import java.time.Instant;
+
+/** One ingestion of test results (and optionally coverage) for a project at a commit. */
+@Entity
+@Table(name = "test_run")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+public class TestRun {
+
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
+
+	@ManyToOne(fetch = FetchType.LAZY, optional = false)
+	@JoinColumn(name = "project_id", nullable = false)
+	private Project project;
+
+	private String branch;
+
+	@Column(name = "commit_sha")
+	private String commitSha;
+
+	@Column(name = "build_url")
+	private String buildUrl;
+
+	@Column(name = "ci_provider")
+	private String ciProvider;
+
+	@Column(name = "created_at", nullable = false)
+	private Instant createdAt = Instant.now();
+
+	@Column(name = "total_tests", nullable = false)
+	private int totalTests;
+
+	@Column(nullable = false)
+	private int passed;
+
+	@Column(nullable = false)
+	private int failed;
+
+	@Column(nullable = false)
+	private int errors;
+
+	@Column(nullable = false)
+	private int skipped;
+
+	@Column(name = "duration_ms", nullable = false)
+	private long durationMs;
+
+	/** PASSED if there are no failures/errors, otherwise FAILED. */
+	@Column(nullable = false)
+	private String status = "PASSED";
+
+	/** Line coverage percentage 0-100, null when no coverage was uploaded. */
+	@Setter
+	@Column(name = "line_coverage_pct")
+	private Double lineCoveragePct;
+
+	@Setter
+	@Column(name = "branch_coverage_pct")
+	private Double branchCoveragePct;
+
+	public TestRun(Project project, String branch, String commitSha, String buildUrl, String ciProvider) {
+		this.project = project;
+		this.branch = branch;
+		this.commitSha = commitSha;
+		this.buildUrl = buildUrl;
+		this.ciProvider = ciProvider;
+	}
+
+	public void applyTotals(int passed, int failed, int errors, int skipped, long durationMs) {
+		this.passed = passed;
+		this.failed = failed;
+		this.errors = errors;
+		this.skipped = skipped;
+		this.totalTests = passed + failed + errors + skipped;
+		this.durationMs = durationMs;
+		this.status = ((failed + errors) == 0) ? "PASSED" : "FAILED";
+	}
+
+	public double passRate() {
+		int considered = totalTests - skipped;
+		return (considered == 0) ? 0.0 : (passed * 100.0) / considered;
+	}
+
+	public String getShortSha() {
+		return (commitSha != null) ? commitSha.substring(0, Math.min(7, commitSha.length())) : "";
+	}
+
+}

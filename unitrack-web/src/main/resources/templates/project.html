@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/common :: head('UniTrack — ' + ${project.name})}"></head>
+<body>
+<header th:replace="~{fragments/common :: topbar}"></header>
+
+<main class="container">
+    <p class="crumbs"><a th:href="@{/}">Projects</a> / <span th:text="${project.name}">project</span></p>
+    <h1 th:text="${project.name}">project</h1>
+    <p class="muted" th:if="${project.repoUrl != null}">
+        <a th:href="${project.repoUrl}" th:text="${project.repoUrl}">repo</a>
+    </p>
+
+    <h2>Trends</h2>
+    <div class="chart-wrap">
+        <canvas id="trendChart" height="90"></canvas>
+        <p class="muted" th:if="${runs.isEmpty()}">No runs to chart yet.</p>
+    </div>
+
+    <h2>Recent runs</h2>
+    <div th:if="${runs.isEmpty()}" class="empty">No runs uploaded yet.</div>
+    <table th:unless="${runs.isEmpty()}">
+        <thead>
+        <tr>
+            <th>When</th>
+            <th>Branch</th>
+            <th>Commit</th>
+            <th>Status</th>
+            <th class="num">Tests</th>
+            <th class="num">Failed</th>
+            <th class="num">Skipped</th>
+            <th class="num">Pass %</th>
+            <th class="num">Coverage</th>
+            <th class="num">Duration</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="r : ${runs}">
+            <td><a th:href="@{/runs/{id}(id=${r.id})}"
+                   th:text="${#temporals.format(r.createdAt, 'MMM dd HH:mm')}">date</a></td>
+            <td th:text="${r.branch} ?: '—'">main</td>
+            <td><code class="mono" th:text="${r.shortSha} ?: '—'">abc1234</code></td>
+            <td><span class="badge" th:classappend="${r.status == 'PASSED'} ? 'pass' : 'fail'"
+                      th:text="${r.status}">PASSED</span></td>
+            <td class="num" th:text="${r.totalTests}">0</td>
+            <td class="num" th:text="${r.failed + r.errors}">0</td>
+            <td class="num" th:text="${r.skipped}">0</td>
+            <td class="num pct" th:text="${#numbers.formatDecimal(r.passRate(),1,1)} + '%'">100%</td>
+            <td class="num pct"
+                th:text="${r.lineCoveragePct != null} ? ${#numbers.formatDecimal(r.lineCoveragePct,1,1)} + '%' : '—'">—</td>
+            <td class="num" th:text="${#numbers.formatDecimal(r.durationMs / 1000.0,1,1)} + 's'">0s</td>
+        </tr>
+        </tbody>
+    </table>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script th:inline="javascript">
+    const labels = /*[[${trendLabels}]]*/ [];
+    const passRate = /*[[${trendPassRate}]]*/ [];
+    const coverage = /*[[${trendCoverage}]]*/ [];
+    if (labels.length > 0 && window.Chart) {
+        new Chart(document.getElementById('trendChart'), {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    { label: 'Pass rate %', data: passRate, borderColor: '#2ea043',
+                      backgroundColor: 'rgba(46,160,67,.15)', tension: .25, spanGaps: true },
+                    { label: 'Line coverage %', data: coverage, borderColor: '#4493f8',
+                      backgroundColor: 'rgba(68,147,248,.12)', tension: .25, spanGaps: true }
+                ]
+            },
+            options: {
+                scales: { y: { min: 0, max: 100, ticks: { color: '#8b98a5' } },
+                          x: { ticks: { color: '#8b98a5' } } },
+                plugins: { legend: { labels: { color: '#e6edf3' } } }
+            }
+        });
+    }
+</script>
+</body>
+</html>
