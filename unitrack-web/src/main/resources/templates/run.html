@@ -17,6 +17,7 @@
     </h1>
     <p class="muted">
         <span th:text="${run.branch} ?: 'no branch'">main</span> ·
+        flag <code class="mono" th:text="${run.flag}">default</code> ·
         <code class="mono" th:text="${run.shortSha} ?: '—'">abc1234</code> ·
         <span th:text="${#temporals.format(run.createdAt, 'yyyy-MM-dd HH:mm')}">date</span>
         <a th:if="${run.buildUrl != null}" th:href="${run.buildUrl}">· build</a>

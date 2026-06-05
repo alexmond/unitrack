@@ -3,6 +3,8 @@ package org.alexmond.unitrack.repository;
 import org.alexmond.unitrack.domain.TestRun;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
 import java.util.List;
@@ -17,10 +19,15 @@ public interface TestRunRepository extends JpaRepository<TestRun, Long> {
 	long countByProjectId(Long projectId);
 
 	/**
-	 * Most recent prior run on the baseline branch (excluding the given run) — the gate
+	 * Most recent prior run on the baseline branch with the same flag — the gate
 	 * baseline.
 	 */
-	Optional<TestRun> findFirstByProjectIdAndBranchAndIdNotAndCreatedAtLessThanEqualOrderByCreatedAtDesc(Long projectId,
-			String branch, Long excludeId, Instant createdAt);
+	Optional<TestRun> findFirstByProjectIdAndBranchAndFlagAndIdNotAndCreatedAtLessThanEqualOrderByCreatedAtDesc(
+			Long projectId, String branch, String flag, Long excludeId, Instant createdAt);
+
+	@Query("select distinct t.flag from TestRun t where t.project.id = :projectId order by t.flag")
+	List<String> findDistinctFlags(@Param("projectId") Long projectId);
+
+	Optional<TestRun> findFirstByProjectIdAndFlagOrderByCreatedAtDesc(Long projectId, String flag);
 
 }

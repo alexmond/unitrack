@@ -56,8 +56,8 @@ public class QualityGateService {
 	}
 
 	private Optional<TestRun> baselineFor(TestRun run) {
-		return runs.findFirstByProjectIdAndBranchAndIdNotAndCreatedAtLessThanEqualOrderByCreatedAtDesc(
-				run.getProject().getId(), props.getBaseBranch(), run.getId(), run.getCreatedAt());
+		return runs.findFirstByProjectIdAndBranchAndFlagAndIdNotAndCreatedAtLessThanEqualOrderByCreatedAtDesc(
+				run.getProject().getId(), props.getBaseBranch(), run.getFlag(), run.getId(), run.getCreatedAt());
 	}
 
 	private QualityGateResult evaluate(TestRun run) {

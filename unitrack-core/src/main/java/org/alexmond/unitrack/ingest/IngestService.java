@@ -61,7 +61,7 @@ public class IngestService {
 		}
 
 		Project project = findOrCreateProject(meta.project(), meta.repoUrl());
-		TestRun run = new TestRun(project, blankToNull(meta.branch()), blankToNull(meta.commit()),
+		TestRun run = new TestRun(project, blankToNull(meta.branch()), meta.flag(), blankToNull(meta.commit()),
 				blankToNull(meta.buildUrl()), blankToNull(meta.ciProvider()));
 
 		JUnitResults merged = parseJUnit(junitStreams);

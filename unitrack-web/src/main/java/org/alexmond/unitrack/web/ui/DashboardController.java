@@ -59,6 +59,7 @@ public class DashboardController {
 
 		model.addAttribute("project", project);
 		model.addAttribute("runs", runs);
+		model.addAttribute("flags", reporting.flagSummaries(id));
 		model.addAttribute("trendLabels", toJson(trend.stream().map(TestRun::getShortSha).toList()));
 		model.addAttribute("trendPassRate", toJson(trend.stream().map((r) -> round(r.passRate())).toList()));
 		model.addAttribute("trendCoverage", toJson(trend.stream().map(TestRun::getLineCoveragePct).toList()));

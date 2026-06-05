@@ -33,6 +33,10 @@ public class TestRun {
 
 	private String branch;
 
+	/** Coverage flag / component (e.g. frontend, backend); "default" when unset. */
+	@Column(nullable = false)
+	private String flag = "default";
+
 	@Column(name = "commit_sha")
 	private String commitSha;
 
@@ -76,9 +80,10 @@ public class TestRun {
 	@Column(name = "branch_coverage_pct")
 	private Double branchCoveragePct;
 
-	public TestRun(Project project, String branch, String commitSha, String buildUrl, String ciProvider) {
+	public TestRun(Project project, String branch, String flag, String commitSha, String buildUrl, String ciProvider) {
 		this.project = project;
 		this.branch = branch;
+		this.flag = ((flag != null) && !flag.isBlank()) ? flag : "default";
 		this.commitSha = commitSha;
 		this.buildUrl = buildUrl;
 		this.ciProvider = ciProvider;

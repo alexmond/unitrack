@@ -3,6 +3,7 @@ package org.alexmond.unitrack.web.api;
 import org.alexmond.unitrack.domain.CoverageReport;
 import org.alexmond.unitrack.domain.Project;
 import org.alexmond.unitrack.domain.TestRun;
+import org.alexmond.unitrack.report.FlagSummary;
 import org.alexmond.unitrack.report.ReportingService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -36,6 +37,14 @@ public class QueryController {
 		return reporting.findProject(id)
 			.map((p) -> ResponseEntity.ok(ApiResponses.ProjectJson.of(p, reporting.runCount(id))))
 			.orElseGet(() -> ResponseEntity.notFound().build());
+	}
+
+	@GetMapping("/projects/{id}/flags")
+	public ResponseEntity<List<FlagSummary>> flags(@PathVariable Long id) {
+		if (reporting.findProject(id).isEmpty()) {
+			return ResponseEntity.notFound().build();
+		}
+		return ResponseEntity.ok(reporting.flagSummaries(id));
 	}
 
 	@GetMapping("/projects/{id}/runs")

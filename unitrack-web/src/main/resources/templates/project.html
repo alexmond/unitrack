@@ -18,6 +18,26 @@
         <p class="muted" th:if="${runs.isEmpty()}">No runs to chart yet.</p>
     </div>
 
+    <div th:if="${flags.size() > 1}">
+        <h2>Coverage by flag</h2>
+        <table>
+            <thead>
+            <tr><th>Flag</th><th class="num">Line coverage</th><th>Latest</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+            <tr th:each="f : ${flags}">
+                <td><code class="mono" th:text="${f.flag()}">default</code></td>
+                <td class="num pct"
+                    th:text="${f.lineCoveragePct() != null} ? ${#numbers.formatDecimal(f.lineCoveragePct(),1,1)} + '%' : '—'">—</td>
+                <td><a th:href="@{/runs/{id}(id=${f.lastRunId()})}"
+                       th:text="${#temporals.format(f.lastRunAt(), 'MMM dd HH:mm')}">date</a></td>
+                <td><span class="badge" th:classappend="${f.lastStatus() == 'PASSED'} ? 'pass' : 'fail'"
+                          th:text="${f.lastStatus()}">PASSED</span></td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
     <h2>Recent runs</h2>
     <div th:if="${runs.isEmpty()}" class="empty">No runs uploaded yet.</div>
     <table th:unless="${runs.isEmpty()}">
@@ -25,6 +45,7 @@
         <tr>
             <th>When</th>
             <th>Branch</th>
+            <th>Flag</th>
             <th>Commit</th>
             <th>Status</th>
             <th class="num">Tests</th>
@@ -40,6 +61,7 @@
             <td><a th:href="@{/runs/{id}(id=${r.id})}"
                    th:text="${#temporals.format(r.createdAt, 'MMM dd HH:mm')}">date</a></td>
             <td th:text="${r.branch} ?: '—'">main</td>
+            <td><code class="mono" th:text="${r.flag}">default</code></td>
             <td><code class="mono" th:text="${r.shortSha} ?: '—'">abc1234</code></td>
             <td><span class="badge" th:classappend="${r.status == 'PASSED'} ? 'pass' : 'fail'"
                       th:text="${r.status}">PASSED</span></td>
