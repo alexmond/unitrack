@@ -22,6 +22,8 @@ Built with **Spring Boot 4** and **Java 21**, as a multi-module Maven project (`
   failure-rate and flaky-commit metrics and a quarantine toggle.
 - **Quality gate** — PASS/FAIL verdict per run: minimum coverage, coverage drop vs the baseline
   branch, and new test failures relative to the baseline (quarantined flaky tests are excluded).
+- **GitHub commit status** — on ingest, posts the gate verdict + coverage delta as a commit status
+  (`unitrack/quality-gate`), so it surfaces on the commit and any associated PR.
 - **Dashboard** — server-rendered Thymeleaf UI: projects → runs → run detail (failures with
   stacktraces, suite breakdown, coverage by file).
 - **REST API** — JSON endpoints for projects, runs, and run detail.
@@ -114,6 +116,22 @@ unitrack:
     min-line-coverage:         # absolute floor (unset = disabled)
     max-coverage-drop-pct: 1.0 # max allowed drop vs baseline, in percentage points
     fail-on-new-failures: true # fail on failures not present in the baseline (excl. quarantined)
+```
+
+### GitHub commit status
+
+When enabled, each ingest posts a commit status (the quality-gate verdict + coverage delta) to the
+project's GitHub repo. Disabled by default; the project's `repoUrl` and the run's `commit` must be
+set. Configure via `unitrack.github.*`:
+
+```yaml
+unitrack:
+  github:
+    enabled: true
+    token: ${GITHUB_TOKEN}              # PAT or App token with repo:status scope
+    api-url: https://api.github.com     # override for GitHub Enterprise
+    server-base-url: https://unitrack.example   # used to build status target links
+    context: unitrack/quality-gate
 ```
 
 ## Build & test
