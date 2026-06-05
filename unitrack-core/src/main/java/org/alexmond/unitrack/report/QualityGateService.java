@@ -40,12 +40,29 @@ public class QualityGateService {
 		return runs.findById(runId).map(this::evaluate);
 	}
 
+	/**
+	 * Current minus baseline line coverage (percentage points), or empty if not
+	 * computable.
+	 */
+	public Optional<Double> coverageDelta(Long runId) {
+		return runs.findById(runId).flatMap(this::coverageDelta);
+	}
+
+	private Optional<Double> coverageDelta(TestRun run) {
+		if (run.getLineCoveragePct() == null) {
+			return Optional.empty();
+		}
+		return baselineFor(run).map(TestRun::getLineCoveragePct).map((baseCov) -> run.getLineCoveragePct() - baseCov);
+	}
+
+	private Optional<TestRun> baselineFor(TestRun run) {
+		return runs.findFirstByProjectIdAndBranchAndIdNotAndCreatedAtLessThanEqualOrderByCreatedAtDesc(
+				run.getProject().getId(), props.getBaseBranch(), run.getId(), run.getCreatedAt());
+	}
+
 	private QualityGateResult evaluate(TestRun run) {
 		Long projectId = run.getProject().getId();
-		TestRun baseline = runs
-			.findFirstByProjectIdAndBranchAndIdNotAndCreatedAtLessThanEqualOrderByCreatedAtDesc(projectId,
-					props.getBaseBranch(), run.getId(), run.getCreatedAt())
-			.orElse(null);
+		TestRun baseline = baselineFor(run).orElse(null);
 
 		List<RuleResult> rules = new ArrayList<>();
 		minCoverageRule(run).ifPresent(rules::add);

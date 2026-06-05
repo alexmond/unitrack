@@ -4,6 +4,9 @@ import org.alexmond.unitrack.domain.TestRun;
 import org.alexmond.unitrack.ingest.IngestException;
 import org.alexmond.unitrack.ingest.IngestRequest;
 import org.alexmond.unitrack.ingest.IngestService;
+import org.alexmond.unitrack.report.QualityGateResult;
+import org.alexmond.unitrack.report.QualityGateService;
+import org.alexmond.unitrack.web.github.GitHubStatusService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -36,6 +39,10 @@ public class IngestController {
 
 	private final IngestService ingestService;
 
+	private final QualityGateService qualityGate;
+
+	private final GitHubStatusService gitHubStatus;
+
 	@PostMapping(path = "/ingest", consumes = "multipart/form-data")
 	public ResponseEntity<ApiResponses.IngestResultJson> ingest(@RequestParam String project,
 			@RequestParam(required = false) String repoUrl, @RequestParam(required = false) String branch,
@@ -45,7 +52,14 @@ public class IngestController {
 
 		IngestRequest meta = new IngestRequest(project, repoUrl, branch, commit, buildUrl, ciProvider);
 		TestRun run = ingestService.ingest(meta, toSuppliers(junit), toSuppliers(jacoco));
+		publishGitHubStatus(run);
 		return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponses.IngestResultJson.of(run));
+	}
+
+	private void publishGitHubStatus(TestRun run) {
+		QualityGateResult gate = qualityGate.evaluate(run.getId()).orElse(null);
+		Double delta = qualityGate.coverageDelta(run.getId()).orElse(null);
+		gitHubStatus.publish(run, gate, delta);
 	}
 
 	private static List<Supplier<InputStream>> toSuppliers(List<MultipartFile> files) {
