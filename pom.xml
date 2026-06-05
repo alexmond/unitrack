@@ -325,5 +325,51 @@
                 </plugins>
             </build>
         </profile>
+
+        <!--
+            Build an OCI image with Cloud Native Buildpacks (no Dockerfile needed):
+              ./mvnw -Pdocker package                         (build all modules + the web image)
+              ./mvnw -Pdocker -pl unitrack-web -am package    (just the runnable module's image)
+            Override the tag or publish to a registry:
+              ./mvnw -Pdocker -Ddocker.image.name=ghcr.io/alexmond/unitrack:0.1.0 -Ddocker.publish=true package
+            Requires a running Docker daemon. Only unitrack-web (which declares the Spring Boot
+            plugin) produces an image; the config lives in pluginManagement so other modules are
+            unaffected.
+        -->
+        <profile>
+            <id>docker</id>
+            <properties>
+                <docker.image.name>unitrack:${project.version}</docker.image.name>
+                <docker.publish>false</docker.publish>
+            </properties>
+            <build>
+                <pluginManagement>
+                    <plugins>
+                        <plugin>
+                            <groupId>org.springframework.boot</groupId>
+                            <artifactId>spring-boot-maven-plugin</artifactId>
+                            <configuration>
+                                <image>
+                                    <name>${docker.image.name}</name>
+                                    <env>
+                                        <BP_JVM_VERSION>${java.version}</BP_JVM_VERSION>
+                                    </env>
+                                </image>
+                                <publish>${docker.publish}</publish>
+                            </configuration>
+                            <executions>
+                                <execution>
+                                    <id>build-image</id>
+                                    <phase>package</phase>
+                                    <goals>
+                                        <goal>build-image</goal>
+                                    </goals>
+                                </execution>
+                            </executions>
+                        </plugin>
+                    </plugins>
+                </pluginManagement>
+            </build>
+        </profile>
     </profiles>
 </project>

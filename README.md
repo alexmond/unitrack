@@ -159,6 +159,26 @@ unitrack:
 The boot jar is produced at `unitrack-web/target/unitrack.jar`. Each module also emits a JaCoCo
 report at `<module>/target/site/jacoco/jacoco.xml` — UniTrack can ingest its own coverage.
 
+### Docker image
+
+The `docker` profile builds an OCI image with Cloud Native Buildpacks (no Dockerfile), via the
+Spring Boot plugin's `build-image` goal bound to `package`. Requires a running Docker daemon.
+
+```bash
+./mvnw -Pdocker -pl unitrack-web -am package        # builds image unitrack:<version>
+docker run --rm -p 8080:8080 unitrack:0.1.0-SNAPSHOT
+```
+
+Override the tag or publish to a registry:
+
+```bash
+./mvnw -Pdocker -Ddocker.image.name=ghcr.io/alexmond/unitrack:0.1.0 -Ddocker.publish=true \
+  -pl unitrack-web -am package
+```
+
+The image pins `BP_JVM_VERSION` to the project's Java version. Only `unitrack-web` produces an
+image; the profile is inert for normal builds.
+
 ### Code quality
 
 Mirroring [`jhelm`](https://github.com/alexmond/jhelm), the build enforces quality gates in the
