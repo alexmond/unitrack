@@ -9,8 +9,20 @@
 # Note: H2 is fine for evaluation; use the Postgres compose for anything real.
 
 services:
+  # The Spring Boot buildpacks image runs as a non-root user; make the data
+  # volume writable by it before the app starts (uid varies by builder, so
+  # just make the dir world-writable — it's an isolated demo volume).
+  volume-init:
+    image: busybox
+    command: ["sh", "-c", "chmod -R 0777 /data"]
+    volumes:
+      - unitrack-h2:/data
+
   unitrack:
     image: ${UNITRACK_IMAGE:-unitrack:0.1.0-SNAPSHOT}
+    depends_on:
+      volume-init:
+        condition: service_completed_successfully
     environment:
       # File-backed H2 in PostgreSQL-compatibility mode (matches the Flyway migrations).
       UNITRACK_DB_URL: "jdbc:h2:file:/data/unitrack;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE"
