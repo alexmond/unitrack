@@ -5,6 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title th:text="${title}">UniTrack</title>
     <link rel="stylesheet" th:href="@{/css/app.css}"/>
+    <!-- Applies the saved theme before paint (no flash); falls back to OS preference. -->
+    <script th:inline="none">
+        (function () {
+            var root = document.documentElement;
+            function icon(t) {
+                var b = document.getElementById('theme-toggle');
+                if (b) { b.textContent = (t === 'light' ? '☾' : '☀'); }
+            }
+            function apply(t) { root.setAttribute('data-theme', t); icon(t); }
+            var saved = localStorage.getItem('theme');
+            apply(saved || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'));
+            window.__toggleTheme = function () {
+                var t = (root.getAttribute('data-theme') === 'light') ? 'dark' : 'light';
+                localStorage.setItem('theme', t);
+                apply(t);
+            };
+            document.addEventListener('DOMContentLoaded', function () { icon(root.getAttribute('data-theme')); });
+        })();
+    </script>
 </head>
 <body>
 <header th:fragment="topbar" class="topbar">
@@ -14,6 +33,9 @@
         <a th:href="@{/}">Projects</a>
         <a th:href="@{/actuator/health}">Health</a>
     </nav>
+    <button id="theme-toggle" class="theme-toggle" type="button"
+            aria-label="Toggle light/dark theme" title="Toggle theme"
+            onclick="window.__toggleTheme()">☀</button>
 </header>
 </body>
 </html>
