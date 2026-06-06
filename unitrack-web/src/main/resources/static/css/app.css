@@ -1,4 +1,5 @@
 :root {
+    color-scheme: dark;
     --bg: #0f1419;
     --panel: #1a2027;
     --panel-2: #222a33;
@@ -9,8 +10,40 @@
     --red: #e5534b;
     --amber: #d29922;
     --blue: #4493f8;
+    --code-bg: #0b0f14;
+    --code-text: #d6dee7;
     --radius: 10px;
 }
+
+:root[data-theme="light"] {
+    color-scheme: light;
+    --bg: #f6f8fa;
+    --panel: #ffffff;
+    --panel-2: #eef1f4;
+    --border: #d6dbe1;
+    --text: #1f2328;
+    --muted: #5b6570;
+    --green: #1a7f37;
+    --red: #cf222e;
+    --amber: #9a6700;
+    --blue: #0969da;
+    /* keep code/stacktrace blocks dark for contrast in both themes */
+    --code-bg: #0b0f14;
+    --code-text: #d6dee7;
+}
+
+.theme-toggle {
+    margin-left: 16px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    padding: 5px 9px;
+}
+.theme-toggle:hover { background: var(--panel-2); }
 
 * { box-sizing: border-box; }
 
@@ -97,7 +130,7 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 details.failure { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 10px; }
 details.failure > summary { padding: 12px 14px; cursor: pointer; }
 details.failure pre {
-    margin: 0; padding: 14px; background: #0b0f14; color: #d6dee7;
+    margin: 0; padding: 14px; background: var(--code-bg); color: var(--code-text);
     overflow-x: auto; font-size: 12.5px; border-top: 1px solid var(--border);
 }
 code.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
@@ -138,13 +171,13 @@ code.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-si
 
 .cluster-body { padding: 10px 16px; border-top: 1px solid var(--border); }
 .cluster-body ul { margin: 6px 0; padding-left: 18px; }
-.cluster-body pre { background: #0b0f14; color: #d6dee7; padding: 10px; overflow-x: auto; font-size: 12.5px; border-radius: 6px; }
+.cluster-body pre { background: var(--code-bg); color: var(--code-text); padding: 10px; overflow-x: auto; font-size: 12.5px; border-radius: 6px; }
 
 .attachments { padding: 10px 14px; border-top: 1px solid var(--border); font-size: 13px; }
 .attachments a { display: inline-block; margin-left: 8px; }
 details.output { border-top: 1px solid var(--border); }
 details.output > summary { padding: 8px 14px; cursor: pointer; color: var(--muted); font-size: 13px; }
 details.output pre {
-    margin: 0; padding: 12px 14px; background: #0b0f14; color: #d6dee7;
+    margin: 0; padding: 12px 14px; background: var(--code-bg); color: var(--code-text);
     overflow-x: auto; font-size: 12.5px; border-top: 1px solid var(--border);
 }

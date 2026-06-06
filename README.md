@@ -34,7 +34,7 @@ Built with **Spring Boot 4** and **Java 21**, as a multi-module Maven project (`
   (product defect / test defect / infrastructure / …); categories show on the run page.
 - **Dashboard** — server-rendered Thymeleaf UI: projects → runs → run detail (failures with
   stacktraces, captured `system-out`/`system-err` and `[[ATTACHMENT|…]]` links, suite breakdown,
-  coverage by file).
+  coverage by file). Dark/light theme toggle (persisted, defaults to OS preference).
 - **REST API** — JSON endpoints for projects, runs, and run detail.
 - **CI integration** — a `curl`-based uploader script and ready-to-copy GitHub Actions workflows.
 
