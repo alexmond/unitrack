@@ -32,11 +32,13 @@ jobs:
           if-no-files-found: ignore
 
       # Self-reporting: push this build's own results to a UniTrack server.
-      # Configure the UNITRACK_URL repo variable to enable.
+      # Configure the UNITRACK_URL repo variable to enable; set the UNITRACK_TOKEN
+      # secret if the server requires a token (unitrack.security.require-ingest-token).
       - name: Report to UniTrack
         if: always() && vars.UNITRACK_URL != ''
         env:
           UNITRACK_URL: ${{ vars.UNITRACK_URL }}
+          UNITRACK_TOKEN: ${{ secrets.UNITRACK_TOKEN }}
         run: |
           bash scripts/unitrack-upload.sh \
             --project unitrack \

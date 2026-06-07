@@ -148,8 +148,16 @@ unitrack:
   security:
     open-mode: true        # true (default): APIs public so CI/uploader keep working; login still available.
                            # false: UI requires login, /api/** requires a token.
+    require-ingest-token: false  # true: POST /api/v1/ingest needs a token even in open mode.
     admin-username: admin
     admin-password:        # blank → a random password is generated and logged on first start
+```
+
+When `require-ingest-token` is on, CI passes the token to the uploader via `--token` or the
+`UNITRACK_TOKEN` env var (the bundled GitHub workflows read a `UNITRACK_TOKEN` secret):
+
+```bash
+scripts/unitrack-upload.sh --project myapp --token "$UNITRACK_TOKEN" --junit 'target/surefire-reports/TEST-*.xml'
 ```
 
 ### GitHub commit status

@@ -14,11 +14,15 @@
 #
 # --junit / --jacoco accept glob patterns (quote them so the shell does not expand early)
 # and may be repeated. Only --project and at least one --junit file are required.
+#
+# Auth: if the server requires it (unitrack.security.require-ingest-token=true), pass an API
+# token via --token <token> or the UNITRACK_TOKEN env var (sent as 'Authorization: Bearer').
 
 set -euo pipefail
 
 URL="${UNITRACK_URL:-http://localhost:8080}"
 PROJECT="" BRANCH="" COMMIT="" BUILD="" REPO="" FLAG="" RUN_KEY="" CI_PROVIDER="${UNITRACK_CI:-}"
+TOKEN="${UNITRACK_TOKEN:-}"
 JUNIT_GLOBS=()
 JACOCO_GLOBS=()
 
@@ -28,6 +32,7 @@ while [[ $# -gt 0 ]]; do
     --branch)   BRANCH="$2"; shift 2 ;;
     --flag)     FLAG="$2"; shift 2 ;;
     --run-key)  RUN_KEY="$2"; shift 2 ;;
+    --token)    TOKEN="$2"; shift 2 ;;
     --commit)   COMMIT="$2"; shift 2 ;;
     --build)    BUILD="$2"; shift 2 ;;
     --repo)     REPO="$2"; shift 2 ;;
@@ -76,5 +81,8 @@ if [[ "$junit_count" -eq 0 ]]; then
 fi
 
 echo "Uploading $junit_count JUnit file(s) to $URL/api/v1/ingest ..."
-curl --fail --show-error --silent -X POST "${FORM[@]}" "$URL/api/v1/ingest"
+AUTH=()
+[[ -n "$TOKEN" ]] && AUTH=(-H "Authorization: Bearer $TOKEN")
+
+curl --fail --show-error --silent -X POST "${AUTH[@]}" "${FORM[@]}" "$URL/api/v1/ingest"
 echo
