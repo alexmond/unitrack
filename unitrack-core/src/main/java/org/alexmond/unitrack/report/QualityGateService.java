@@ -8,7 +8,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import lombok.RequiredArgsConstructor;
-import org.alexmond.unitrack.config.QualityGateProperties;
 import org.alexmond.unitrack.domain.FlakyStatus;
 import org.alexmond.unitrack.domain.TestRun;
 import org.alexmond.unitrack.domain.TestStatus;
@@ -19,7 +18,7 @@ import org.alexmond.unitrack.repository.TestRunRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Evaluates a run against the configurable {@link QualityGateProperties}. */
+/** Evaluates a run against the effective per-project {@link GateConfig}. */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -33,7 +32,7 @@ public class QualityGateService {
 
 	private final FlakyTestRepository flakyTests;
 
-	private final QualityGateProperties props;
+	private final ProjectSettingsService settings;
 
 	/** Evaluates the gate for a run, or empty if the run does not exist. */
 	public Optional<QualityGateResult> evaluate(Long runId) {
@@ -56,25 +55,27 @@ public class QualityGateService {
 	}
 
 	private Optional<TestRun> baselineFor(TestRun run) {
+		GateConfig cfg = settings.gateConfig(run.getProject().getId());
 		return runs.findFirstByProjectIdAndBranchAndFlagAndIdNotAndCreatedAtLessThanEqualOrderByCreatedAtDesc(
-				run.getProject().getId(), props.getBaseBranch(), run.getFlag(), run.getId(), run.getCreatedAt());
+				run.getProject().getId(), cfg.baseBranch(), run.getFlag(), run.getId(), run.getCreatedAt());
 	}
 
 	private QualityGateResult evaluate(TestRun run) {
 		Long projectId = run.getProject().getId();
+		GateConfig cfg = settings.gateConfig(projectId);
 		TestRun baseline = baselineFor(run).orElse(null);
 
 		List<RuleResult> rules = new ArrayList<>();
-		minCoverageRule(run).ifPresent(rules::add);
-		coverageDropRule(run, baseline).ifPresent(rules::add);
-		newFailuresRule(run, baseline, projectId).ifPresent(rules::add);
+		minCoverageRule(run, cfg).ifPresent(rules::add);
+		coverageDropRule(run, baseline, cfg).ifPresent(rules::add);
+		newFailuresRule(run, baseline, projectId, cfg).ifPresent(rules::add);
 
 		boolean passed = rules.stream().allMatch(RuleResult::passed);
 		return new QualityGateResult(passed, rules);
 	}
 
-	private Optional<RuleResult> minCoverageRule(TestRun run) {
-		Double min = props.getMinLineCoverage();
+	private Optional<RuleResult> minCoverageRule(TestRun run, GateConfig cfg) {
+		Double min = cfg.minLineCoverage();
 		if (min == null) {
 			return Optional.empty();
 		}
@@ -86,20 +87,20 @@ public class QualityGateService {
 		return Optional.of(new RuleResult("min-coverage", ok, pct(cov) + " line coverage (minimum " + pct(min) + ")"));
 	}
 
-	private Optional<RuleResult> coverageDropRule(TestRun run, TestRun baseline) {
+	private Optional<RuleResult> coverageDropRule(TestRun run, TestRun baseline, GateConfig cfg) {
 		if (baseline == null || run.getLineCoveragePct() == null || baseline.getLineCoveragePct() == null) {
 			return Optional.empty();
 		}
 		double drop = baseline.getLineCoveragePct() - run.getLineCoveragePct();
-		boolean ok = drop <= props.getMaxCoverageDropPct();
+		boolean ok = drop <= cfg.maxCoverageDropPct();
 		String detail = pct(run.getLineCoveragePct()) + " vs baseline " + pct(baseline.getLineCoveragePct()) + " (drop "
 				+ String.format(Locale.ROOT, "%.1f", Math.max(0.0, drop)) + "pp, max "
-				+ String.format(Locale.ROOT, "%.1f", props.getMaxCoverageDropPct()) + "pp)";
+				+ String.format(Locale.ROOT, "%.1f", cfg.maxCoverageDropPct()) + "pp)";
 		return Optional.of(new RuleResult("coverage-drop", ok, detail));
 	}
 
-	private Optional<RuleResult> newFailuresRule(TestRun run, TestRun baseline, Long projectId) {
-		if (!props.isFailOnNewFailures()) {
+	private Optional<RuleResult> newFailuresRule(TestRun run, TestRun baseline, Long projectId, GateConfig cfg) {
+		if (!cfg.failOnNewFailures()) {
 			return Optional.empty();
 		}
 		Set<String> current = failedKeys(run.getId());

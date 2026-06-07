@@ -9,7 +9,6 @@ import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 import lombok.RequiredArgsConstructor;
-import org.alexmond.unitrack.config.QualityGateProperties;
 import org.alexmond.unitrack.domain.TestCaseResult;
 import org.alexmond.unitrack.domain.TestRun;
 import org.alexmond.unitrack.domain.TestStatus;
@@ -35,7 +34,7 @@ public class TestRegressionService {
 
 	private final TestCaseResultRepository cases;
 
-	private final QualityGateProperties props;
+	private final ProjectSettingsService settings;
 
 	/** Computes the regression diff for a run, or empty if the run does not exist. */
 	public Optional<TestRegressionResult> diff(Long runId) {
@@ -43,8 +42,9 @@ public class TestRegressionService {
 	}
 
 	private TestRegressionResult diff(TestRun run) {
+		String baseBranch = this.settings.gateConfig(run.getProject().getId()).baseBranch();
 		Map<String, TestCaseResult> currentFailed = failedByKey(run.getId());
-		TestRun baseline = baselineFor(run).orElse(null);
+		TestRun baseline = baselineFor(run, baseBranch).orElse(null);
 
 		if (baseline == null) {
 			// No baseline to compare against: report current failures as new, nothing
@@ -53,7 +53,7 @@ public class TestRegressionService {
 				.stream()
 				.map(TestRegressionService::toFailure)
 				.toList();
-			return new TestRegressionResult(false, null, this.props.getBaseBranch(), newFailures, List.of(), List.of());
+			return new TestRegressionResult(false, null, baseBranch, newFailures, List.of(), List.of());
 		}
 
 		Set<String> baselineFailed = failedKeys(baseline.getId());
@@ -77,13 +77,12 @@ public class TestRegressionService {
 			.map(TestRegressionService::toIdentity)
 			.toList();
 
-		return new TestRegressionResult(true, baseline.getId(), this.props.getBaseBranch(), newFailures, newPasses,
-				stillFailing);
+		return new TestRegressionResult(true, baseline.getId(), baseBranch, newFailures, newPasses, stillFailing);
 	}
 
-	private Optional<TestRun> baselineFor(TestRun run) {
+	private Optional<TestRun> baselineFor(TestRun run, String baseBranch) {
 		return this.runs.findFirstByProjectIdAndBranchAndFlagAndIdNotAndCreatedAtLessThanEqualOrderByCreatedAtDesc(
-				run.getProject().getId(), this.props.getBaseBranch(), run.getFlag(), run.getId(), run.getCreatedAt());
+				run.getProject().getId(), baseBranch, run.getFlag(), run.getId(), run.getCreatedAt());
 	}
 
 	/** Failing cases for a run, keyed by class+name, ordered for stable output. */
