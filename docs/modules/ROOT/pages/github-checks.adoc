@@ -38,6 +38,30 @@ unitrack:
     server-base-url: https://unitrack.example.com
 ----
 
+== Pull-request comment
+
+In addition to the commit status, UniTrack posts (and updates in place) a *results-table
+comment* on the pull request associated with the run's commit -- the Codecov-style summary
+developers see without leaving the PR:
+
+[source]
+----
+## UniTrack — ✅ gate passed
+
+| Metric | Value |
+|---|---|
+| Tests | 128 passed · 0 failed · 2 skipped (130 total) |
+| Coverage | 84.3% (+1.2pp) |
+| Quality gate | PASSED |
+----
+
+It resolves the PR from the commit SHA, and uses a hidden marker to *update its own comment*
+on later pushes instead of posting duplicates. New failures and slower tests
+(xref:test-regression.adoc[regression] / xref:unit-test-performance.adoc[perf regression])
+are added as rows when present. Disable with `unitrack.github.pr-comment=false` while keeping
+the commit status. Requires the token to have pull-request write (`issues`/`pull_requests`)
+permission.
+
 == Requirements
 
 * The upload must include both `commit` and `repoUrl` so UniTrack knows which commit on
