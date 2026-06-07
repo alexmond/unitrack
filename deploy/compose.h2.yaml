@@ -29,6 +29,10 @@ services:
       UNITRACK_DB_USER: sa
       UNITRACK_DB_PASSWORD: ""
       SPRING_DOCKER_COMPOSE_ENABLED: "false"
+      # This is the throwaway demo stack: stable creds (admin/admin, test/test) and
+      # pre-seeded sample projects. Do NOT use these settings for the Postgres stack.
+      UNITRACK_SECURITY_ADMINPASSWORD: admin
+      UNITRACK_DEMO_ENABLED: "true"
     volumes:
       - unitrack-h2:/data
     ports:

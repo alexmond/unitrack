@@ -34,6 +34,12 @@ public class UserService {
 		return users.save(user);
 	}
 
+	/** Sets a user's password directly (admin/seed use). */
+	@Transactional
+	public void resetPassword(String username, String rawPassword) {
+		require(username).setPasswordHash(passwordEncoder.encode(rawPassword));
+	}
+
 	@Transactional
 	public void updateProfile(String username, String displayName, String email) {
 		User user = require(username);
