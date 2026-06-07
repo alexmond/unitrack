@@ -19,6 +19,12 @@ public class SecurityProperties {
 	 */
 	private boolean openMode = true;
 
+	/**
+	 * When true, {@code POST /api/v1/ingest} requires a valid API token (or session) even
+	 * in open mode — so CI uploads must authenticate. Default false for back-compat.
+	 */
+	private boolean requireIngestToken;
+
 	/** Username of the default admin seeded on first start (when there are no users). */
 	private String adminUsername = "admin";
 

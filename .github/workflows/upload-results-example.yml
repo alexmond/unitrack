@@ -33,9 +33,12 @@ jobs:
         if: always() && vars.UNITRACK_URL != ''
         env:
           UNITRACK_URL: ${{ vars.UNITRACK_URL }}
-          # If your server requires auth, add a token header in the uploader or use a secret.
+          # Set the UNITRACK_TOKEN secret if the server requires a token
+          # (unitrack.security.require-ingest-token). Mint it on the UniTrack profile page.
+          UNITRACK_TOKEN: ${{ secrets.UNITRACK_TOKEN }}
         run: |
           curl --fail --show-error --silent -X POST \
+            ${UNITRACK_TOKEN:+-H "Authorization: Bearer ${UNITRACK_TOKEN}"} \
             -F "project=${GITHUB_REPOSITORY##*/}" \
             -F "branch=${GITHUB_REF_NAME}" \
             -F "commit=${GITHUB_SHA}" \
