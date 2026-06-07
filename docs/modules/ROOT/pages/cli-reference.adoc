@@ -70,6 +70,24 @@ A minimal reporting step:
 Run your tests with `|| true` (or `--fail-at-end`) before this step so failing builds
 still report their results.
 
+== Gating any CI on the quality gate
+
+`scripts/unitrack-gate.sh` checks the xref:quality-gate.adoc[quality gate] for a project +
+commit and **exits non-zero when the gate fails**, so any CI -- GitLab CI, Jenkins,
+Buildkite, a local pre-push hook, not just GitHub -- can block a build on it. Run it after
+the upload step:
+
+[source,bash]
+----
+UNITRACK_URL=http://unitrack.example.com \
+scripts/unitrack-gate.sh --project myapp --commit "$CI_COMMIT_SHA"
+# exit 0 = gate passed · 1 = gate failed · 2 = usage/lookup error
+----
+
+Options: `--project` (required); `--commit` **or** `--branch`; `--flag` to scope to a
+component; `--token` / `UNITRACK_TOKEN` and `--url` / `UNITRACK_URL` as for the uploader. It
+calls `GET /api/v1/gate` (see xref:rest-api.adoc[REST API]).
+
 == Authentication
 
 If the server runs with `unitrack.security.require-ingest-token=true`, mint a personal
