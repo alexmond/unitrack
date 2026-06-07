@@ -67,6 +67,22 @@ public class ReportingService {
 		return runs.findById(id);
 	}
 
+	public Optional<Project> findProjectByName(String name) {
+		return projects.findByName(name);
+	}
+
+	/** Latest run for a project + commit (optional flag) — for CI gate lookups by SHA. */
+	public Optional<TestRun> latestRunByCommit(Long projectId, String commit, String flag) {
+		return runs.findLatestByCommit(projectId, commit, flag, PageRequest.ofSize(1)).stream().findFirst();
+	}
+
+	/**
+	 * Latest run for a project + branch (optional flag) — for CI gate lookups by branch.
+	 */
+	public Optional<TestRun> latestRunByBranch(Long projectId, String branch, String flag) {
+		return runs.findLatestByBranch(projectId, branch, flag, PageRequest.ofSize(1)).stream().findFirst();
+	}
+
 	/** Latest coverage/status per coverage flag (component) for a project. */
 	public List<FlagSummary> flagSummaries(Long projectId) {
 		return runs.findDistinctFlags(projectId)

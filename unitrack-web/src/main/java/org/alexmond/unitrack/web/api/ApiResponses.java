@@ -6,6 +6,7 @@ import org.alexmond.unitrack.domain.Project;
 import org.alexmond.unitrack.domain.TestCaseResult;
 import org.alexmond.unitrack.domain.TestRun;
 import org.alexmond.unitrack.domain.TestSuiteResult;
+import org.alexmond.unitrack.report.QualityGateResult;
 
 import java.time.Instant;
 import java.util.List;
@@ -66,6 +67,19 @@ public interface ApiResponses {
 	}
 
 	public record RunDetailJson(RunJson run, List<SuiteJson> suites, List<CaseJson> failures, CoverageJson coverage) {
+	}
+
+	/**
+	 * CI-consumable quality-gate verdict, resolved by project + commit/branch (no
+	 * internal run id needed). {@code passed} maps to the {@code unitrack-gate.sh} exit
+	 * code.
+	 */
+	public record GateReportJson(String project, String branch, String commit, String flag, Long runId, String status,
+			boolean passed, Double coverageDelta, List<QualityGateResult.RuleResult> rules, String runPath) {
+		public static GateReportJson of(TestRun run, QualityGateResult gate, Double coverageDelta) {
+			return new GateReportJson(run.getProject().getName(), run.getBranch(), run.getCommitSha(), run.getFlag(),
+					run.getId(), gate.status(), gate.passed(), coverageDelta, gate.rules(), "/runs/" + run.getId());
+		}
 	}
 
 	public record IngestResultJson(Long runId, Long projectId, String project, int total, int passed, int failed,

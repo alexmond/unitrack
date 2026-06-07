@@ -33,4 +33,22 @@ public interface TestRunRepository extends JpaRepository<TestRun, Long> {
 	/** Existing run for a merge key, so sharded uploads accumulate into one run. */
 	Optional<TestRun> findByProjectIdAndRunKey(Long projectId, String runKey);
 
+	/** Latest run for a commit (optionally scoped to a flag) — for CI gate lookups. */
+	@Query("""
+			select t from TestRun t
+			where t.project.id = :projectId and t.commitSha = :commit and (:flag is null or t.flag = :flag)
+			order by t.createdAt desc
+			""")
+	List<TestRun> findLatestByCommit(@Param("projectId") Long projectId, @Param("commit") String commit,
+			@Param("flag") String flag, Pageable pageable);
+
+	/** Latest run on a branch (optionally scoped to a flag) — for CI gate lookups. */
+	@Query("""
+			select t from TestRun t
+			where t.project.id = :projectId and t.branch = :branch and (:flag is null or t.flag = :flag)
+			order by t.createdAt desc
+			""")
+	List<TestRun> findLatestByBranch(@Param("projectId") Long projectId, @Param("branch") String branch,
+			@Param("flag") String flag, Pageable pageable);
+
 }

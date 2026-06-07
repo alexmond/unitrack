@@ -38,3 +38,18 @@ All knobs live under `unitrack.quality-gate` (see xref:configuration.adoc[Config
 The evaluation yields a verdict plus the coverage delta against the baseline. Both are shown
 on the run page and, when GitHub is configured, posted as a commit status with the context
 `unitrack/quality-gate`.
+
+== Gating any CI (not just GitHub)
+
+Beyond the GitHub commit status, the verdict is available as a machine-readable result so
+**any** pipeline can fail a build on it. `GET /api/v1/gate?project=<name>&commit=<sha>` returns
+the latest matching run's verdict (see xref:rest-api.adoc[REST API]), and
+`scripts/unitrack-gate.sh` wraps it into an exit code:
+
+[source,bash]
+----
+scripts/unitrack-gate.sh --project myapp --commit "$CI_COMMIT_SHA"   # exit 1 if the gate failed
+----
+
+This works on GitLab CI, Jenkins, Buildkite, or a local pre-push hook -- see
+xref:cli-reference.adoc[CLI & CI Integration].

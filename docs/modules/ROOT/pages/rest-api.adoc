@@ -34,6 +34,34 @@ When `unitrack.security.require-ingest-token=true`, the request must carry a val
 as `Authorization: Bearer <token>` (or the `X-UniTrack-Token` header); otherwise it returns
 `401`.
 
+== GET /api/v1/gate
+
+CI-consumable quality-gate lookup. A pipeline knows its **project name** and **commit SHA**,
+not UniTrack's internal run id -- this endpoint resolves the latest matching run and returns
+its xref:quality-gate.adoc[gate] verdict.
+
+[source,bash]
+----
+curl "http://localhost:8080/api/v1/gate?project=myapp&commit=$GIT_SHA"
+----
+
+Parameters: `project` (required); one of `commit` or `branch` (required -- `commit` preferred,
+`branch` gates the latest run on a branch); optional `flag` to scope to a component.
+
+[source,json]
+----
+{
+  "project": "myapp", "branch": "main", "commit": "9af5872", "flag": "default",
+  "runId": 42, "status": "FAILED", "passed": false, "coverageDelta": -1.8,
+  "rules": [ { "name": "new-failures", "passed": false, "detail": "1 new failure(s): com.x.G a" } ],
+  "runPath": "/runs/42"
+}
+----
+
+`404` if no run matches the project + commit/branch; `400` if neither `commit` nor `branch` is
+given. The xref:cli-reference.adoc[`unitrack-gate.sh`] wrapper turns `passed` into a build
+exit code so any CI can fail on it.
+
 == GET /api/v1/me
 
 Returns the authenticated principal -- the account behind the current session or API token.
