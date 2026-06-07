@@ -124,6 +124,48 @@ Docs/[screenshots]: https://plugins.jenkins.io/junit/
 
 ---
 
+## Gaps & next feature set — accounts, auth, API tokens, config
+
+The P0–P2 roadmap above is now **delivered**. Re-reading the field, the biggest remaining gap
+between UniTrack and the established tools is **not** test/coverage features — it's everything around
+**identity, access, and configuration**. UniTrack today has **no authentication** (the ingest and
+read APIs are open), **no user accounts or profiles**, **no API tokens**, and **no settings UI**
+(config is properties/env only). Every competitor treats these as table stakes.
+
+### What the others offer (and where)
+
+| Capability | Who / where | UniTrack today |
+|---|---|---|
+| **Authentication / login** | All. Local + SSO/LDAP/OIDC — Allure TestOps (LDAP, Azure OIDC), SonarQube, ReportPortal | ❌ none (open) |
+| **User profile page** | ReportPortal **Profile** page; SonarQube **My Account** | ❌ none |
+| **Edit personal info** (name, email, password, avatar) | ReportPortal *Edit personal information*; SonarQube My Account | ❌ none |
+| **Personal API tokens / keys** | ReportPortal **Profile → API Keys** (named, multiple, revocable, `Bearer`); SonarQube **My Account → Security** (named, expiry, revoke, email reminder) | ❌ none |
+| **Ingest/upload token** | Codecov repo **upload token** + org **global upload token**; token required for uploads | ❌ `POST /api/v1/ingest` is unauthenticated |
+| **Roles / RBAC** | Allure TestOps global (Admin/User/Guest) + project (Owner/Write/Read); Administration → Members | ❌ none |
+| **Settings / config screens** | Codecov repo **Config** + **Org Settings**; SonarQube admin/quality-gate settings | ⚠️ `unitrack.quality-gate.*` / `unitrack.github.*` exist only as properties |
+| **Notifications** | SonarQube emails on token expiry; gate/alert emails | ❌ none |
+
+### Proposed next epic — "Accounts, auth & settings"
+
+1. **Authentication + local user accounts** (foundation): login/logout, `User` entity, hashed
+   passwords, session/security config. Prereq for everything below. *(SonarQube/ReportPortal/Allure)*
+2. **User profile page** — view name, email, role, joined date. *(ReportPortal Profile)*
+3. **Edit profile** — change name/email/password (avatar optional). *(ReportPortal edit personal info)*
+4. **Personal API tokens** — generate (named, optional expiry), list, revoke, shown once. Authn via
+   `Authorization: Bearer <token>` / header. *(ReportPortal API Keys, SonarQube Security)*
+5. **Secure the ingest + read APIs with tokens** — require a token for `POST /api/v1/ingest` (and
+   optionally reads); CI uses a token like Codecov's upload token. Back-compat "open mode" flag.
+6. **Settings / config UI** — surface quality-gate + GitHub config per project (today properties-only)
+   in an editable settings page. *(Codecov Config, SonarQube settings)*
+7. **Roles & project membership** (later) — admin/member/viewer; Members admin page. *(Allure TestOps)*
+8. **Notifications** (later) — email on token expiry and gate failures. *(SonarQube)*
+
+> **Config/profile screen references** (external docs — drop captured PNGs into `doc/images/`):
+> SonarQube *My Account → Security* tokens · ReportPortal *Profile → API Keys* · Codecov repo *Config →
+> General* upload token · Allure TestOps *Administration → Members* roles. Links in **Sources**.
+
+---
+
 ## Sources
 
 - Allure Report: https://allurereport.org/ · https://github.com/allure-framework
@@ -138,3 +180,7 @@ Docs/[screenshots]: https://plugins.jenkins.io/junit/
 - Currents.dev: https://currents.dev/ · https://currents.dev/pricing · https://docs.currents.dev/dashboard/tests/flaky-tests
 - Trunk Flaky Tests: https://trunk.io/flaky-tests · https://trunk.io/pricing · https://docs.trunk.io/flaky-tests
 - Jenkins JUnit plugin: https://plugins.jenkins.io/junit/
+- SonarQube tokens (My Account → Security): https://docs.sonarsource.com/sonarqube-server/latest/user-guide/managing-tokens/
+- ReportPortal API keys (Profile): https://reportportal.io/docs/log-data-in-reportportal/HowToGetAnAccessTokenInReportPortal/ · profile: https://reportportal.io/docs/user-account/EditPersonalInformation/
+- Codecov tokens: https://docs.codecov.com/docs/codecov-tokens
+- Allure TestOps roles & members: https://help.qameta.io/support/solutions/articles/101000500968-roles-and-access-and-rights · https://docs.qameta.io/allure-testops/briefly/managing-users/ · LDAP: https://docs.qameta.io/allure-testops/configuration/authentication/ldap/
