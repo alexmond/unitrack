@@ -166,6 +166,17 @@ read APIs are open), **no user accounts or profiles**, **no API tokens**, and **
 
 ---
 
+## Screenshots
+
+Reference UI captures of the competitors live in [`images/`](images/) with a per-screenshot
+index ([`images/README.md`](images/README.md)) mapping each to the UniTrack feature it parallels
+— Codecov (coverage, flags, components, report-merging, PR/GitHub checks, Slack), Datadog
+(flaky management, policies, notifications), and Trunk (quarantine, failure grouping, PR comment,
+status history). The index also lists the auth/config/profile screens still to capture from
+Allure, SonarQube and ReportPortal (their image hosts block automated download).
+
+---
+
 ## Sources
 
 - Allure Report: https://allurereport.org/ · https://github.com/allure-framework
