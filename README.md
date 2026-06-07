@@ -190,7 +190,15 @@ docker compose -f deploy/compose.h2.yaml up -d
 ```
 
 H2 is a `runtime` dependency so the same image runs on either backend — Postgres is the default;
-it only uses H2 when `UNITRACK_DB_URL` points at an `h2:` URL (as the H2 compose does).
+it only uses H2 when `UNITRACK_DB_URL` points at an `h2:` URL (as the H2 compose does). Both stacks
+cap the app container memory (`UNITRACK_MEM_LIMIT`, default `1g`) so the buildpacks JVM sizes its
+heap from the limit rather than total host RAM.
+
+To build locally and ship to a remote Docker host over SSH (no registry):
+
+```bash
+scripts/deploy-remote.sh --host root@192.168.100.132 --stack h2 --port 8081
+```
 
 ### Code quality
 
