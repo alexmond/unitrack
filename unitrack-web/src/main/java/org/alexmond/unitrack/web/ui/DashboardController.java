@@ -4,9 +4,13 @@ import org.alexmond.unitrack.domain.CoverageReport;
 import org.alexmond.unitrack.domain.Project;
 import org.alexmond.unitrack.domain.TestCaseResult;
 import org.alexmond.unitrack.domain.TestRun;
+import org.alexmond.unitrack.report.DurationPoint;
 import org.alexmond.unitrack.report.FailureClusteringService;
+import org.alexmond.unitrack.report.PerformanceService;
+import org.alexmond.unitrack.report.PerformanceSummary;
 import org.alexmond.unitrack.report.QualityGateService;
 import org.alexmond.unitrack.report.ReportingService;
+import org.alexmond.unitrack.report.TestDurationTrend;
 import org.alexmond.unitrack.report.TestRegressionService;
 import org.alexmond.unitrack.report.TriageService;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.HashMap;
@@ -35,6 +40,10 @@ public class DashboardController {
 
 	private static final int COVERAGE_FILE_LIMIT = 200;
 
+	private static final int SLOWEST_IN_RUN_LIMIT = 10;
+
+	private static final int PERF_SLOW_LIMIT = 25;
+
 	private final ReportingService reporting;
 
 	private final QualityGateService qualityGate;
@@ -44,6 +53,8 @@ public class DashboardController {
 	private final TriageService triage;
 
 	private final TestRegressionService regression;
+
+	private final PerformanceService performance;
 
 	@GetMapping("/")
 	public String index(Model model) {
@@ -101,7 +112,38 @@ public class DashboardController {
 		model.addAttribute("coverage", coverage.orElse(null));
 		List<?> files = coverage.map((c) -> reporting.coverageFiles(c.getId(), COVERAGE_FILE_LIMIT)).orElse(List.of());
 		model.addAttribute("coverageFiles", files);
+		model.addAttribute("slowest", performance.slowestInRun(id, SLOWEST_IN_RUN_LIMIT));
 		return "run";
+	}
+
+	@GetMapping("/projects/{id}/performance")
+	public String performance(@PathVariable Long id, Model model) {
+		Project project = reporting.findProject(id)
+			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found"));
+		PerformanceSummary summary = performance.summary(id, PERF_SLOW_LIMIT, TREND_LIMIT);
+		model.addAttribute("project", project);
+		model.addAttribute("slowest", summary.slowestInLatestRun());
+		model.addAttribute("latestRunId", summary.latestRunId());
+		model.addAttribute("trendLabels",
+				toJson(summary.suiteTimeTrend().stream().map(DurationPoint::shortSha).toList()));
+		model.addAttribute("trendSeconds",
+				toJson(summary.suiteTimeTrend().stream().map((p) -> round(p.durationMs() / 1000.0)).toList()));
+		return "performance";
+	}
+
+	@GetMapping("/projects/{id}/test")
+	public String test(@PathVariable Long id, @RequestParam(defaultValue = "") String className,
+			@RequestParam String name, Model model) {
+		Project project = reporting.findProject(id)
+			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found"));
+		TestDurationTrend trend = performance.testDurationTrend(id, className, name, TREND_LIMIT);
+		model.addAttribute("project", project);
+		model.addAttribute("className", className);
+		model.addAttribute("name", name);
+		model.addAttribute("points", trend.points());
+		model.addAttribute("trendLabels", toJson(trend.points().stream().map(DurationPoint::shortSha).toList()));
+		model.addAttribute("trendMs", toJson(trend.points().stream().map(DurationPoint::durationMs).toList()));
+		return "test";
 	}
 
 	/** Serializes a list of Strings/Numbers/nulls to a JSON array for the trend chart. */

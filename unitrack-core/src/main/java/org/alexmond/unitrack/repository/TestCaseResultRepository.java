@@ -15,6 +15,21 @@ public interface TestCaseResultRepository extends JpaRepository<TestCaseResult, 
 
 	List<TestCaseResult> findByRunIdAndStatusInOrderByClassNameAscNameAsc(Long runId, List<TestStatus> statuses);
 
+	/** Slowest cases in a run first — for the slowest-tests leaderboard. */
+	List<TestCaseResult> findByRunIdOrderByDurationMsDescNameAsc(Long runId, Pageable pageable);
+
+	/**
+	 * One test's history across a project's runs (newest first) — for the duration trend.
+	 */
+	@Query("""
+			select c from TestCaseResult c
+			join fetch c.run r
+			where r.project.id = :projectId and c.className = :className and c.name = :name
+			order by r.createdAt desc
+			""")
+	List<TestCaseResult> findTestHistory(@Param("projectId") Long projectId, @Param("className") String className,
+			@Param("name") String name, Pageable pageable);
+
 	/**
 	 * Recent failing/erroring cases for a project (newest first), for failure clustering.
 	 */

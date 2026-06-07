@@ -131,6 +131,22 @@
         </tbody>
     </table>
 
+    <h2 th:unless="${slowest.isEmpty()}">Slowest tests
+        <a class="muted" th:href="@{/projects/{id}/performance(id=${run.project.id})}">(performance &rarr;)</a>
+    </h2>
+    <table th:unless="${slowest.isEmpty()}">
+        <thead>
+        <tr><th>Test</th><th class="num">Duration</th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="t : ${slowest}">
+            <td><a th:href="@{/projects/{pid}/test(pid=${run.project.id},className=${t.className()},name=${t.name()})}">
+                <code class="mono" th:text="${t.className()} + ' › ' + ${t.name()}">Test › method</code></a></td>
+            <td class="num" th:text="${#numbers.formatInteger(t.durationMs(), 1, 'COMMA')} + ' ms'">0 ms</td>
+        </tr>
+        </tbody>
+    </table>
+
     <div th:if="${coverage != null}">
         <h2>Coverage by file <span class="muted">(most missed first)</span></h2>
         <table>
