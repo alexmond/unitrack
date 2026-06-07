@@ -7,6 +7,7 @@ import org.alexmond.unitrack.domain.TestRun;
 import org.alexmond.unitrack.report.BlameService;
 import org.alexmond.unitrack.report.DurationPoint;
 import org.alexmond.unitrack.report.FailureClusteringService;
+import org.alexmond.unitrack.report.PerfRegressionService;
 import org.alexmond.unitrack.report.PerformanceService;
 import org.alexmond.unitrack.report.PerformanceSummary;
 import org.alexmond.unitrack.report.QualityGateService;
@@ -59,6 +60,8 @@ public class DashboardController {
 
 	private final BlameService blame;
 
+	private final PerfRegressionService perfRegression;
+
 	@GetMapping("/")
 	public String index(Model model) {
 		List<Project> projects = reporting.listProjects();
@@ -106,6 +109,7 @@ public class DashboardController {
 		model.addAttribute("run", run);
 		model.addAttribute("gate", qualityGate.evaluate(id).orElse(null));
 		model.addAttribute("regression", regression.diff(id).orElse(null));
+		model.addAttribute("perfRegression", perfRegression.diff(id).orElse(null));
 		model.addAttribute("suites", reporting.suitesFor(id));
 		List<TestCaseResult> failures = reporting.failedCasesFor(id);
 		model.addAttribute("failures", failures);

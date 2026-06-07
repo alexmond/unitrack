@@ -83,6 +83,32 @@
         </ul>
     </div>
 
+    <div th:if="${perfRegression != null and perfRegression.hasRegressions()}" class="gate gate-fail">
+        <div class="gate-head">
+            Performance regression
+            <span class="badge fail" th:text="${perfRegression.slowerCount()} + ' slower'">0 slower</span>
+        </div>
+        <div class="muted" th:if="${perfRegression.baselineFound()}">
+            vs baseline run
+            <a th:href="@{'/runs/' + ${perfRegression.baselineRunId()}}" th:text="'#' + ${perfRegression.baselineRunId()}">#0</a>
+            on <code class="mono" th:text="${perfRegression.baseBranch()}">main</code>
+        </div>
+        <table>
+            <thead>
+            <tr><th>Test</th><th class="num">Baseline</th><th class="num">Now</th><th class="num">Δ</th></tr>
+            </thead>
+            <tbody>
+            <tr th:each="s : ${perfRegression.slower()}">
+                <td><code class="mono" th:text="${s.className()} + ' › ' + ${s.name()}">Test › method</code></td>
+                <td class="num" th:text="${s.baselineMs()} + ' ms'">0 ms</td>
+                <td class="num" th:text="${s.currentMs()} + ' ms'">0 ms</td>
+                <td class="num" style="color:var(--red)"
+                    th:text="'+' + ${s.deltaMs()} + ' ms (+' + ${s.pct()} + '%)'">+0 ms</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
     <h2>Failures <span class="muted" th:text="'(' + ${failures.size()} + ')'">(0)</span></h2>
     <div th:if="${failures.isEmpty()}" class="empty">No failed tests. 🎉</div>
     <div th:each="c : ${failures}">
