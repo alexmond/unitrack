@@ -1,0 +1,30 @@
+= Flaky Detection
+
+A flaky test is one that produces different results without any code change. UniTrack
+detects flakiness by comparing test outcomes across runs that share the *same commit*: if a
+test passes in one run and fails in another for the same SHA, the code didn't change -- the
+test did.
+
+== How it works
+
+. Each ingest records every test case with its status, keyed by class and method name.
+. After a run is stored, UniTrack looks at other runs of the same `commit` for the same
+  project.
+. Any test seen both passing and failing on that commit is recorded as a `FlakyTest`.
+. The flaky view ranks tests by how often they flip, so the worst offenders surface first.
+
+For this to work, supply a `commit` on each upload and run the same suite more than once per
+commit (e.g. a nightly re-run job, or CI retries). Without retries on a fixed commit there
+is nothing to compare.
+
+== Where it shows up
+
+The *Flaky* dashboard page lists detected flaky tests with their status and flip counts.
+Tests can be tracked through a lifecycle (`FlakyStatus`) as they are investigated and fixed.
+
+== Tips
+
+* A scheduled job that re-runs the suite on the last `main` commit several times a night is
+  the most reliable way to surface flakiness.
+* Combine with xref:failure-clustering.adoc[Failure Clustering] to see whether a flaky test's
+  failures share a common error signature.

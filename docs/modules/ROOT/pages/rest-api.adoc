@@ -1,0 +1,67 @@
+= REST API
+
+UniTrack exposes a small HTTP API under `/api/v1`. The dashboard itself is server-rendered
+Thymeleaf; the API is for ingestion and account introspection.
+
+== POST /api/v1/ingest
+
+Accepts a CI upload of test and coverage reports as `multipart/form-data`. The full field
+list is documented in xref:ingestion.adoc[Reporting Results].
+
+[source,bash]
+----
+curl -F project=myapp -F branch=main -F commit=$SHA \
+     -F 'junit=@target/surefire-reports/TEST-MyTest.xml;type=text/xml' \
+     -F 'jacoco=@target/site/jacoco/jacoco.xml;type=text/xml' \
+     http://localhost:8080/api/v1/ingest
+----
+
+*Response* -- `201 Created`:
+
+[source,json]
+----
+{
+  "runId": 42,
+  "project": "myapp",
+  "tests": 128,
+  "failures": 1,
+  "skipped": 2,
+  "lineCoveragePct": 84.3
+}
+----
+
+When `unitrack.security.require-ingest-token=true`, the request must carry a valid token
+as `Authorization: Bearer <token>` (or the `X-UniTrack-Token` header); otherwise it returns
+`401`.
+
+== GET /api/v1/me
+
+Returns the authenticated principal -- the account behind the current session or API token.
+Always requires authentication, even in open mode.
+
+[source,bash]
+----
+curl -H "Authorization: Bearer ut_xxxxxxxx" http://localhost:8080/api/v1/me
+----
+
+[source,json]
+----
+{
+  "username": "alex",
+  "displayName": "Alex Mondshain",
+  "email": "alex@example.com",
+  "role": "ADMIN"
+}
+----
+
+== Authentication mechanisms
+
+UniTrack accepts two kinds of credential:
+
+* *Session cookie* -- after a form login at `/login`.
+* *API token* -- a personal token, sent as `Authorization: Bearer <token>` or
+  `X-UniTrack-Token: <token>`. Tokens are minted on the profile page and stored only as a
+  SHA-256 hash.
+
+For API paths an unauthenticated request returns `401`; browser paths redirect to
+`/login`. See xref:accounts.adoc[Accounts & API Tokens].

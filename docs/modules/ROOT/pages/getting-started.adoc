@@ -1,0 +1,63 @@
+= Getting Started
+
+This guide gets a UniTrack server running and pushes your first test report into it.
+
+== Prerequisites
+
+* Java {java-version}
+* A database -- PostgreSQL for production, or embedded H2 (PostgreSQL mode) for a quick demo
+* Maven is not required to run; the project ships the Maven Wrapper (`./mvnw`)
+
+== Build
+
+[source,bash]
+----
+./mvnw clean install
+----
+
+The reactor builds two modules: `unitrack-core` (domain, persistence, reporting) and
+`unitrack-web` (REST API, Thymeleaf dashboard, security).
+
+== Run against PostgreSQL
+
+By default the app connects to PostgreSQL on `localhost:5432`. Override with environment
+variables (see xref:configuration.adoc[Configuration]):
+
+[source,bash]
+----
+UNITRACK_DB_URL=jdbc:postgresql://localhost:5432/unitrack \
+UNITRACK_DB_USER=unitrack \
+UNITRACK_DB_PASSWORD=unitrack \
+./mvnw -pl unitrack-web spring-boot:run
+----
+
+Flyway applies the schema migrations on startup. The dashboard is then served at
+http://localhost:8080.
+
+== Run a self-contained demo on H2
+
+For evaluation you can run entirely on embedded H2 with seeded sample data -- no external
+database needed. The Compose stack in `deploy/compose.h2.yaml` does exactly this; see
+xref:deployment.adoc[Deployment]. To enable the seeded demo projects and a `test`/`test`
+user, set:
+
+[source,bash]
+----
+UNITRACK_DEMO_ENABLED=true
+----
+
+== Push your first report
+
+With the server up, upload a Surefire + JaCoCo report from any build:
+
+[source,bash]
+----
+curl -F project=myapp -F branch=main -F commit=$(git rev-parse HEAD) \
+     -F 'junit=@target/surefire-reports/TEST-com.example.MyTest.xml;type=text/xml' \
+     -F 'jacoco=@target/site/jacoco/jacoco.xml;type=text/xml' \
+     http://localhost:8080/api/v1/ingest
+----
+
+Open the dashboard and the `myapp` project now shows its first run, pass/fail totals, and
+line-coverage percentage. From here, wire it into CI with the
+xref:cli-reference.adoc[upload script] and explore the xref:features.adoc[features].

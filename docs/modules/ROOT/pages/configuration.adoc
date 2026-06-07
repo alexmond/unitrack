@@ -1,0 +1,99 @@
+= Configuration
+
+UniTrack is configured through standard Spring Boot externalised configuration. All
+application-specific settings are bound via `@ConfigurationProperties` under the `unitrack.*`
+namespace -- so every property can be set in `application.yml`, as a `UNITRACK_*` environment
+variable, or as a JVM system property.
+
+== Database & server
+
+These use the standard Spring keys; the defaults target a local PostgreSQL:
+
+[cols="2,3"]
+|===
+| Property (env var) | Default
+
+| `spring.datasource.url` (`UNITRACK_DB_URL`)            | `jdbc:postgresql://localhost:5432/unitrack`
+| `spring.datasource.username` (`UNITRACK_DB_USER`)      | `unitrack`
+| `spring.datasource.password` (`UNITRACK_DB_PASSWORD`)  | `unitrack`
+| `server.port` (`PORT`)                                 | `8080`
+| `spring.servlet.multipart.max-file-size`               | `25MB`
+| `spring.servlet.multipart.max-request-size`            | `100MB`
+|===
+
+Flyway runs the migrations on startup (`spring.flyway.enabled=true`).
+
+== `unitrack.security`
+
+See xref:accounts.adoc[Accounts & API Tokens].
+
+[cols="2,1,3"]
+|===
+| Property | Default | Meaning
+
+| `open-mode`             | `true`  | Permit all endpoints (except `/profile`, `/api/v1/me`).
+| `require-ingest-token`  | `false` | Require a token on `POST /api/v1/ingest`.
+| `admin-username`        | `admin` | Username of the bootstrap admin.
+| `admin-password`        | _generated_ | Admin password; logged if not set.
+|===
+
+== `unitrack.quality-gate`
+
+See xref:quality-gate.adoc[Quality Gate].
+
+[cols="2,1,3"]
+|===
+| Property | Default | Meaning
+
+| `base-branch`            | `main` | Branch whose latest run is the baseline.
+| `min-line-coverage`      | _unset_ | Absolute minimum line-coverage percentage.
+| `max-coverage-drop-pct`  | `1.0`  | Largest allowed coverage drop, in percentage points.
+| `fail-on-new-failures`   | `true` | Fail the gate on any test failure.
+|===
+
+== `unitrack.github`
+
+See xref:github-checks.adoc[GitHub PR Checks].
+
+[cols="2,1,3"]
+|===
+| Property | Default | Meaning
+
+| `enabled`         | `false` | Enable commit-status publishing.
+| `token`           | _unset_ | GitHub token with commit-status scope.
+| `api-url`         | `https://api.github.com` | API base (change for GHE).
+| `server-base-url` | `http://localhost:8080` | Public URL used for run links.
+| `context`         | `unitrack/quality-gate` | Status context label.
+|===
+
+== `unitrack.demo`
+
+[cols="2,1,3"]
+|===
+| Property | Default | Meaning
+
+| `enabled`        | `false` | Seed sample projects and a demo user.
+| `test-username`  | `test`  | Demo user's username.
+| `test-password`  | `test`  | Demo user's password.
+|===
+
+WARNING: Enable `unitrack.demo` only on throwaway evaluation instances.
+
+== Example `application.yml`
+
+[source,yaml]
+----
+unitrack:
+  security:
+    open-mode: true
+    require-ingest-token: true
+    admin-password: ${UNITRACK_ADMIN_PASSWORD}
+  quality-gate:
+    base-branch: main
+    min-line-coverage: 70
+    max-coverage-drop-pct: 0.5
+  github:
+    enabled: true
+    token: ${GITHUB_TOKEN}
+    server-base-url: https://unitrack.example.com
+----

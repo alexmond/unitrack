@@ -1,0 +1,77 @@
+= CLI & CI Integration
+
+UniTrack ships a small uploader script and ready-to-copy GitHub Actions workflows so you
+can report results from any build with one step.
+
+== The upload script
+
+`scripts/unitrack-upload.sh` wraps the multipart `curl` call, expanding glob patterns and
+handling authentication.
+
+[source,bash]
+----
+UNITRACK_URL=http://localhost:8080 \
+scripts/unitrack-upload.sh \
+  --project myapp \
+  --branch  "$GITHUB_REF_NAME" \
+  --commit  "$GITHUB_SHA" \
+  --build   "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+  --junit   'target/surefire-reports/TEST-*.xml' \
+  --jacoco  'target/site/jacoco/jacoco.xml'
+----
+
+=== Options
+
+[cols="1,3"]
+|===
+| `--project`  | Project name (required).
+| `--junit`    | JUnit XML glob; repeatable. At least one match is required.
+| `--jacoco`   | JaCoCo XML glob; repeatable.
+| `--branch` / `--commit` / `--build` / `--repo` / `--ci` | Run metadata.
+| `--flag`     | Coverage flag (e.g. `frontend`).
+| `--run-key`  | Stable key to merge sharded runs.
+| `--token`    | API token; or set `UNITRACK_TOKEN`. Sent as `Authorization: Bearer`.
+| `--url`      | Server URL; or set `UNITRACK_URL` (default `http://localhost:8080`).
+|===
+
+Quote the `--junit`/`--jacoco` globs so the shell does not expand them before the script
+does.
+
+== GitHub Actions
+
+Two workflows live under `.github/workflows/`:
+
+* `ci.yml` -- UniTrack's own build; it self-reports its results when the `UNITRACK_URL`
+  repository variable is set.
+* `upload-results-example.yml` -- a drop-in template for *other* repositories that want to
+  report to your UniTrack server. Copy it into your project.
+
+A minimal reporting step:
+
+[source,yaml]
+----
+- name: Upload to UniTrack
+  if: always() && vars.UNITRACK_URL != ''
+  env:
+    UNITRACK_URL: ${{ vars.UNITRACK_URL }}
+    UNITRACK_TOKEN: ${{ secrets.UNITRACK_TOKEN }}   # only if the server requires a token
+  run: |
+    bash scripts/unitrack-upload.sh \
+      --project "${GITHUB_REPOSITORY##*/}" \
+      --branch  "${GITHUB_REF_NAME}" \
+      --commit  "${GITHUB_SHA}" \
+      --build   "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+      --repo    "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}" \
+      --ci      github-actions \
+      --junit   'target/surefire-reports/TEST-*.xml' \
+      --jacoco  'target/site/jacoco/jacoco.xml'
+----
+
+Run your tests with `|| true` (or `--fail-at-end`) before this step so failing builds
+still report their results.
+
+== Authentication
+
+If the server runs with `unitrack.security.require-ingest-token=true`, mint a personal
+token on the dashboard profile page and pass it via `--token` / `UNITRACK_TOKEN`. See
+xref:accounts.adoc[Accounts & API Tokens].

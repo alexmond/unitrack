@@ -1,0 +1,62 @@
+= Accounts & API Tokens
+
+UniTrack has a lightweight account system: form login for the dashboard, per-user personal
+API tokens for automated uploads, and an *open mode* that keeps the barrier low for internal
+deployments.
+
+== Open mode
+
+By default (`unitrack.security.open-mode=true`) all dashboard and API endpoints are public,
+*except* `/profile` and `/api/v1/me`, which always require a signed-in principal. This makes
+a fresh deployment immediately browsable. Set `open-mode=false` to require authentication for
+everything.
+
+Independently, `unitrack.security.require-ingest-token=true` locks down just the ingest
+endpoint so that pushing results requires a token, even while the dashboard stays open.
+
+== The admin user
+
+On first start an `admin` user is created. Provide its password with
+`unitrack.security.admin-password`; if you omit it, a random password is generated and
+written to the logs. If the configured password later changes, the admin password is
+re-synced on startup so the two never drift.
+
+== Personal API tokens
+
+Sign in, open the *Profile* page, and mint a token. The raw token (prefixed `ut_`) is shown
+*once* -- copy it then. UniTrack stores only its SHA-256 hash plus a short prefix for
+display, and records the last-used time. Tokens can carry an expiry and be revoked at any
+time.
+
+Use a token from CI:
+
+[source,bash]
+----
+scripts/unitrack-upload.sh --token "$UNITRACK_TOKEN" --project app --junit '...'
+# or, raw:
+curl -H "Authorization: Bearer ut_xxx" http://localhost:8080/api/v1/me
+----
+
+Tokens are accepted as `Authorization: Bearer <token>` or as the `X-UniTrack-Token` header.
+
+== Profile management
+
+The Profile page lets a signed-in user edit their display name and email, change their
+password, and manage (create / revoke) their API tokens. Roles are `ADMIN` and `USER`.
+
+== Demo accounts
+
+When `unitrack.demo.enabled=true`, a `test`/`test` user is seeded alongside sample projects,
+so an evaluation instance has something to log into and explore. Never enable the demo
+seeder on a real deployment.
+
+== Putting it together
+
+[cols="2,3"]
+|===
+| Goal | Setting
+
+| Fully public internal dashboard          | `open-mode=true` (default)
+| Public dashboard, protected uploads      | `open-mode=true`, `require-ingest-token=true`
+| Locked down -- login for everything      | `open-mode=false`
+|===

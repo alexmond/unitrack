@@ -1,0 +1,47 @@
+= Roadmap & Future Design
+
+UniTrack's roadmap is tracked as GitHub epics and issues on the
+https://github.com/alexmond/unitrack[project repository]. The P0–P2 feature set -- ingestion,
+trends, flaky detection, quality gates, coverage flags, report merging, failure clustering,
+triage, GitHub checks, the dashboard, and accounts/API tokens -- is *delivered*. The pages in
+this site document that shipped functionality.
+
+The sections below summarise what is planned next.
+
+== Accounts, auth & settings (epic #38)
+
+Build on the existing account system:
+
+* *Per-project settings, persisted* -- move quality-gate and GitHub config from global
+  properties into per-project records with a settings UI (#44, #58–#61).
+* *Roles & project membership (RBAC)* -- global roles plus Owner/Write/Read membership, a
+  members admin page, and write authorisation by membership (#45, #62–#65).
+* *Notifications* -- email infrastructure, token-expiry reminders, gate-failure alerts, and
+  per-user preferences (#46, #66–#69).
+
+== More formats & quality signals (epic #48)
+
+Broaden what UniTrack can ingest and the signals it derives:
+
+* *More coverage formats* -- a parser abstraction with auto-detection, plus Cobertura, LCOV,
+  and Coverlet/OpenCover/coverage.py parsers (#49, #70–#73).
+* *Performance-test ingestion* -- a performance data model and parsers for JMeter JTL,
+  Gatling and k6, with trend views (#50, #74–#77).
+* *Unit-test performance* -- slowest-tests views and per-test / suite duration trends
+  (#51, #78–#80).
+* *Performance regression detection* -- latency/throughput and slow-test regressions vs a
+  baseline (#52, #81–#82).
+* *Test regression report* -- a new-failures / new-passes diff against the baseline with its
+  own UI and API (#53, #83–#84).
+
+== Dashboard & integrations
+
+* *Configurable dashboard widgets + real-time ingest* (#21).
+* *MCP server via Spring AI* -- expose UniTrack's data to AI agents through the Model Context
+  Protocol (#54).
+
+== Contributing
+
+Issues are labelled by area (`ingestion`, `backend`, `frontend`, `perf`, `auth`, `ai`) and
+priority (`P0`–`P4`), and grouped under their epic. See the open issues for the current state
+and pick one up to contribute.

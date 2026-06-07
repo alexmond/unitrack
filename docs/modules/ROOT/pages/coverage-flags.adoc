@@ -1,0 +1,32 @@
+= Coverage Flags
+
+Flags let you attribute a run -- and its coverage -- to a *component* or *test type*, so a
+single project can report several independent slices: frontend vs backend, unit vs
+integration, per-service, and so on. The concept mirrors Codecov's "flags".
+
+== Using flags
+
+Add a `flag` to the upload:
+
+[source,bash]
+----
+scripts/unitrack-upload.sh --project shop --flag frontend \
+  --junit 'frontend/target/surefire-reports/TEST-*.xml' \
+  --jacoco 'frontend/target/site/jacoco/jacoco.xml'
+
+scripts/unitrack-upload.sh --project shop --flag backend \
+  --junit 'backend/target/surefire-reports/TEST-*.xml' \
+  --jacoco 'backend/target/site/jacoco/jacoco.xml'
+----
+
+Both uploads land under the `shop` project but stay distinguishable by flag, so you can
+track each component's coverage trend separately instead of averaging them into one number.
+
+== Why it matters
+
+* A small, well-covered module isn't masked by a large, poorly-covered one.
+* You can apply different expectations to different test types.
+* The dashboard can filter runs by flag.
+
+The distinct set of flags seen for a project is tracked automatically, so new flags appear
+as soon as the first run carrying them is ingested.
