@@ -6,6 +6,7 @@ import org.alexmond.unitrack.domain.Role;
 import org.alexmond.unitrack.web.account.UserService;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 import java.security.SecureRandom;
@@ -13,6 +14,7 @@ import java.util.Base64;
 
 /** Seeds a default admin on first start when there are no users yet. */
 @Component
+@Order(1)
 @RequiredArgsConstructor
 @Slf4j
 public class DefaultAdminSeeder implements ApplicationRunner {
@@ -23,18 +25,22 @@ public class DefaultAdminSeeder implements ApplicationRunner {
 
 	@Override
 	public void run(ApplicationArguments args) {
-		if (users.count() > 0) {
-			return;
+		String username = props.getAdminUsername();
+		boolean configured = props.getAdminPassword() != null && !props.getAdminPassword().isBlank();
+		if (users.findByUsername(username).isEmpty()) {
+			String password = configured ? props.getAdminPassword() : randomPassword();
+			users.create(username, "Administrator", null, password, Role.ADMIN);
+			if (configured) {
+				log.info("Created default admin '{}'", username);
+			}
+			else {
+				log.warn("Created default admin '{}' with generated password: {}  (set "
+						+ "unitrack.security.admin-password to control it)", username, password);
+			}
 		}
-		boolean generated = (props.getAdminPassword() == null || props.getAdminPassword().isBlank());
-		String password = generated ? randomPassword() : props.getAdminPassword();
-		users.create(props.getAdminUsername(), "Administrator", null, password, Role.ADMIN);
-		if (generated) {
-			log.warn("Created default admin '{}' with generated password: {}  (set unitrack.security.admin-password "
-					+ "to control it)", props.getAdminUsername(), password);
-		}
-		else {
-			log.info("Created default admin '{}'", props.getAdminUsername());
+		else if (configured) {
+			// Keep the admin password in sync with the configured value.
+			users.resetPassword(username, props.getAdminPassword());
 		}
 	}
 

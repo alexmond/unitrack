@@ -208,6 +208,10 @@ docker compose -f deploy/compose.postgres.yaml up -d        # cp deploy/.env.exa
 docker compose -f deploy/compose.h2.yaml up -d
 ```
 
+The H2 stack is a throwaway demo: it sets stable creds (`admin`/`admin`, `test`/`test`) and
+pre-seeds sample projects/runs (`unitrack.demo.enabled=true`). Don't use those settings for the
+Postgres stack.
+
 H2 is a `runtime` dependency so the same image runs on either backend — Postgres is the default;
 it only uses H2 when `UNITRACK_DB_URL` points at an `h2:` URL (as the H2 compose does). Both stacks
 cap the app container memory (`UNITRACK_MEM_LIMIT`, default `1g`) so the buildpacks JVM sizes its
