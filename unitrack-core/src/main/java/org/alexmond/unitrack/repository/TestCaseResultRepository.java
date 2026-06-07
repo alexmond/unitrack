@@ -31,6 +31,20 @@ public interface TestCaseResultRepository extends JpaRepository<TestCaseResult, 
 			@Param("name") String name, Pageable pageable);
 
 	/**
+	 * One test's history on a single branch (newest first) — for first-failing-commit
+	 * blame.
+	 */
+	@Query("""
+			select c from TestCaseResult c
+			join fetch c.run r
+			where r.project.id = :projectId and r.branch = :branch
+			  and c.className = :className and c.name = :name
+			order by r.createdAt desc
+			""")
+	List<TestCaseResult> findTestHistoryOnBranch(@Param("projectId") Long projectId, @Param("branch") String branch,
+			@Param("className") String className, @Param("name") String name, Pageable pageable);
+
+	/**
 	 * Recent failing/erroring cases for a project (newest first), for failure clustering.
 	 */
 	@Query("""

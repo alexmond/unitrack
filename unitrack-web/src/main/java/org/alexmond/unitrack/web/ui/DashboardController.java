@@ -4,6 +4,7 @@ import org.alexmond.unitrack.domain.CoverageReport;
 import org.alexmond.unitrack.domain.Project;
 import org.alexmond.unitrack.domain.TestCaseResult;
 import org.alexmond.unitrack.domain.TestRun;
+import org.alexmond.unitrack.report.BlameService;
 import org.alexmond.unitrack.report.DurationPoint;
 import org.alexmond.unitrack.report.FailureClusteringService;
 import org.alexmond.unitrack.report.PerformanceService;
@@ -56,6 +57,8 @@ public class DashboardController {
 
 	private final PerformanceService performance;
 
+	private final BlameService blame;
+
 	@GetMapping("/")
 	public String index(Model model) {
 		List<Project> projects = reporting.listProjects();
@@ -107,6 +110,7 @@ public class DashboardController {
 		List<TestCaseResult> failures = reporting.failedCasesFor(id);
 		model.addAttribute("failures", failures);
 		model.addAttribute("categories", triage.categoryByCaseId(run.getProject().getId(), failures));
+		model.addAttribute("blame", blame.blameByCaseId(run, failures));
 
 		Optional<CoverageReport> coverage = reporting.coverageFor(id);
 		model.addAttribute("coverage", coverage.orElse(null));
