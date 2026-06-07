@@ -7,6 +7,7 @@ import org.alexmond.unitrack.domain.TestRun;
 import org.alexmond.unitrack.report.FailureClusteringService;
 import org.alexmond.unitrack.report.QualityGateService;
 import org.alexmond.unitrack.report.ReportingService;
+import org.alexmond.unitrack.report.TestRegressionService;
 import org.alexmond.unitrack.report.TriageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -41,6 +42,8 @@ public class DashboardController {
 	private final FailureClusteringService clustering;
 
 	private final TriageService triage;
+
+	private final TestRegressionService regression;
 
 	@GetMapping("/")
 	public String index(Model model) {
@@ -88,6 +91,7 @@ public class DashboardController {
 			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Run not found"));
 		model.addAttribute("run", run);
 		model.addAttribute("gate", qualityGate.evaluate(id).orElse(null));
+		model.addAttribute("regression", regression.diff(id).orElse(null));
 		model.addAttribute("suites", reporting.suitesFor(id));
 		List<TestCaseResult> failures = reporting.failedCasesFor(id);
 		model.addAttribute("failures", failures);

@@ -1,0 +1,57 @@
+= Test Regression Report
+
+The regression report answers one question for a run: *what changed versus the baseline?*
+It diffs the run's per-test outcomes against the latest run on the base branch and splits
+the result into three buckets:
+
+* *New failures* — tests failing now that were **not** failing in the baseline. These are the
+  regressions this run introduced.
+* *New passes (fixed)* — tests that were failing in the baseline and now **pass**.
+* *Still failing* — tests failing in both, i.e. pre-existing failures carried over.
+
+Where the xref:quality-gate.adoc[quality gate] gives a single pass/fail verdict, the
+regression report gives the itemised diff behind it.
+
+== The baseline
+
+The baseline is the same one the quality gate uses: the most recent run on the configured
+base branch (`unitrack.quality-gate.base-branch`, default `main`) for the same project and
+the same xref:coverage-flags.adoc[coverage flag], created no later than the run being viewed.
+If there is no prior run to compare against, the report says so and lists the run's current
+failures as "new".
+
+Tests are matched by class name + test name, so renaming a test reads as one removed and one
+added.
+
+== Where it shows up
+
+* *Run page* — a "Regression vs baseline" panel above the failures list, summarising
+  `N new · M fixed · K still failing` with a link to the baseline run, and listing the new
+  failures (with their failure type) and the fixed tests.
+* *REST* — `GET /api/v1/runs/{id}/regression`:
+
+[source,json]
+----
+{
+  "baselineFound": true,
+  "baselineRunId": 41,
+  "baseBranch": "main",
+  "newFailures": [
+    { "className": "com.x.G", "name": "c", "failureType": "java.lang.AssertionError", "failureMessage": "boom" }
+  ],
+  "newPasses": [
+    { "className": "com.x.G", "name": "a", "failureType": null, "failureMessage": null }
+  ],
+  "stillFailing": []
+}
+----
+
+`404` if the run does not exist; `baselineFound` is `false` (and `baselineRunId` omitted) when
+there is no prior run on the base branch.
+
+== Relation to the quality gate
+
+The quality gate's `new-failures` rule excludes xref:flaky-detection.adoc[quarantined] flaky
+tests, because its job is to decide whether to fail the build. The regression report is purely
+informational and shows the raw diff — including quarantined tests — so you see everything
+that actually changed.
