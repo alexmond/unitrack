@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/common :: head('UniTrack — Profile')}"></head>
+<body>
+<header th:replace="~{fragments/common :: topbar}"></header>
+
+<main class="container">
+    <h1>Profile</h1>
+    <div th:if="${msg}" class="muted" th:text="${msg}">ok</div>
+    <div th:if="${error}" style="color:var(--red)" th:text="${error}">err</div>
+
+    <div th:if="${newToken}" class="gate gate-pass">
+        <div class="gate-head">New token — copy it now, it won't be shown again</div>
+        <pre th:text="${newToken}" style="background:var(--code-bg);color:var(--code-text);padding:10px;border-radius:6px;overflow-x:auto">ut_…</pre>
+    </div>
+
+    <h2>Account</h2>
+    <p class="muted">
+        Username <code class="mono" th:text="${user.username}">admin</code> ·
+        role <span class="badge pass" th:text="${user.role}">USER</span>
+    </p>
+    <form method="post" th:action="@{/profile}" class="rule-form">
+        <input type="text" name="displayName" th:value="${user.displayName}" placeholder="Display name"/>
+        <input type="email" name="email" th:value="${user.email}" placeholder="Email"/>
+        <button class="btn btn-muted" type="submit">Save</button>
+    </form>
+
+    <h2>Change password</h2>
+    <form method="post" th:action="@{/profile/password}" class="rule-form">
+        <input type="password" name="currentPassword" placeholder="Current password" required/>
+        <input type="password" name="newPassword" placeholder="New password" required/>
+        <button class="btn btn-muted" type="submit">Change</button>
+    </form>
+
+    <h2>API tokens</h2>
+    <p class="muted">Use a token to authenticate the REST/ingest API:
+        <code class="mono">Authorization: Bearer &lt;token&gt;</code></p>
+    <form method="post" th:action="@{/profile/tokens}" class="rule-form">
+        <input type="text" name="name" placeholder="Token name (e.g. ci)" required/>
+        <input type="number" name="expiresDays" placeholder="Expires (days)"/>
+        <button class="btn btn-muted" type="submit">Generate</button>
+    </form>
+
+    <table th:unless="${tokens.isEmpty()}" style="margin-top:12px">
+        <thead>
+        <tr><th>Name</th><th>Prefix</th><th>Created</th><th>Expires</th><th>Last used</th><th>State</th><th></th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="t : ${tokens}">
+            <td th:text="${t.name}">ci</td>
+            <td><code class="mono" th:text="${t.prefix}">ut_…</code></td>
+            <td th:text="${#temporals.format(t.createdAt, 'yyyy-MM-dd')}">date</td>
+            <td th:text="${t.expiresAt != null} ? ${#temporals.format(t.expiresAt, 'yyyy-MM-dd')} : 'never'">never</td>
+            <td th:text="${t.lastUsedAt != null} ? ${#temporals.format(t.lastUsedAt, 'yyyy-MM-dd HH:mm')} : '—'">—</td>
+            <td><span class="badge" th:classappend="${t.active} ? 'pass' : 'fail'"
+                      th:text="${t.active} ? 'active' : 'revoked'">active</span></td>
+            <td>
+                <form th:if="${t.active}" method="post"
+                      th:action="@{/profile/tokens/{id}/revoke(id=${t.id})}">
+                    <button class="btn" type="submit">Revoke</button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</main>
+</body>
+</html>
