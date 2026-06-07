@@ -21,7 +21,7 @@ Content-Type: multipart/form-data
 
 | `project`    | yes | Project name; created on first sight.
 | `junit`      | yes | One or more Surefire/JUnit XML files (repeatable).
-| `jacoco`     | no  | One or more JaCoCo XML reports (repeatable).
+| `jacoco`     | no  | One or more coverage reports (repeatable): JaCoCo XML, Cobertura XML, or LCOV -- auto-detected.
 | `branch`     | no  | Git branch the build ran on.
 | `commit`     | no  | Commit SHA -- used for flaky detection and GitHub status.
 | `buildUrl`   | no  | Link back to the CI build.
@@ -38,7 +38,10 @@ metadata that unlocks additional features.
 
 . The JUnit XML is parsed into suites and cases, capturing status and any
   `system-out`/`system-err` output and attachments.
-. JaCoCo counters are aggregated into a line-coverage percentage and stored per file.
+. The coverage report's format is auto-detected from its content -- *JaCoCo XML*,
+  *Cobertura XML*, or *LCOV* (`.info`) -- and its counters are aggregated into a
+  line-coverage percentage and stored per file. The `jacoco` upload field accepts any of
+  these, so non-JVM projects (Python, JavaScript, .NET) can report coverage too.
 . A `TestRun` is created, linked to its `Project`, with pass/fail totals.
 . Flaky detection compares this run to other runs of the same commit.
 . Triage rules categorise any failures, and similar failures are clustered.

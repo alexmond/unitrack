@@ -13,8 +13,19 @@ import java.util.List;
  * aggregate coverage and the per-{@code <sourcefile>} counters for the file breakdown.
  */
 @Component
-public class JacocoXmlParser {
+public class JacocoXmlParser implements CoverageParser {
 
+	@Override
+	public String format() {
+		return "jacoco";
+	}
+
+	@Override
+	public boolean supports(String headSample) {
+		return headSample.contains("<report");
+	}
+
+	@Override
 	public CoverageResults parse(InputStream in) {
 		try {
 			Document doc = XmlSupport.parse(in);

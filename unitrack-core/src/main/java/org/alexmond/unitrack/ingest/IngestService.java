@@ -43,7 +43,7 @@ public class IngestService {
 
 	private final JUnitXmlParser junitParser;
 
-	private final JacocoXmlParser jacocoParser;
+	private final CoverageParsers coverageParsers;
 
 	/**
 	 * Parses and stores a run. {@code junitStreams} and {@code jacocoStreams} are
@@ -138,7 +138,8 @@ public class IngestService {
 	}
 
 	private CoverageResults parseCoverage(List<Supplier<InputStream>> streams) {
-		// Merge multiple JaCoCo reports by summing counters and concatenating file rows.
+		// Merge multiple coverage reports by summing counters and concatenating file
+		// rows.
 		int lc = 0;
 		int lm = 0;
 		int bc = 0;
@@ -150,7 +151,7 @@ public class IngestService {
 		List<CoverageResults.ParsedFileCoverage> files = new ArrayList<>();
 		for (Supplier<InputStream> supplier : streams) {
 			try (InputStream in = supplier.get()) {
-				CoverageResults r = jacocoParser.parse(in);
+				CoverageResults r = coverageParsers.parse(in);
 				lc += r.lineCovered();
 				lm += r.lineMissed();
 				bc += r.branchCovered();
@@ -162,7 +163,7 @@ public class IngestService {
 				files.addAll(r.files());
 			}
 			catch (IOException ex) {
-				throw new IngestException("Failed reading JaCoCo upload: " + ex.getMessage(), ex);
+				throw new IngestException("Failed reading coverage upload: " + ex.getMessage(), ex);
 			}
 		}
 		return new CoverageResults(lc, lm, bc, bm, ic, im, mc, mm, files);
