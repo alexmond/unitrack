@@ -32,7 +32,12 @@
     <nav>
         <a th:href="@{/}">Projects</a>
         <a th:href="@{/actuator/health}">Health</a>
+        <a th:if="${currentUser != null}" th:href="@{/profile}" th:text="${currentUser}">user</a>
+        <a th:if="${currentUser == null}" th:href="@{/login}">Sign in</a>
     </nav>
+    <form th:if="${currentUser != null}" method="post" th:action="@{/logout}" style="display:inline;margin-left:16px">
+        <button class="theme-toggle" type="submit">Logout</button>
+    </form>
     <button id="theme-toggle" class="theme-toggle" type="button"
             aria-label="Toggle light/dark theme" title="Toggle theme"
             onclick="window.__toggleTheme()">☀</button>

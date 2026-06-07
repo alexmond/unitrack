@@ -35,6 +35,9 @@ Built with **Spring Boot 4** and **Java 21**, as a multi-module Maven project (`
 - **Dashboard** — server-rendered Thymeleaf UI: projects → runs → run detail (failures with
   stacktraces, captured `system-out`/`system-err` and `[[ATTACHMENT|…]]` links, suite breakdown,
   coverage by file). Dark/light theme toggle (persisted, defaults to OS preference).
+- **Accounts & API tokens** — local user accounts with a login + profile page (edit name/email,
+  change password) and personal API tokens (`Authorization: Bearer …`) for authenticating the API.
+  Ships in **open mode** by default (APIs stay public) so existing CI keeps working.
 - **REST API** — JSON endpoints for projects, runs, and run detail.
 - **CI integration** — a `curl`-based uploader script and ready-to-copy GitHub Actions workflows.
 
@@ -131,6 +134,22 @@ unitrack:
     min-line-coverage:         # absolute floor (unset = disabled)
     max-coverage-drop-pct: 1.0 # max allowed drop vs baseline, in percentage points
     fail-on-new-failures: true # fail on failures not present in the baseline (excl. quarantined)
+```
+
+### Authentication & API tokens
+
+Local accounts with form login at `/login` and a profile page at `/profile` (edit profile, change
+password, mint/revoke personal API tokens). API tokens authenticate via `Authorization: Bearer <token>`
+(or `X-UniTrack-Token`). On first start a default **admin** is seeded (password from config, else
+generated and logged). Configure via `unitrack.security.*`:
+
+```yaml
+unitrack:
+  security:
+    open-mode: true        # true (default): APIs public so CI/uploader keep working; login still available.
+                           # false: UI requires login, /api/** requires a token.
+    admin-username: admin
+    admin-password:        # blank → a random password is generated and logged on first start
 ```
 
 ### GitHub commit status

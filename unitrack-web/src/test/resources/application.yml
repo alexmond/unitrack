@@ -15,3 +15,7 @@ spring:
   docker:
     compose:
       enabled: false
+
+unitrack:
+  security:
+    admin-password: testadmin
