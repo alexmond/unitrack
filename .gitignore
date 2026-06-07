@@ -6,3 +6,6 @@ build/
 .DS_Store
 data/
 *.log
+
+# Claude Code personal per-project settings
+.claude/settings.local.json
