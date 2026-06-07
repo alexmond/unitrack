@@ -1,0 +1,35 @@
+= Failure Clustering & Triage
+
+When a build goes red with dozens of failures, they often share a handful of root causes --
+one NullPointerException, one timeout, one OOM. UniTrack groups similar failures into
+*clusters* and lets you *triage* them with rules so the noise collapses into a few
+actionable buckets.
+
+== Clustering
+
+After ingest, recent failures are compared by their error signature (exception type and
+message) and grouped. The *Clusters* dashboard page shows each group with its representative
+error and the tests that hit it, so you can tell "20 tests failed" from "20 tests hit the
+same one bug".
+
+== Triage rules
+
+A `TriageRule` matches failures by pattern and assigns a category, turning recurring,
+recognisable failures into labelled, owned buckets automatically. Rules are managed on the
+*Triage* dashboard page.
+
+Typical uses:
+
+* tag any `OutOfMemoryError` as an *infrastructure* failure;
+* route timeouts in a known-slow suite to a *flaky/perf* category;
+* label assertion failures in a module as *product bug*.
+
+As new runs arrive, their failures are matched against the rules and categorised on the way
+in, so the Clusters and run views stay organised without manual sorting.
+
+== Working the queue
+
+. Open *Clusters* after a red build to see the distinct root causes.
+. For a cause you recognise, add a *Triage* rule so future occurrences self-categorise.
+. Cross-reference xref:flaky-detection.adoc[flaky tests] -- a cluster that only appears
+  intermittently on a fixed commit is likely flakiness, not a real regression.

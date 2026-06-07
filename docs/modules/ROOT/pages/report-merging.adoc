@@ -1,0 +1,36 @@
+= Report Merging
+
+Large suites are often split across parallel CI shards, each producing its own JUnit and
+JaCoCo files. Without merging, that one logical test run would show up as several partial
+runs. A *run key* stitches them back together.
+
+== Using a run key
+
+Pass the same `runKey` from every shard of a single logical build:
+
+[source,bash]
+----
+# shard 1
+scripts/unitrack-upload.sh --project app --commit $SHA --run-key "$GITHUB_RUN_ID" \
+  --junit 'shard1/surefire-reports/TEST-*.xml' --jacoco 'shard1/jacoco.xml'
+
+# shard 2
+scripts/unitrack-upload.sh --project app --commit $SHA --run-key "$GITHUB_RUN_ID" \
+  --junit 'shard2/surefire-reports/TEST-*.xml' --jacoco 'shard2/jacoco.xml'
+----
+
+UniTrack looks up an existing run for `(project, runKey)` and *merges* the new uploads into
+it -- accumulating suites and cases and re-aggregating the pass/fail totals and coverage
+counters -- rather than creating a second run.
+
+== Picking a key
+
+Use any value that is stable across shards of one build but unique per build. The CI run id
+(`GITHUB_RUN_ID`) is a natural choice. The commit SHA alone is *not* a good key if you run
+the suite more than once per commit -- that would merge separate executions and defeat
+xref:flaky-detection.adoc[flaky detection].
+
+== Result
+
+The dashboard shows one consolidated run with the full suite tree and the combined
+line-coverage percentage, exactly as if the suite had run in a single job.

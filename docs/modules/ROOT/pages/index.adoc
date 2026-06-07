@@ -1,0 +1,39 @@
+= UniTrack -- JUnit & Coverage Tracking Server
+
+UniTrack is a self-hosted server that tracks and reports on JUnit test execution and
+JaCoCo code coverage over time. Think *Allure-meets-Codecov for the JVM*: push your
+build's test results and coverage reports after every run, and UniTrack stores them,
+charts the trends, flags flaky tests, enforces quality gates, and surfaces failures on
+your pull requests.
+
+== Key Features
+
+* *Test & coverage ingestion* -- upload Surefire/JUnit XML and JaCoCo XML over a single REST endpoint
+* *Trend tracking* -- pass/fail counts and line-coverage percentage charted per project over time
+* *Flaky-test detection* -- spots tests that pass and fail on the same commit
+* *Quality gates* -- fail a build when coverage drops or new failures appear
+* *Coverage flags* -- slice coverage by component (frontend, backend, integration, ...)
+* *Report merging* -- combine shards of one logical run via a stable run key
+* *Failure clustering & triage* -- groups similar failures and auto-categorises them with rules
+* *GitHub PR checks* -- post a commit status back to the pull request
+* *Accounts & API tokens* -- form login, per-user personal tokens, optional secured ingest
+
+== Technology Stack
+
+* Java {java-version}
+* Spring Boot {spring-boot-version}
+* Spring Data JPA + Flyway migrations
+* PostgreSQL (runtime) / H2 in PostgreSQL mode (tests and demos)
+* Spring Security 7 (form login + API-token filter)
+* Thymeleaf server-rendered dashboard with a dark/light theme
+* Cloud Native Buildpacks for container images
+
+== Quick Links
+
+* xref:getting-started.adoc[Getting Started] -- run the server and push your first report
+* xref:ingestion.adoc[Reporting Results] -- the ingest endpoint and what it accepts
+* xref:cli-reference.adoc[CLI & CI Integration] -- the upload script and a GitHub Actions example
+* xref:features.adoc[Features] -- flaky detection, quality gates, clustering and more
+* xref:configuration.adoc[Configuration] -- the `unitrack.*` properties reference
+* xref:deployment.adoc[Deployment] -- buildpack images, Compose stacks, remote deploy
+* xref:roadmap.adoc[Roadmap] -- planned features and the epic backlog

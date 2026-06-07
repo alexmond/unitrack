@@ -1,0 +1,29 @@
+= Features
+
+Once runs are flowing in, UniTrack turns the raw JUnit and JaCoCo data into the signals
+teams actually act on. Each feature has its own page:
+
+* xref:flaky-detection.adoc[Flaky Detection] -- find tests that pass and fail on the same
+  commit.
+* xref:quality-gate.adoc[Quality Gate] -- fail builds when coverage drops or new failures
+  appear, measured against a baseline.
+* xref:coverage-flags.adoc[Coverage Flags] -- slice coverage by component using the `flag`
+  field.
+* xref:report-merging.adoc[Report Merging] -- combine sharded/parallel runs into one
+  logical run via a `runKey`.
+* xref:failure-clustering.adoc[Failure Clustering & Triage] -- group similar failures and
+  auto-categorise them with rules.
+* xref:github-checks.adoc[GitHub PR Checks] -- post the quality-gate verdict back to the
+  pull request as a commit status.
+
+== The dashboard
+
+All of the above surface in the Thymeleaf dashboard:
+
+* a *project list* with the latest run and coverage at a glance;
+* a *project page* charting pass/fail and coverage trends over time;
+* a *run page* with the suite/case tree, captured output and attachments, and the
+  quality-gate verdict;
+* dedicated *flaky*, *clusters* and *triage* views.
+
+The UI supports a dark/light theme toggle, persisted in the browser.

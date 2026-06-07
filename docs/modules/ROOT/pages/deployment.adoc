@@ -1,0 +1,79 @@
+= Deployment
+
+UniTrack builds an OCI container image with Cloud Native Buildpacks and ships sample Docker
+Compose stacks for both H2 and PostgreSQL.
+
+== Building a container image
+
+The `docker` Maven profile binds Spring Boot's `build-image` goal to the package phase:
+
+[source,bash]
+----
+./mvnw -Pdocker -pl unitrack-web package
+----
+
+This produces a `unitrack:<version>` image without a Dockerfile. The image name and whether
+to publish are controlled by the `docker.image.name` and `docker.publish` properties. For
+cross-architecture builds, set the platform:
+
+[source,bash]
+----
+./mvnw -Pdocker -pl unitrack-web package \
+  -Dspring-boot.build-image.imagePlatform=linux/amd64
+----
+
+NOTE: Buildpack images run as a non-root user. When mounting a host volume for H2, make sure
+the data directory is writable by that user -- the sample H2 stack does this with a small
+init container.
+
+== Compose: H2 (self-contained)
+
+`deploy/compose.h2.yaml` runs the app on embedded H2 with a persistent volume -- no external
+database. It also enables the demo seeder and sets the admin password, making it ideal for
+evaluation:
+
+[source,bash]
+----
+docker compose -f deploy/compose.h2.yaml up -d
+----
+
+A `mem_limit` caps the container so the JVM heap is sized sensibly on small hosts. Copy
+`deploy/.env.example` to `.env` to override ports, memory and passwords.
+
+== Compose: PostgreSQL
+
+`deploy/compose.postgres.yaml` runs the app together with a PostgreSQL container for a more
+production-like setup (no demo data):
+
+[source,bash]
+----
+docker compose -f deploy/compose.postgres.yaml up -d
+----
+
+== Remote deploy over SSH
+
+`scripts/deploy-remote.sh` builds the image locally and ships it to a remote Docker host over
+an SSH connection (`docker save | docker -H ssh://… load`), then brings up the chosen Compose
+stack and health-checks it -- handy when the build host and the deploy host differ:
+
+[source,bash]
+----
+scripts/deploy-remote.sh --host root@192.168.100.132 --stack h2 --port 8081
+----
+
+[cols="2,3"]
+|===
+| Flag | Meaning
+
+| `--host`     | SSH target `user@host` of the remote Docker daemon.
+| `--stack`    | `h2` or `postgres`.
+| `--port`     | Host port to expose.
+| `--platform` | Image platform, e.g. `linux/amd64`.
+| `--project`  | Compose project name.
+| `--no-build` | Reuse the already-built local image.
+|===
+
+== Health & metrics
+
+Actuator is exposed with `health`, `info` and `metrics`, and liveness/readiness probes are
+enabled -- wire these into your orchestrator's health checks.

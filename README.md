@@ -11,6 +11,13 @@ Built with **Spring Boot 4** and **Java 21**, as a multi-module Maven project (`
 > Allure, Codecov, ReportPortal, SonarQube, Datadog Test Optimization, Trunk, and others, plus the
 > prioritized roadmap of features worth adopting.
 
+## Documentation
+
+Full documentation lives under [`docs/`](docs/) as an [Antora](https://antora.org) component
+(AsciiDoc) — start at [`docs/modules/ROOT/pages/index.adoc`](docs/modules/ROOT/pages/index.adoc).
+It covers getting started, the ingest API, every feature, configuration, accounts/API tokens, and
+deployment. The published site is built from a separate documentation playbook repository.
+
 ## Features
 
 - **Ingestion** — `POST /api/v1/ingest` accepts multipart Surefire/JUnit XML and JaCoCo XML, with

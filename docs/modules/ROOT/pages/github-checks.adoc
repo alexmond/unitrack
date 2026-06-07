@@ -1,0 +1,46 @@
+= GitHub PR Checks
+
+UniTrack can post the xref:quality-gate.adoc[quality-gate] verdict back to GitHub as a
+*commit status*, so the result of a build shows up directly on the pull request next to the
+other checks.
+
+== What gets posted
+
+After each ingest that carries a `commit` and a `repoUrl`, `GitHubStatusService` publishes a
+status against that commit:
+
+* *state* -- success or failure, from the quality-gate verdict;
+* *description* -- a short summary including the coverage delta vs the baseline;
+* *context* -- `unitrack/quality-gate` by default;
+* *target URL* -- a deep link to the run page on your UniTrack server.
+
+== Configuration
+
+Enable and configure under `unitrack.github` (see xref:configuration.adoc[Configuration]):
+
+[cols="2,3"]
+|===
+| Property | Meaning
+
+| `enabled`          | Master switch for status publishing.
+| `token`            | A GitHub token with `repo:status` (or fine-grained commit-status) scope.
+| `api-url`          | GitHub API base; change for GitHub Enterprise.
+| `server-base-url`  | Public URL of this UniTrack server, used to build the target link.
+| `context`          | The status context label shown on the PR. Default `unitrack/quality-gate`.
+|===
+
+[source,yaml]
+----
+unitrack:
+  github:
+    enabled: true
+    token: ${GITHUB_TOKEN}
+    server-base-url: https://unitrack.example.com
+----
+
+== Requirements
+
+* The upload must include both `commit` and `repoUrl` so UniTrack knows which commit on
+  which repository to annotate. The xref:cli-reference.adoc[upload script] sets these from
+  the standard GitHub Actions environment variables.
+* The configured token must have permission to write commit statuses on the target repo.

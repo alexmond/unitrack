@@ -1,0 +1,53 @@
+= Architecture
+
+UniTrack is a multi-module Maven project under the `org.alexmond` group, modelled on the
+conventions of https://github.com/alexmond/jhelm[jhelm].
+
+== Modules
+
+[cols="1,3"]
+|===
+| `unitrack-core`
+| Domain model (JPA entities), repositories, Flyway migrations, report ingestion and the
+  reporting services (flaky detection, quality gate, failure clustering, triage).
+
+| `unitrack-web`
+| Spring Boot application: the REST ingest API, the `/api/v1/me` account API, the
+  Thymeleaf dashboard, Spring Security, and GitHub status publishing. Depends on
+  `unitrack-core`.
+|===
+
+The parent POM (`unitrack-parent`) centralises plugin management and the shared build
+conventions -- spring-javaformat, Checkstyle (SpringChecks plus file/method size limits),
+PMD, JaCoCo -- along with `release` and `docker` profiles.
+
+== Data model
+
+The core entities, persisted via Spring Data JPA:
+
+* *Project* -- a tracked codebase; owns many test runs.
+* *TestRun* -- one upload: branch, commit, build URL, an optional `flag` and `runKey`,
+  aggregated pass/fail totals, and a line-coverage percentage.
+* *TestSuiteResult* / *TestCaseResult* -- the parsed JUnit tree; cases carry status,
+  captured `system-out`/`system-err`, and attachments.
+* *CoverageReport* / *CoverageFileEntry* -- parsed JaCoCo counters, per file.
+* *FlakyTest* -- a test observed passing and failing on the same commit.
+* *TriageRule* -- a pattern that auto-categorises failures.
+* *User* / *ApiToken* -- accounts and hashed personal access tokens.
+
+Schema evolution is managed by Flyway migrations `V1`–`V7` under
+`unitrack-core/src/main/resources/db/migration`.
+
+== Request flow
+
+. CI uploads multipart JUnit + JaCoCo files to `POST /api/v1/ingest`.
+. `IngestService` parses the XML, creates a `TestRun`, aggregates totals and coverage,
+  links it to its `Project`, and runs flaky detection and triage.
+. `QualityGateService` compares the run against the project baseline on the base branch.
+. `GitHubStatusService` optionally publishes a commit status back to the pull request.
+. The Thymeleaf dashboard renders projects, runs, trends, flaky tests, clusters and rules.
+
+== Persistence targets
+
+PostgreSQL is the production database. Tests and demos run on H2 in PostgreSQL
+compatibility mode, so the same migrations and SQL apply to both.
