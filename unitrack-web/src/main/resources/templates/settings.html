@@ -40,6 +40,30 @@
                 <option value="false" th:selected="${settings != null and settings.failOnNewFailures == false}">Off</option>
             </select>
         </label>
+        <h2 style="margin-top:18px">GitHub</h2>
+        <p class="muted" style="margin-top:0">The token stays global; only these are per-project.</p>
+        <label style="width:100%">Publish commit status
+            <select name="ghEnabled" style="width:100%">
+                <option value="" th:selected="${settings == null or settings.ghEnabled == null}"
+                        th:text="'Inherit (' + (${github.enabled} ? 'on' : 'off') + ')'">Inherit</option>
+                <option value="true" th:selected="${settings != null and settings.ghEnabled == true}">On</option>
+                <option value="false" th:selected="${settings != null and settings.ghEnabled == false}">Off</option>
+            </select>
+        </label>
+        <label style="width:100%">Status context
+            <input type="text" name="ghContext" style="width:100%"
+                   th:value="${settings != null ? settings.ghContext : null}"
+                   th:placeholder="'inherit (' + ${github.context} + ')'"/>
+        </label>
+        <label style="width:100%">PR comment
+            <select name="ghPrComment" style="width:100%">
+                <option value="" th:selected="${settings == null or settings.ghPrComment == null}"
+                        th:text="'Inherit (' + (${github.prComment} ? 'on' : 'off') + ')'">Inherit</option>
+                <option value="true" th:selected="${settings != null and settings.ghPrComment == true}">On</option>
+                <option value="false" th:selected="${settings != null and settings.ghPrComment == false}">Off</option>
+            </select>
+        </label>
+
         <button class="btn" type="submit">Save settings</button>
     </form>
 </main>

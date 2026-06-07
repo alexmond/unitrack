@@ -58,13 +58,20 @@ public class ProjectSettingsService {
 	 */
 	@Transactional
 	public void save(Long projectId, String baseBranch, Double minLineCoverage, Double maxCoverageDropPct,
-			Boolean failOnNewFailures) {
+			Boolean failOnNewFailures, Boolean ghEnabled, String ghContext, Boolean ghPrComment) {
 		ProjectSettings s = this.repo.findByProjectId(projectId).orElseGet(() -> new ProjectSettings(projectId));
-		s.setBaseBranch((baseBranch != null && !baseBranch.isBlank()) ? baseBranch.trim() : null);
+		s.setBaseBranch(blankToNull(baseBranch));
 		s.setMinLineCoverage(minLineCoverage);
 		s.setMaxCoverageDropPct(maxCoverageDropPct);
 		s.setFailOnNewFailures(failOnNewFailures);
+		s.setGhEnabled(ghEnabled);
+		s.setGhContext(blankToNull(ghContext));
+		s.setGhPrComment(ghPrComment);
 		this.repo.save(s);
+	}
+
+	private static String blankToNull(String value) {
+		return (value != null && !value.isBlank()) ? value.trim() : null;
 	}
 
 }

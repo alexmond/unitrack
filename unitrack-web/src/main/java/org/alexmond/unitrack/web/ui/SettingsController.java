@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.alexmond.unitrack.domain.Project;
 import org.alexmond.unitrack.report.ProjectSettingsService;
 import org.alexmond.unitrack.report.ReportingService;
+import org.alexmond.unitrack.web.github.GitHubProperties;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +25,8 @@ public class SettingsController {
 
 	private final ProjectSettingsService settings;
 
+	private final GitHubProperties github;
+
 	@GetMapping("/projects/{id}/settings")
 	public String settings(@PathVariable Long id, Model model) {
 		Project project = reporting.findProject(id)
@@ -31,6 +34,7 @@ public class SettingsController {
 		model.addAttribute("project", project);
 		model.addAttribute("settings", settings.find(id).orElse(null));
 		model.addAttribute("globals", settings.globals());
+		model.addAttribute("github", github);
 		return "settings";
 	}
 
@@ -38,12 +42,13 @@ public class SettingsController {
 	public String save(@PathVariable Long id, @RequestParam(required = false) String baseBranch,
 			@RequestParam(required = false) String minLineCoverage,
 			@RequestParam(required = false) String maxCoverageDropPct,
-			@RequestParam(required = false) String failOnNewFailures) {
+			@RequestParam(required = false) String failOnNewFailures, @RequestParam(required = false) String ghEnabled,
+			@RequestParam(required = false) String ghContext, @RequestParam(required = false) String ghPrComment) {
 		if (reporting.findProject(id).isEmpty()) {
 			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found");
 		}
 		settings.save(id, baseBranch, parseDouble(minLineCoverage), parseDouble(maxCoverageDropPct),
-				parseBoolean(failOnNewFailures));
+				parseBoolean(failOnNewFailures), parseBoolean(ghEnabled), ghContext, parseBoolean(ghPrComment));
 		return "redirect:/projects/" + id + "/settings";
 	}
 

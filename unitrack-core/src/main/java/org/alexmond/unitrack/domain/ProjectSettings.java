@@ -41,6 +41,15 @@ public class ProjectSettings {
 	@Column(name = "fail_on_new_failures")
 	private Boolean failOnNewFailures;
 
+	@Column(name = "gh_enabled")
+	private Boolean ghEnabled;
+
+	@Column(name = "gh_context")
+	private String ghContext;
+
+	@Column(name = "gh_pr_comment")
+	private Boolean ghPrComment;
+
 	public ProjectSettings(Long projectId) {
 		this.projectId = projectId;
 	}

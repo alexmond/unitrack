@@ -25,16 +25,21 @@ public class GitHubStatusService {
 
 	private final RestClient restClient;
 
-	public GitHubStatusService(GitHubProperties props, RestClient.Builder restClientBuilder) {
+	private final GitHubConfigResolver config;
+
+	public GitHubStatusService(GitHubProperties props, RestClient.Builder restClientBuilder,
+			GitHubConfigResolver config) {
 		this.props = props;
 		this.restClient = restClientBuilder.build();
+		this.config = config;
 	}
 
 	/**
 	 * Posts a commit status for the run; silently skips when disabled or not applicable.
 	 */
 	public void publish(TestRun run, QualityGateResult gate, Double coverageDelta) {
-		if (!props.isEnabled() || props.getToken() == null || props.getToken().isBlank()) {
+		GitHubConfigResolver.Effective cfg = config.effective(run.getProject().getId());
+		if (!cfg.enabled() || props.getToken() == null || props.getToken().isBlank()) {
 			return;
 		}
 		String[] repo = parseOwnerRepo(run.getProject().getRepoUrl());
@@ -44,7 +49,7 @@ public class GitHubStatusService {
 		}
 
 		boolean passed = (gate == null) || gate.passed();
-		Map<String, String> body = Map.of("state", passed ? "success" : "failure", "context", props.getContext(),
+		Map<String, String> body = Map.of("state", passed ? "success" : "failure", "context", cfg.context(),
 				"description", describe(run, gate, coverageDelta), "target_url",
 				props.getServerBaseUrl() + "/runs/" + run.getId());
 		try {
