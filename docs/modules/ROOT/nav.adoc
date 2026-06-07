@@ -10,6 +10,7 @@
 ** xref:coverage-flags.adoc[Coverage Flags]
 ** xref:report-merging.adoc[Report Merging]
 ** xref:failure-clustering.adoc[Failure Clustering & Triage]
+** xref:test-regression.adoc[Test Regression Report]
 ** xref:github-checks.adoc[GitHub PR Checks]
 * xref:accounts.adoc[Accounts & API Tokens]
 * xref:configuration.adoc[Configuration]

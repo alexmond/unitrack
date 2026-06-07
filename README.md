@@ -129,6 +129,7 @@ into your project and set a `UNITRACK_URL` repository variable.
 | `GET`  | `/api/v1/projects/{id}/flaky` | Detected flaky tests with metrics + quarantine state |
 | `POST` | `/api/v1/projects/{id}/flaky/status` | Set a test's state (`ACTIVE`/`QUARANTINED`/`RESOLVED`) |
 | `GET`  | `/api/v1/runs/{id}/quality-gate` | Evaluate the quality gate for a run (PASS/FAIL + per-rule detail) |
+| `GET`  | `/api/v1/runs/{id}/regression` | Diff vs baseline: new failures / new passes (fixed) / still failing |
 
 ### Quality gate configuration
 

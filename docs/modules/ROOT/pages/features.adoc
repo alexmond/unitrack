@@ -13,6 +13,8 @@ teams actually act on. Each feature has its own page:
   logical run via a `runKey`.
 * xref:failure-clustering.adoc[Failure Clustering & Triage] -- group similar failures and
   auto-categorise them with rules.
+* xref:test-regression.adoc[Test Regression Report] -- the itemised diff vs the baseline:
+  what newly failed, what got fixed, what is still failing.
 * xref:github-checks.adoc[GitHub PR Checks] -- post the quality-gate verdict back to the
   pull request as a commit status.
 

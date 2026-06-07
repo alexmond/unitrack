@@ -50,6 +50,39 @@
         </ul>
     </div>
 
+    <div th:if="${regression != null}" class="gate"
+         th:classappend="${regression.hasRegressions()} ? 'gate-fail' : 'gate-pass'">
+        <div class="gate-head">
+            Regression vs baseline
+            <span th:if="${regression.baselineFound()}" class="badge"
+                  th:classappend="${regression.hasRegressions()} ? 'fail' : 'pass'"
+                  th:text="${regression.hasRegressions()} ? (${regression.newFailureCount()} + ' new failure(s)') : 'no new failures'">no new failures</span>
+            <span th:unless="${regression.baselineFound()}" class="badge" th:text="'no baseline'">no baseline</span>
+        </div>
+        <div class="muted" th:if="${regression.baselineFound()}">
+            vs baseline run
+            <a th:href="@{'/runs/' + ${regression.baselineRunId()}}" th:text="'#' + ${regression.baselineRunId()}">#0</a>
+            on <code class="mono" th:text="${regression.baseBranch()}">main</code> —
+            <span th:text="${regression.newFailureCount()} + ' new · ' + ${regression.newPassCount()} + ' fixed · ' + ${regression.stillFailingCount()} + ' still failing'">…</span>
+        </div>
+        <div class="muted" th:unless="${regression.baselineFound()}">
+            No prior run on <code class="mono" th:text="${regression.baseBranch()}">main</code> to compare against.
+        </div>
+        <ul class="gate-rules" th:if="${!regression.newFailures().isEmpty()}">
+            <li th:each="t : ${regression.newFailures()}">
+                <span style="color:var(--red)">✗ new</span>
+                <code class="mono" th:text="${t.className()} + ' › ' + ${t.name()}">Test › method</code>
+                <span class="muted" th:if="${t.failureType()}" th:text="' — ' + ${t.failureType()}">type</span>
+            </li>
+        </ul>
+        <ul class="gate-rules" th:if="${!regression.newPasses().isEmpty()}">
+            <li th:each="t : ${regression.newPasses()}">
+                <span style="color:var(--green)">✓ fixed</span>
+                <code class="mono" th:text="${t.className()} + ' › ' + ${t.name()}">Test › method</code>
+            </li>
+        </ul>
+    </div>
+
     <h2>Failures <span class="muted" th:text="'(' + ${failures.size()} + ')'">(0)</span></h2>
     <div th:if="${failures.isEmpty()}" class="empty">No failed tests. 🎉</div>
     <div th:each="c : ${failures}">
