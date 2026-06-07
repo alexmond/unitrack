@@ -49,6 +49,21 @@ added.
 `404` if the run does not exist; `baselineFound` is `false` (and `baselineRunId` omitted) when
 there is no prior run on the base branch.
 
+== Blame: which commit broke it
+
+On the run page, each failing test carries a *first failed: <sha>* link pointing at the run
+where its current failing streak began on the same branch -- the first failure since the test
+was last green. It answers "which commit broke this?" without leaving the dashboard. The same
+data is available at `GET /api/v1/runs/{id}/blame`:
+
+[source,json]
+----
+[ { "className": "com.x.G", "name": "a", "firstFailingRunId": 41,
+    "firstFailingCommit": "c2broke", "firstFailingShortSha": "c2broke" } ]
+----
+
+This uses only the stored run history (commit SHAs) -- UniTrack does not read git diffs.
+
 == Relation to the quality gate
 
 The quality gate's `new-failures` rule excludes xref:flaky-detection.adoc[quarantined] flaky
