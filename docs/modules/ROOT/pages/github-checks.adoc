@@ -38,6 +38,11 @@ unitrack:
     server-base-url: https://unitrack.example.com
 ----
 
+These are global defaults. `enabled`, the status `context`, and `pr-comment` can each be
+*overridden per project* from its xref:quality-gate.adoc[Settings] page -- e.g. enable GitHub
+for one repo only, or use a different status context. The token always stays global and is
+never set per project.
+
 == Pull-request comment
 
 In addition to the commit status, UniTrack posts (and updates in place) a *results-table

@@ -5,6 +5,7 @@ import java.util.List;
 import org.alexmond.unitrack.domain.Project;
 import org.alexmond.unitrack.domain.TestRun;
 import org.alexmond.unitrack.report.QualityGateResult;
+import org.alexmond.unitrack.repository.ProjectSettingsRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
@@ -12,6 +13,9 @@ import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.jsonPath;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
@@ -29,6 +33,13 @@ class GitHubStatusServiceTest {
 		return p;
 	}
 
+	/**
+	 * Resolver backed by an empty settings repo -> always falls back to the global props.
+	 */
+	private GitHubConfigResolver resolver(GitHubProperties props) {
+		return new GitHubConfigResolver(props, mock(ProjectSettingsRepository.class));
+	}
+
 	private TestRun run() {
 		TestRun run = new TestRun(new Project("demo", "https://github.com/octo/repo"), "main", "default", "abc123",
 				null, null);
@@ -42,7 +53,7 @@ class GitHubStatusServiceTest {
 		GitHubProperties props = props(true);
 		RestClient.Builder builder = RestClient.builder();
 		MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
-		GitHubStatusService service = new GitHubStatusService(props, builder);
+		GitHubStatusService service = new GitHubStatusService(props, builder, resolver(props));
 
 		server.expect(requestTo("https://api.github.com/repos/octo/repo/statuses/abc123"))
 			.andExpect(method(HttpMethod.POST))
@@ -61,9 +72,26 @@ class GitHubStatusServiceTest {
 		GitHubProperties props = props(false);
 		RestClient.Builder builder = RestClient.builder();
 		MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
-		GitHubStatusService service = new GitHubStatusService(props, builder);
+		GitHubStatusService service = new GitHubStatusService(props, builder, resolver(props));
 
 		// No request expected.
+		service.publish(run(), new QualityGateResult(true, List.of()), null);
+		server.verify();
+	}
+
+	@Test
+	void usesPerProjectContextOverride() {
+		GitHubProperties props = props(true);
+		RestClient.Builder builder = RestClient.builder();
+		MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+		GitHubConfigResolver resolver = mock(GitHubConfigResolver.class);
+		given(resolver.effective(any())).willReturn(new GitHubConfigResolver.Effective(true, "custom/ctx", true));
+		GitHubStatusService service = new GitHubStatusService(props, builder, resolver);
+
+		server.expect(requestTo("https://api.github.com/repos/octo/repo/statuses/abc123"))
+			.andExpect(jsonPath("$.context").value("custom/ctx"))
+			.andRespond(withStatus(HttpStatus.CREATED));
+
 		service.publish(run(), new QualityGateResult(true, List.of()), null);
 		server.verify();
 	}

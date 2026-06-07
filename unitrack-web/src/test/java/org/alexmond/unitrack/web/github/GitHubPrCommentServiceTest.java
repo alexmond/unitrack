@@ -5,6 +5,7 @@ import java.util.List;
 import org.alexmond.unitrack.domain.Project;
 import org.alexmond.unitrack.domain.TestRun;
 import org.alexmond.unitrack.report.QualityGateResult;
+import org.alexmond.unitrack.repository.ProjectSettingsRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
@@ -13,6 +14,9 @@ import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.jsonPath;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
@@ -38,12 +42,18 @@ class GitHubPrCommentServiceTest {
 		return run;
 	}
 
+	/** Service whose resolver falls back to the global props (empty settings repo). */
+	private GitHubPrCommentService svc(GitHubProperties props, RestClient.Builder builder) {
+		return new GitHubPrCommentService(props, builder,
+				new GitHubConfigResolver(props, mock(ProjectSettingsRepository.class)));
+	}
+
 	@Test
 	void createsCommentWhenNoneExists() {
 		GitHubProperties props = props();
 		RestClient.Builder builder = RestClient.builder();
 		MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
-		GitHubPrCommentService service = new GitHubPrCommentService(props, builder);
+		GitHubPrCommentService service = svc(props, builder);
 
 		server.expect(requestTo("https://api.github.com/repos/octo/repo/commits/abc123/pulls"))
 			.andExpect(method(HttpMethod.GET))
@@ -65,7 +75,7 @@ class GitHubPrCommentServiceTest {
 		GitHubProperties props = props();
 		RestClient.Builder builder = RestClient.builder();
 		MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
-		GitHubPrCommentService service = new GitHubPrCommentService(props, builder);
+		GitHubPrCommentService service = svc(props, builder);
 
 		server.expect(requestTo("https://api.github.com/repos/octo/repo/commits/abc123/pulls"))
 			.andRespond(withSuccess("[{\"number\":7}]", MediaType.APPLICATION_JSON));
@@ -85,7 +95,7 @@ class GitHubPrCommentServiceTest {
 		GitHubProperties props = props();
 		RestClient.Builder builder = RestClient.builder();
 		MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
-		GitHubPrCommentService service = new GitHubPrCommentService(props, builder);
+		GitHubPrCommentService service = svc(props, builder);
 
 		server.expect(requestTo("https://api.github.com/repos/octo/repo/commits/abc123/pulls"))
 			.andRespond(withSuccess("[]", MediaType.APPLICATION_JSON));
@@ -95,9 +105,23 @@ class GitHubPrCommentServiceTest {
 	}
 
 	@Test
+	void skipsWhenPrCommentDisabledForProject() {
+		GitHubProperties props = props();
+		RestClient.Builder builder = RestClient.builder();
+		MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+		GitHubConfigResolver resolver = mock(GitHubConfigResolver.class);
+		given(resolver.effective(any())).willReturn(new GitHubConfigResolver.Effective(true, "ctx", false));
+		GitHubPrCommentService service = new GitHubPrCommentService(props, builder, resolver);
+
+		// prComment overridden off for this project -> no GitHub calls at all.
+		service.publish(run(), new QualityGateResult(true, List.of()), null, 0, 0);
+		server.verify();
+	}
+
+	@Test
 	void rendersTableWithMarkerAndMetrics() {
-		String body = new GitHubPrCommentService(props(), RestClient.builder()).render(run(),
-				new QualityGateResult(false, List.of()), -1.5, 2, 1);
+		String body = svc(props(), RestClient.builder()).render(run(), new QualityGateResult(false, List.of()), -1.5, 2,
+				1);
 		assertThat(body).startsWith(GitHubPrCommentService.MARKER);
 		assertThat(body).contains("3 passed · 1 failed · 1 skipped (5 total)");
 		assertThat(body).contains("80.0% (-1.5pp)");

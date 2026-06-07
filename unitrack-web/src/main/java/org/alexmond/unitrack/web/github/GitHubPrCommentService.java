@@ -33,16 +33,21 @@ public class GitHubPrCommentService {
 
 	private final RestClient restClient;
 
-	public GitHubPrCommentService(GitHubProperties props, RestClient.Builder restClientBuilder) {
+	private final GitHubConfigResolver config;
+
+	public GitHubPrCommentService(GitHubProperties props, RestClient.Builder restClientBuilder,
+			GitHubConfigResolver config) {
 		this.props = props;
 		this.restClient = restClientBuilder.build();
+		this.config = config;
 	}
 
 	/**
 	 * Upserts the PR comment for the run; silently skips when disabled or not applicable.
 	 */
 	public void publish(TestRun run, QualityGateResult gate, Double coverageDelta, int newFailures, int slowerTests) {
-		if (!this.props.isEnabled() || !this.props.isPrComment() || isBlank(this.props.getToken())) {
+		GitHubConfigResolver.Effective cfg = this.config.effective(run.getProject().getId());
+		if (!cfg.enabled() || !cfg.prComment() || isBlank(this.props.getToken())) {
 			return;
 		}
 		String[] repo = GitHubStatusService.parseOwnerRepo(run.getProject().getRepoUrl());
