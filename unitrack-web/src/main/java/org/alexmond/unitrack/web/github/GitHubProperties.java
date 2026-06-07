@@ -30,4 +30,7 @@ public class GitHubProperties {
 	/** Status context label shown on the commit/PR. */
 	private String context = "unitrack/quality-gate";
 
+	/** Also post/update a results-table comment on the associated pull request. */
+	private boolean prComment = true;
+
 }

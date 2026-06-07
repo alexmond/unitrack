@@ -1,0 +1,171 @@
+package org.alexmond.unitrack.web.github;
+
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+
+import org.alexmond.unitrack.domain.TestRun;
+import org.alexmond.unitrack.report.QualityGateResult;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.MediaType;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClient;
+
+/**
+ * Posts (and updates) a results-table comment on the pull request associated with a run's
+ * commit, so the test/coverage summary shows up inline on every PR. Best-effort: any
+ * failure is logged, never propagated to the ingest path.
+ */
+@Service
+public class GitHubPrCommentService {
+
+	/** Hidden marker so we update our own comment instead of posting duplicates. */
+	static final String MARKER = "<!-- unitrack-report -->";
+
+	private static final Logger log = LoggerFactory.getLogger(GitHubPrCommentService.class);
+
+	private static final ParameterizedTypeReference<List<Map<String, Object>>> LIST_OF_MAPS = new ParameterizedTypeReference<>() {
+	};
+
+	private final GitHubProperties props;
+
+	private final RestClient restClient;
+
+	public GitHubPrCommentService(GitHubProperties props, RestClient.Builder restClientBuilder) {
+		this.props = props;
+		this.restClient = restClientBuilder.build();
+	}
+
+	/**
+	 * Upserts the PR comment for the run; silently skips when disabled or not applicable.
+	 */
+	public void publish(TestRun run, QualityGateResult gate, Double coverageDelta, int newFailures, int slowerTests) {
+		if (!this.props.isEnabled() || !this.props.isPrComment() || isBlank(this.props.getToken())) {
+			return;
+		}
+		String[] repo = GitHubStatusService.parseOwnerRepo(run.getProject().getRepoUrl());
+		String sha = run.getCommitSha();
+		if (repo == null || isBlank(sha)) {
+			return;
+		}
+		try {
+			Integer pr = resolvePullNumber(repo, sha);
+			if (pr == null) {
+				log.debug("No open PR for {}/{}@{}; skipping comment", repo[0], repo[1], sha);
+				return;
+			}
+			String body = render(run, gate, coverageDelta, newFailures, slowerTests);
+			Long existing = findExistingComment(repo, pr);
+			if (existing != null) {
+				updateComment(repo, existing, body);
+			}
+			else {
+				createComment(repo, pr, body);
+			}
+			log.info("Posted UniTrack PR comment on {}/{}#{}", repo[0], repo[1], pr);
+		}
+		catch (RuntimeException ex) {
+			log.warn("Failed to post PR comment for {}/{}@{}: {}", repo[0], repo[1], sha, ex.getMessage());
+		}
+	}
+
+	private Integer resolvePullNumber(String[] repo, String sha) {
+		List<Map<String, Object>> pulls = this.restClient.get()
+			.uri(this.props.getApiUrl() + "/repos/{owner}/{repo}/commits/{sha}/pulls", repo[0], repo[1], sha)
+			.headers(this::githubHeaders)
+			.retrieve()
+			.body(LIST_OF_MAPS);
+		if (pulls == null || pulls.isEmpty()) {
+			return null;
+		}
+		Object number = pulls.get(0).get("number");
+		return (number instanceof Number n) ? n.intValue() : null;
+	}
+
+	private Long findExistingComment(String[] repo, int pr) {
+		List<Map<String, Object>> comments = this.restClient.get()
+			.uri(this.props.getApiUrl() + "/repos/{owner}/{repo}/issues/{pr}/comments", repo[0], repo[1], pr)
+			.headers(this::githubHeaders)
+			.retrieve()
+			.body(LIST_OF_MAPS);
+		if (comments == null) {
+			return null;
+		}
+		for (Map<String, Object> comment : comments) {
+			Object body = comment.get("body");
+			Object id = comment.get("id");
+			if (body instanceof String s && s.contains(MARKER) && id instanceof Number n) {
+				return n.longValue();
+			}
+		}
+		return null;
+	}
+
+	private void createComment(String[] repo, int pr, String body) {
+		this.restClient.post()
+			.uri(this.props.getApiUrl() + "/repos/{owner}/{repo}/issues/{pr}/comments", repo[0], repo[1], pr)
+			.headers(this::githubHeaders)
+			.contentType(MediaType.APPLICATION_JSON)
+			.body(Map.of("body", body))
+			.retrieve()
+			.toBodilessEntity();
+	}
+
+	private void updateComment(String[] repo, long commentId, String body) {
+		this.restClient.patch()
+			.uri(this.props.getApiUrl() + "/repos/{owner}/{repo}/issues/comments/{id}", repo[0], repo[1], commentId)
+			.headers(this::githubHeaders)
+			.contentType(MediaType.APPLICATION_JSON)
+			.body(Map.of("body", body))
+			.retrieve()
+			.toBodilessEntity();
+	}
+
+	private void githubHeaders(org.springframework.http.HttpHeaders headers) {
+		headers.set("Authorization", "Bearer " + this.props.getToken());
+		headers.set("Accept", "application/vnd.github+json");
+		headers.set("X-GitHub-Api-Version", "2022-11-28");
+	}
+
+	String render(TestRun run, QualityGateResult gate, Double coverageDelta, int newFailures, int slowerTests) {
+		boolean passed = (gate == null) || gate.passed();
+		String heading = passed ? "✅ gate passed" : "❌ gate failed";
+		StringBuilder sb = new StringBuilder(MARKER + "\n## UniTrack — ");
+		sb.append(heading).append("\n\n| Metric | Value |\n|---|---|\n| Tests | ");
+		sb.append(run.getPassed())
+			.append(" passed · ")
+			.append(run.getFailed() + run.getErrors())
+			.append(" failed · ")
+			.append(run.getSkipped())
+			.append(" skipped (")
+			.append(run.getTotalTests())
+			.append(" total) |\n");
+		if (run.getLineCoveragePct() != null) {
+			sb.append("| Coverage | ").append(String.format(Locale.ROOT, "%.1f%%", run.getLineCoveragePct()));
+			if (coverageDelta != null) {
+				sb.append(String.format(Locale.ROOT, " (%+.1fpp)", coverageDelta));
+			}
+			sb.append(" |\n");
+		}
+		sb.append("| Quality gate | ").append((gate != null) ? gate.status() : "n/a").append(" |\n");
+		if (newFailures > 0) {
+			sb.append("| New failures | ").append(newFailures).append(" |\n");
+		}
+		if (slowerTests > 0) {
+			sb.append("| Slower tests | ").append(slowerTests).append(" |\n");
+		}
+		sb.append("\n[View run →](")
+			.append(this.props.getServerBaseUrl())
+			.append("/runs/")
+			.append(run.getId())
+			.append(")\n");
+		return sb.toString();
+	}
+
+	private static boolean isBlank(String s) {
+		return s == null || s.isBlank();
+	}
+
+}
