@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/common :: head('UniTrack — ' + ${project.name} + ' settings')}"></head>
+<body>
+<header th:replace="~{fragments/common :: topbar}"></header>
+
+<main class="container">
+    <p class="crumbs">
+        <a th:href="@{/}">Projects</a> /
+        <a th:href="@{/projects/{id}(id=${project.id})}" th:text="${project.name}">project</a> /
+        <span>Settings</span>
+    </p>
+    <h1 th:text="${project.name} + ' — settings'">project — settings</h1>
+
+    <h2>Quality gate</h2>
+    <p class="muted">Per-project overrides. Leave a field blank to inherit the global default
+        (shown in the placeholder).</p>
+
+    <form method="post" th:action="@{/projects/{id}/settings(id=${project.id})}" class="rule-form" style="flex-direction:column;align-items:flex-start;gap:10px;max-width:520px">
+        <label style="width:100%">Base branch
+            <input type="text" name="baseBranch" style="width:100%"
+                   th:value="${settings != null ? settings.baseBranch : null}"
+                   th:placeholder="'inherit (' + ${globals.baseBranch()} + ')'"/>
+        </label>
+        <label style="width:100%">Minimum line coverage %
+            <input type="number" step="0.1" min="0" max="100" name="minLineCoverage" style="width:100%"
+                   th:value="${settings != null and settings.minLineCoverage != null ? settings.minLineCoverage : ''}"
+                   th:placeholder="${globals.minLineCoverage() != null ? 'inherit (' + globals.minLineCoverage() + ')' : 'inherit (none)'}"/>
+        </label>
+        <label style="width:100%">Max coverage drop (pp)
+            <input type="number" step="0.1" min="0" name="maxCoverageDropPct" style="width:100%"
+                   th:value="${settings != null and settings.maxCoverageDropPct != null ? settings.maxCoverageDropPct : ''}"
+                   th:placeholder="'inherit (' + ${globals.maxCoverageDropPct()} + ')'"/>
+        </label>
+        <label style="width:100%">Fail on new failures
+            <select name="failOnNewFailures" style="width:100%">
+                <option value="" th:selected="${settings == null or settings.failOnNewFailures == null}"
+                        th:text="'Inherit (' + (${globals.failOnNewFailures()} ? 'on' : 'off') + ')'">Inherit</option>
+                <option value="true" th:selected="${settings != null and settings.failOnNewFailures == true}">On</option>
+                <option value="false" th:selected="${settings != null and settings.failOnNewFailures == false}">Off</option>
+            </select>
+        </label>
+        <button class="btn" type="submit">Save settings</button>
+    </form>
+</main>
+</body>
+</html>

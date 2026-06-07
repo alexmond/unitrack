@@ -19,9 +19,18 @@ The baseline is the most recent run on the configured base branch (default `main
 same project. A pull-request build is therefore measured against the current state of the
 branch it targets -- so the gate answers "does this change make things worse?".
 
+== Per-project overrides
+
+The thresholds below are global defaults. Each project can override any of them from its
+*Settings* page (`/projects/{id}/settings`, requires login) -- e.g. a stricter minimum
+coverage for one service. A blank field inherits the global default, so you only set what
+differs. The effective config (overrides merged over the globals) is what the gate,
+xref:test-regression.adoc[regression report], and xref:github-checks.adoc[GitHub status]
+all use.
+
 == Configuration
 
-All knobs live under `unitrack.quality-gate` (see xref:configuration.adoc[Configuration]):
+All global defaults live under `unitrack.quality-gate` (see xref:configuration.adoc[Configuration]):
 
 [cols="2,1,3"]
 |===

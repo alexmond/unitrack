@@ -45,6 +45,7 @@ public class SecurityConfig {
 			.authorizeHttpRequests((auth) -> {
 				auth.requestMatchers("/login", "/css/**", "/actuator/**", "/error").permitAll();
 				auth.requestMatchers("/profile/**", "/api/v1/me/**").authenticated();
+				auth.requestMatchers("/projects/*/settings").authenticated();
 				if (props.isRequireIngestToken()) {
 					auth.requestMatchers(HttpMethod.POST, "/api/v1/ingest").authenticated();
 				}
