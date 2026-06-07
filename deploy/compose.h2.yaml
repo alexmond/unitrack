@@ -33,6 +33,9 @@ services:
       - unitrack-h2:/data
     ports:
       - "${UNITRACK_PORT:-8080}:8080"
+    # Cap container memory so the buildpacks JVM sizes its heap from this limit
+    # (otherwise it bases the heap on all host RAM).
+    mem_limit: ${UNITRACK_MEM_LIMIT:-1g}
     restart: unless-stopped
 
 volumes:
