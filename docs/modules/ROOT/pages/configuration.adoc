@@ -66,6 +66,20 @@ See xref:github-checks.adoc[GitHub PR Checks].
 | `context`         | `unitrack/quality-gate` | Status context label.
 |===
 
+== `unitrack.performance`
+
+See xref:unit-test-performance.adoc[Unit-test Performance] -- thresholds for slow-test
+regression detection.
+
+[cols="2,1,3"]
+|===
+| Property | Default | Meaning
+
+| `base-branch`     | `main` | Branch whose latest run is the duration baseline.
+| `slowdown-pct`    | `50.0` | Minimum slowdown vs baseline to flag a test, in percent.
+| `slowdown-min-ms` | `50`   | Minimum absolute slowdown to flag a test, in milliseconds.
+|===
+
 == `unitrack.demo`
 
 [cols="2,1,3"]
