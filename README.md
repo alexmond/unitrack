@@ -131,6 +131,8 @@ into your project and set a `UNITRACK_URL` repository variable.
 | `GET`  | `/api/v1/runs/{id}/quality-gate` | Evaluate the quality gate for a run (PASS/FAIL + per-rule detail) |
 | `GET`  | `/api/v1/runs/{id}/regression` | Diff vs baseline: new failures / new passes (fixed) / still failing |
 | `GET`  | `/api/v1/gate?project=&commit=` | CI gate lookup by project+commit (or `branch`): verdict for the latest matching run |
+| `GET`  | `/api/v1/projects/{id}/performance` | Suite-time trend + slowest tests in the latest run |
+| `GET`  | `/api/v1/projects/{id}/test-duration?className=&name=` | One test's duration trend across recent runs |
 
 ### Quality gate configuration
 

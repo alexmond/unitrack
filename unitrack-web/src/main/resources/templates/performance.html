@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/common :: head('UniTrack — ' + ${project.name} + ' performance')}"></head>
+<body>
+<header th:replace="~{fragments/common :: topbar}"></header>
+
+<main class="container">
+    <p class="crumbs">
+        <a th:href="@{/}">Projects</a> /
+        <a th:href="@{/projects/{id}(id=${project.id})}" th:text="${project.name}">project</a> /
+        <span>Performance</span>
+    </p>
+    <h1 th:text="${project.name} + ' — performance'">project — performance</h1>
+
+    <h2>Suite-time trend <span class="muted">(seconds per run)</span></h2>
+    <div class="chart-wrap">
+        <canvas id="suiteChart" height="90"></canvas>
+        <p class="muted" th:if="${slowest.isEmpty()}">No runs yet.</p>
+    </div>
+
+    <h2>Slowest tests
+        <span class="muted" th:if="${latestRunId != null}">
+            (latest run <a th:href="@{/runs/{id}(id=${latestRunId})}" th:text="'#' + ${latestRunId}">#0</a>)
+        </span>
+    </h2>
+    <div th:if="${slowest.isEmpty()}" class="empty">No test timings yet.</div>
+    <table th:unless="${slowest.isEmpty()}">
+        <thead>
+        <tr><th>Test</th><th>Suite</th><th class="num">Duration</th><th>Status</th><th></th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="t : ${slowest}">
+            <td><code class="mono" th:text="${t.className()} + ' › ' + ${t.name()}">Test › method</code></td>
+            <td class="muted" th:text="${t.suiteName()}">suite</td>
+            <td class="num" th:text="${#numbers.formatInteger(t.durationMs(), 1, 'COMMA')} + ' ms'">0 ms</td>
+            <td><span class="badge"
+                      th:classappend="${t.status() == 'PASSED'} ? 'pass' : (${t.status() == 'SKIPPED'} ? '' : 'fail')"
+                      th:text="${t.status()}">PASSED</span></td>
+            <td><a th:href="@{/projects/{id}/test(id=${project.id},className=${t.className()},name=${t.name()})}">trend &rarr;</a></td>
+        </tr>
+        </tbody>
+    </table>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script th:inline="javascript">
+    const labels = /*[[${trendLabels}]]*/ [];
+    const seconds = /*[[${trendSeconds}]]*/ [];
+    if (labels.length > 0 && window.Chart) {
+        const css = getComputedStyle(document.documentElement);
+        const muted = css.getPropertyValue('--muted').trim() || '#8b98a5';
+        const text = css.getPropertyValue('--text').trim() || '#e6edf3';
+        const grid = css.getPropertyValue('--border').trim() || '#2c343d';
+        new Chart(document.getElementById('suiteChart'), {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    { label: 'Suite time (s)', data: seconds, borderColor: '#d29922',
+                      backgroundColor: 'rgba(210,153,34,.15)', tension: .25, spanGaps: true }
+                ]
+            },
+            options: {
+                scales: { y: { beginAtZero: true, ticks: { color: muted }, grid: { color: grid } },
+                          x: { ticks: { color: muted }, grid: { color: grid } } },
+                plugins: { legend: { labels: { color: text } } }
+            }
+        });
+    }
+</script>
+</body>
+</html>

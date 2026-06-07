@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/common :: head('UniTrack — ' + ${name})}"></head>
+<body>
+<header th:replace="~{fragments/common :: topbar}"></header>
+
+<main class="container">
+    <p class="crumbs">
+        <a th:href="@{/}">Projects</a> /
+        <a th:href="@{/projects/{id}(id=${project.id})}" th:text="${project.name}">project</a> /
+        <a th:href="@{/projects/{id}/performance(id=${project.id})}">Performance</a> /
+        <span>Test</span>
+    </p>
+    <h1><code class="mono" th:text="${name}">testMethod</code></h1>
+    <p class="muted"><code class="mono" th:text="${className}">com.x.Class</code></p>
+
+    <h2>Duration trend <span class="muted">(ms per run)</span></h2>
+    <div class="chart-wrap">
+        <canvas id="durChart" height="90"></canvas>
+        <p class="muted" th:if="${points.isEmpty()}">No history for this test.</p>
+    </div>
+
+    <h2>History</h2>
+    <div th:if="${points.isEmpty()}" class="empty">No runs recorded this test.</div>
+    <table th:unless="${points.isEmpty()}">
+        <thead>
+        <tr><th>Run</th><th>Commit</th><th class="num">Duration</th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="p : ${points}">
+            <td><a th:href="@{/runs/{id}(id=${p.runId()})}" th:text="'#' + ${p.runId()}">#0</a></td>
+            <td><code class="mono" th:text="${p.shortSha()}">abc1234</code></td>
+            <td class="num" th:text="${#numbers.formatInteger(p.durationMs(), 1, 'COMMA')} + ' ms'">0 ms</td>
+        </tr>
+        </tbody>
+    </table>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script th:inline="javascript">
+    const labels = /*[[${trendLabels}]]*/ [];
+    const ms = /*[[${trendMs}]]*/ [];
+    if (labels.length > 0 && window.Chart) {
+        const css = getComputedStyle(document.documentElement);
+        const muted = css.getPropertyValue('--muted').trim() || '#8b98a5';
+        const text = css.getPropertyValue('--text').trim() || '#e6edf3';
+        const grid = css.getPropertyValue('--border').trim() || '#2c343d';
+        new Chart(document.getElementById('durChart'), {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    { label: 'Duration (ms)', data: ms, borderColor: '#4493f8',
+                      backgroundColor: 'rgba(68,147,248,.12)', tension: .25, spanGaps: true }
+                ]
+            },
+            options: {
+                scales: { y: { beginAtZero: true, ticks: { color: muted }, grid: { color: grid } },
+                          x: { ticks: { color: muted }, grid: { color: grid } } },
+                plugins: { legend: { labels: { color: text } } }
+            }
+        });
+    }
+</script>
+</body>
+</html>

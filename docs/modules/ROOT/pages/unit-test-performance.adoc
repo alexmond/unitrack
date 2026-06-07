@@ -1,0 +1,53 @@
+= Unit-test Performance
+
+Slow tests are silent failures: they don't go red, but they drain CI throughput and bury real
+failures in noise. UniTrack surfaces test timing without any extra instrumentation -- the
+per-test `durationMs` is parsed from the JUnit XML at ingest, so these views are pure
+read-side over data you already send.
+
+== Slowest tests
+
+Each xref:ingestion.adoc[run] page lists its slowest test cases, and every project has a
+*Performance* page showing the slowest tests in its latest run. This answers "what should I
+optimise first?" -- the longest-running tests, ranked, with a link to each test's trend.
+
+== Duration trends
+
+* *Suite-time trend* -- total run duration across recent runs, per project. A creeping line
+  is test debt accumulating before it turns a 3-minute suite into 15.
+* *Per-test duration trend* -- one test's duration over recent runs, so you can see exactly
+  when (and on which commit) a test got slower.
+
+== Where it shows up
+
+* *Project → Performance* (`/projects/{id}/performance`) -- the suite-time chart plus the
+  slowest-tests leaderboard for the latest run.
+* *Per-test page* (`/projects/{id}/test?className=&name=`) -- a single test's duration trend
+  and run-by-run history.
+* *Run page* -- a "Slowest tests" section for that run.
+
+== REST
+
+[cols="2,3"]
+|===
+| Endpoint | Returns
+
+| `GET /api/v1/projects/{id}/performance`
+| Suite-time trend (oldest first) + slowest tests in the latest run.
+
+| `GET /api/v1/projects/{id}/test-duration?className=&name=`
+| One test's duration points across recent runs (oldest first).
+|===
+
+[source,json]
+----
+{
+  "projectId": 7, "latestRunId": 42,
+  "suiteTimeTrend": [ { "runId": 41, "shortSha": "9af5872", "durationMs": 184000 } ],
+  "slowestInLatestRun": [ { "suiteName": "com.x.G", "className": "com.x.G", "name": "a",
+                           "status": "PASSED", "durationMs": 500 } ]
+}
+----
+
+NOTE: Timings are whatever the test framework recorded in the JUnit XML's `time` attribute --
+UniTrack stores and trends them, it does not re-measure.
