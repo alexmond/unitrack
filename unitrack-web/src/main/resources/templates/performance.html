@@ -44,8 +44,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script th:inline="javascript">
-    const labels = /*[[${trendLabels}]]*/ [];
-    const seconds = /*[[${trendSeconds}]]*/ [];
+    const labels = JSON.parse(/*[[${trendLabels}]]*/ '[]');
+    const seconds = JSON.parse(/*[[${trendSeconds}]]*/ '[]');
     if (labels.length > 0 && window.Chart) {
         const css = getComputedStyle(document.documentElement);
         const muted = css.getPropertyValue('--muted').trim() || '#8b98a5';
