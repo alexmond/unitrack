@@ -1,9 +1,11 @@
 package org.alexmond.unitrack.web.api;
 
+import org.alexmond.unitrack.domain.PerfRun;
 import org.alexmond.unitrack.domain.TestRun;
 import org.alexmond.unitrack.ingest.IngestException;
 import org.alexmond.unitrack.ingest.IngestRequest;
 import org.alexmond.unitrack.ingest.IngestService;
+import org.alexmond.unitrack.ingest.PerfIngestService;
 import org.alexmond.unitrack.report.PerfRegressionResult;
 import org.alexmond.unitrack.report.PerfRegressionService;
 import org.alexmond.unitrack.report.QualityGateResult;
@@ -54,18 +56,32 @@ public class IngestController {
 
 	private final PerfRegressionService perfRegression;
 
+	private final PerfIngestService perfIngest;
+
 	@PostMapping(path = "/ingest", consumes = "multipart/form-data")
 	public ResponseEntity<ApiResponses.IngestResultJson> ingest(@RequestParam String project,
 			@RequestParam(required = false) String repoUrl, @RequestParam(required = false) String branch,
 			@RequestParam(required = false) String flag, @RequestParam(required = false) String commit,
 			@RequestParam(required = false) String buildUrl, @RequestParam(required = false) String ciProvider,
-			@RequestParam(required = false) String runKey, @RequestParam(name = "junit") List<MultipartFile> junit,
-			@RequestParam(name = "jacoco", required = false) List<MultipartFile> jacoco) {
+			@RequestParam(required = false) String runKey,
+			@RequestParam(name = "junit", required = false) List<MultipartFile> junit,
+			@RequestParam(name = "jacoco", required = false) List<MultipartFile> jacoco,
+			@RequestParam(name = "perf", required = false) List<MultipartFile> perf) {
+
+		List<Supplier<InputStream>> junitStreams = toSuppliers(junit);
+		List<Supplier<InputStream>> perfStreams = toSuppliers(perf);
+		if (junitStreams.isEmpty() && perfStreams.isEmpty()) {
+			throw new IngestException("Provide at least one 'junit' or 'perf' file");
+		}
 
 		IngestRequest meta = new IngestRequest(project, repoUrl, branch, flag, commit, buildUrl, ciProvider, runKey);
-		TestRun run = ingestService.ingest(meta, toSuppliers(junit), toSuppliers(jacoco));
-		publishGitHubStatus(run);
-		return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponses.IngestResultJson.of(run));
+		TestRun run = null;
+		if (!junitStreams.isEmpty()) {
+			run = ingestService.ingest(meta, junitStreams, toSuppliers(jacoco));
+			publishGitHubStatus(run);
+		}
+		PerfRun perfRun = perfStreams.isEmpty() ? null : perfIngest.ingest(meta, perfStreams);
+		return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponses.IngestResultJson.of(run, perfRun));
 	}
 
 	private void publishGitHubStatus(TestRun run) {

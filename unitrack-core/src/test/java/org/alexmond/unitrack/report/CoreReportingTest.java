@@ -60,6 +60,12 @@ class CoreReportingTest {
 	@Autowired
 	private ProjectSettingsService settings;
 
+	@Autowired
+	private org.alexmond.unitrack.ingest.PerfIngestService perfIngest;
+
+	@Autowired
+	private org.alexmond.unitrack.repository.PerfTransactionRepository perfTransactions;
+
 	private static String tc(String name, double time, boolean fail) {
 		String body = "<testcase name=\"" + name + "\" classname=\"com.x.G\" time=\"" + time + "\"";
 		return fail ? body + "><failure message=\"boom\" type=\"java.lang.AssertionError\">trace</failure></testcase>"
@@ -164,6 +170,23 @@ class CoreReportingTest {
 		settings.save(projectId, "main", 80.0, 0.5, true, true, "ci/gate", false);
 		assertThat(settings.find(projectId)).isPresent();
 		assertThat(settings.gateConfig(projectId).minLineCoverage()).isEqualTo(80.0);
+	}
+
+	@Test
+	void ingestsJmeterPerfRunWithPerLabelRows() {
+		byte[] jtl = ("timeStamp,elapsed,label,success\n" + "1000,100,GET /a,true\n" + "1100,300,GET /a,false\n"
+				+ "1200,50,GET /b,true\n")
+			.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+		IngestRequest meta = new IngestRequest("perf-demo", null, "main", "default", "c1", null, null, null);
+		var run = this.perfIngest.ingest(meta, List.of(() -> new ByteArrayInputStream(jtl)));
+
+		assertThat(run.getId()).isNotNull();
+		assertThat(run.getFormat()).isEqualTo("jmeter");
+		assertThat(run.getSampleCount()).isEqualTo(3);
+		assertThat(run.getErrorCount()).isEqualTo(1);
+		assertThat(run.getP95Ms()).isGreaterThan(0);
+		assertThat(run.isOk()).isFalse();
+		assertThat(this.perfTransactions.findByPerfRunIdOrderByMeanMsDesc(run.getId())).hasSize(2);
 	}
 
 }
