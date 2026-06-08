@@ -7,9 +7,13 @@ SaaS or a Grafana stack.
 
 == Uploading
 
-Add a `perf` file to the xref:ingestion.adoc[ingest] upload. The MVP format is *JMeter JTL*
-(the CSV results file, `jmeter -l results.jtl`); the parser computes p50/p90/p95/p99 latency,
-throughput and error rate from the per-sample data, overall and per request label.
+Add a `perf` file to the xref:ingestion.adoc[ingest] upload; the format is auto-detected:
+
+* *JMeter JTL* -- the CSV results file (`jmeter -l results.jtl`). Per-sample, so the parser
+  computes p50/p90/p95/p99 latency, throughput and error rate itself, overall and per request
+  label.
+* *k6 JSON summary* -- `k6 run --summary-export=summary.json`. Pre-aggregated; the parser reads
+  `http_req_duration` percentiles, `http_reqs` count/rate and `http_req_failed`.
 
 [source,bash]
 ----
@@ -55,5 +59,4 @@ only the error-rate rule applies.
 curl --fail "$UNITRACK_URL/api/v1/perf-runs/$PERF_RUN_ID/regression"   # exits non-zero on 422
 ----
 
-NOTE: More formats (k6 JSON summary, Gatling) and a per-label run-detail view are planned --
-see the roadmap.
+NOTE: Gatling and a per-label run-detail view are planned -- see the roadmap.

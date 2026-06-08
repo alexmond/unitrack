@@ -28,6 +28,12 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- JSON parsing for the k6 perf-result format (version from the Spring Boot BOM). -->
+        <dependency>
+            <groupId>tools.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+
         <!-- Test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
