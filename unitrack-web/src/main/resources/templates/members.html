@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/common :: head('UniTrack — ' + ${project.name} + ' members')}"></head>
+<body>
+<header th:replace="~{fragments/common :: topbar}"></header>
+
+<main class="container">
+    <p class="crumbs">
+        <a th:href="@{/}">Projects</a> /
+        <a th:href="@{/projects/{id}(id=${project.id})}" th:text="${project.name}">project</a> /
+        <span>Members</span>
+    </p>
+    <h1 th:text="${project.name} + ' — members'">project — members</h1>
+    <p class="muted">Owners can manage members; writers can edit settings/triage; readers can view.
+        Global admins implicitly own every project.</p>
+
+    <div th:if="${param.error}" style="color:var(--red)">No such user.</div>
+
+    <table th:unless="${members.isEmpty()}">
+        <thead>
+        <tr><th>User</th><th>Role</th><th></th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="m : ${members}">
+            <td><code class="mono" th:text="${m.username()}">user</code></td>
+            <td><span class="badge" th:text="${m.role()}">ROLE</span></td>
+            <td>
+                <form method="post" th:action="@{/projects/{id}/members/{mid}/remove(id=${project.id},mid=${m.id()})}"
+                      style="display:inline">
+                    <button class="btn btn-muted" type="submit">Remove</button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+    <div th:if="${members.isEmpty()}" class="empty">No members yet — add one below.</div>
+
+    <h2>Add or update a member</h2>
+    <form method="post" th:action="@{/projects/{id}/members(id=${project.id})}" class="rule-form">
+        <input type="text" name="username" placeholder="Username" required/>
+        <select name="role">
+            <option th:each="r : ${roles}" th:value="${r}" th:text="${r}">ROLE</option>
+        </select>
+        <button class="btn" type="submit">Save member</button>
+    </form>
+</main>
+</body>
+</html>

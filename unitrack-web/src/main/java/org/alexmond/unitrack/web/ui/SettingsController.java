@@ -4,8 +4,10 @@ import lombok.RequiredArgsConstructor;
 import org.alexmond.unitrack.domain.Project;
 import org.alexmond.unitrack.report.ProjectSettingsService;
 import org.alexmond.unitrack.report.ReportingService;
+import org.alexmond.unitrack.web.account.MembershipService;
 import org.alexmond.unitrack.web.github.GitHubProperties;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
@@ -27,6 +29,8 @@ public class SettingsController {
 
 	private final GitHubProperties github;
 
+	private final MembershipService membership;
+
 	@GetMapping("/projects/{id}/settings")
 	public String settings(@PathVariable Long id, Model model) {
 		Project project = reporting.findProject(id)
@@ -43,9 +47,13 @@ public class SettingsController {
 			@RequestParam(required = false) String minLineCoverage,
 			@RequestParam(required = false) String maxCoverageDropPct,
 			@RequestParam(required = false) String failOnNewFailures, @RequestParam(required = false) String ghEnabled,
-			@RequestParam(required = false) String ghContext, @RequestParam(required = false) String ghPrComment) {
+			@RequestParam(required = false) String ghContext, @RequestParam(required = false) String ghPrComment,
+			Authentication auth) {
 		if (reporting.findProject(id).isEmpty()) {
 			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found");
+		}
+		if (auth == null || !membership.canWrite(auth.getName(), id)) {
+			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Project write access required");
 		}
 		settings.save(id, baseBranch, parseDouble(minLineCoverage), parseDouble(maxCoverageDropPct),
 				parseBoolean(failOnNewFailures), parseBoolean(ghEnabled), ghContext, parseBoolean(ghPrComment));
