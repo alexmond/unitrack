@@ -22,7 +22,7 @@ Content-Type: multipart/form-data
 | `project`    | yes | Project name; created on first sight.
 | `junit`      | yes | One or more Surefire/JUnit XML files (repeatable).
 | `jacoco`     | no  | One or more coverage reports (repeatable): JaCoCo XML, Cobertura XML, or LCOV -- auto-detected.
-| `perf`       | no  | A performance/load-test result (JMeter JTL CSV) -- parsed into latency percentiles, throughput and error rate.
+| `perf`       | no  | A performance/load-test result -- JMeter JTL or k6 JSON summary (auto-detected): latency percentiles, throughput, error rate.
 | `branch`     | no  | Git branch the build ran on.
 | `commit`     | no  | Commit SHA -- used for flaky detection and GitHub status.
 | `buildUrl`   | no  | Link back to the CI build.

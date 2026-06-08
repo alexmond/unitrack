@@ -35,7 +35,7 @@ public class PerfParsers {
 				return new Parsed(parser.format(), parser.parse(new ByteArrayInputStream(content)));
 			}
 		}
-		throw new IngestException("Unrecognized performance result format (expected JMeter JTL)");
+		throw new IngestException("Unrecognized performance result format (expected JMeter JTL or k6 JSON summary)");
 	}
 
 	/** The detected format id plus the parsed results. */
