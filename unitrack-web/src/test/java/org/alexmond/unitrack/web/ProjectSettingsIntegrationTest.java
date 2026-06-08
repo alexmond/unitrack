@@ -94,7 +94,7 @@ class ProjectSettingsIntegrationTest {
 	}
 
 	@Test
-	@WithMockUser
+	@WithMockUser("admin")
 	void settingsPageRendersAndSavesForAuthenticatedUser() throws Exception {
 		MockMvc mvc = mvc();
 		long projectId = ingest(mvc, "settings-ui")[0];

@@ -42,7 +42,21 @@ Tokens are accepted as `Authorization: Bearer <token>` or as the `X-UniTrack-Tok
 == Profile management
 
 The Profile page lets a signed-in user edit their display name and email, change their
-password, and manage (create / revoke) their API tokens. Roles are `ADMIN` and `USER`.
+password, and manage (create / revoke) their API tokens. Global roles are `ADMIN` and `USER`.
+
+== Roles & project membership
+
+Authorization has two layers:
+
+* *Global role* -- `ADMIN` or `USER`. A global *admin* implicitly owns every project.
+* *Project membership* -- a user can be a project `OWNER`, `WRITE`, or `READ` member.
+  `OWNER` can manage members and write; `WRITE` can write (settings, …); `READ` can view.
+
+Project writes (e.g. saving xref:quality-gate.adoc[settings]) require `WRITE` or above (or
+global admin); managing members requires `OWNER` (or global admin). Owners and admins manage a
+project's members from its *Members* page (`/projects/{id}/members`): add a user by username
+with a role, change a role, or remove a member. Reads follow the
+xref:configuration.adoc[`open-mode`] setting (public by default, otherwise any signed-in user).
 
 == Demo accounts
 
