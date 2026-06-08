@@ -22,6 +22,7 @@ Content-Type: multipart/form-data
 | `project`    | yes | Project name; created on first sight.
 | `junit`      | yes | One or more Surefire/JUnit XML files (repeatable).
 | `jacoco`     | no  | One or more coverage reports (repeatable): JaCoCo XML, Cobertura XML, or LCOV -- auto-detected.
+| `perf`       | no  | A performance/load-test result (JMeter JTL CSV) -- parsed into latency percentiles, throughput and error rate.
 | `branch`     | no  | Git branch the build ran on.
 | `commit`     | no  | Commit SHA -- used for flaky detection and GitHub status.
 | `buildUrl`   | no  | Link back to the CI build.
@@ -31,8 +32,11 @@ Content-Type: multipart/form-data
 | `runKey`     | no  | Stable key to merge sharded runs -- see xref:report-merging.adoc[Report Merging].
 |===
 
-Only `project` and at least one `junit` file are required; everything else is optional
-metadata that unlocks additional features.
+Only `project` and at least one `junit` *or* `perf` file are required; everything else is
+optional metadata that unlocks additional features. A `perf` upload (JMeter JTL) is stored as
+a *performance run* alongside the test/coverage history; the parser computes p50/p90/p95/p99
+latency, throughput and error rate (overall and per request label). The response carries a
+`perfRunId`. Upload it from CI with `scripts/unitrack-upload.sh --perf results.jtl`.
 
 == What happens on ingest
 

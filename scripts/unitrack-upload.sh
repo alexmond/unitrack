@@ -25,6 +25,7 @@ PROJECT="" BRANCH="" COMMIT="" BUILD="" REPO="" FLAG="" RUN_KEY="" CI_PROVIDER="
 TOKEN="${UNITRACK_TOKEN:-}"
 JUNIT_GLOBS=()
 JACOCO_GLOBS=()
+PERF_GLOBS=()
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -39,6 +40,7 @@ while [[ $# -gt 0 ]]; do
     --ci)       CI_PROVIDER="$2"; shift 2 ;;
     --junit)    JUNIT_GLOBS+=("$2"); shift 2 ;;
     --jacoco)   JACOCO_GLOBS+=("$2"); shift 2 ;;
+    --perf)     PERF_GLOBS+=("$2"); shift 2 ;;
     --url)      URL="$2"; shift 2 ;;
     -h|--help)  sed -n '2,20p' "$0"; exit 0 ;;
     *) echo "Unknown argument: $1" >&2; exit 2 ;;
@@ -75,12 +77,21 @@ for glob in "${JACOCO_GLOBS[@]}"; do
   done
 done
 
-if [[ "$junit_count" -eq 0 ]]; then
-  echo "error: no JUnit files matched (--junit globs: ${JUNIT_GLOBS[*]:-none})" >&2
+perf_count=0
+for glob in "${PERF_GLOBS[@]}"; do
+  for f in $glob; do
+    [[ -f "$f" ]] || continue
+    FORM+=(-F "perf=@$f;type=text/csv")
+    perf_count=$((perf_count + 1))
+  done
+done
+
+if [[ "$junit_count" -eq 0 && "$perf_count" -eq 0 ]]; then
+  echo "error: no JUnit or perf files matched (--junit / --perf globs)" >&2
   exit 1
 fi
 
-echo "Uploading $junit_count JUnit file(s) to $URL/api/v1/ingest ..."
+echo "Uploading $junit_count JUnit + $perf_count perf file(s) to $URL/api/v1/ingest ..."
 AUTH=()
 [[ -n "$TOKEN" ]] && AUTH=(-H "Authorization: Bearer $TOKEN")
 

@@ -2,6 +2,7 @@ package org.alexmond.unitrack.web.api;
 
 import org.alexmond.unitrack.domain.CoverageFileEntry;
 import org.alexmond.unitrack.domain.CoverageReport;
+import org.alexmond.unitrack.domain.PerfRun;
 import org.alexmond.unitrack.domain.Project;
 import org.alexmond.unitrack.domain.TestCaseResult;
 import org.alexmond.unitrack.domain.TestRun;
@@ -83,11 +84,18 @@ public interface ApiResponses {
 	}
 
 	public record IngestResultJson(Long runId, Long projectId, String project, int total, int passed, int failed,
-			int errors, int skipped, String status, Double lineCoveragePct, int uploads) {
-		public static IngestResultJson of(TestRun r) {
-			return new IngestResultJson(r.getId(), r.getProject().getId(), r.getProject().getName(), r.getTotalTests(),
-					r.getPassed(), r.getFailed(), r.getErrors(), r.getSkipped(), r.getStatus(), r.getLineCoveragePct(),
-					r.getUploads());
+			int errors, int skipped, String status, Double lineCoveragePct, int uploads, Long perfRunId,
+			Double perfP95Ms) {
+		public static IngestResultJson of(TestRun r, PerfRun perf) {
+			Long projectId = (r != null) ? r.getProject().getId() : ((perf != null) ? perf.getProject().getId() : null);
+			String project = (r != null) ? r.getProject().getName()
+					: ((perf != null) ? perf.getProject().getName() : null);
+			return new IngestResultJson((r != null) ? r.getId() : null, projectId, project,
+					(r != null) ? r.getTotalTests() : 0, (r != null) ? r.getPassed() : 0,
+					(r != null) ? r.getFailed() : 0, (r != null) ? r.getErrors() : 0, (r != null) ? r.getSkipped() : 0,
+					(r != null) ? r.getStatus() : null, (r != null) ? r.getLineCoveragePct() : null,
+					(r != null) ? r.getUploads() : 0, (perf != null) ? perf.getId() : null,
+					(perf != null) ? perf.getP95Ms() : null);
 		}
 	}
 
