@@ -25,4 +25,13 @@ public class PerformanceProperties {
 	/** Minimum absolute slowdown (milliseconds) to flag a test — filters out noise. */
 	private long slowdownMinMs = 50;
 
+	/** Max allowed p95 latency increase vs the baseline perf run (percent). */
+	private double latencyRegressionPct = 15.0;
+
+	/** Max allowed throughput drop vs the baseline perf run (percent). */
+	private double throughputDropPct = 10.0;
+
+	/** Max allowed error rate for a perf run (percent). */
+	private double maxErrorPct = 1.0;
+
 }

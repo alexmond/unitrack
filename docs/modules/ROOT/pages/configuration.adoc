@@ -76,9 +76,12 @@ regression detection.
 |===
 | Property | Default | Meaning
 
-| `base-branch`     | `main` | Branch whose latest run is the duration baseline.
-| `slowdown-pct`    | `50.0` | Minimum slowdown vs baseline to flag a test, in percent.
-| `slowdown-min-ms` | `50`   | Minimum absolute slowdown to flag a test, in milliseconds.
+| `base-branch`            | `main` | Branch whose latest run is the duration/perf baseline.
+| `slowdown-pct`           | `50.0` | Minimum unit-test slowdown vs baseline to flag, in percent.
+| `slowdown-min-ms`        | `50`   | Minimum absolute unit-test slowdown to flag, in milliseconds.
+| `latency-regression-pct` | `15.0` | Max allowed p95 latency increase for a load-test run vs baseline.
+| `throughput-drop-pct`    | `10.0` | Max allowed throughput drop for a load-test run vs baseline.
+| `max-error-pct`          | `1.0`  | Max allowed error rate for a load-test run.
 |===
 
 == `unitrack.demo`

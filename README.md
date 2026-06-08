@@ -135,6 +135,7 @@ into your project and set a `UNITRACK_URL` repository variable.
 | `GET`  | `/api/v1/projects/{id}/test-duration?className=&name=` | One test's duration trend across recent runs |
 | `GET`  | `/api/v1/runs/{id}/blame` | For each failing test, the run/commit where its failing streak began |
 | `GET`  | `/api/v1/runs/{id}/perf-regression` | Tests that ran significantly slower than the baseline run |
+| `GET`  | `/api/v1/perf-runs/{id}/regression` | Load-test perf gate vs baseline (p95/throughput/error); `422` on regression |
 
 ### Quality gate configuration
 
