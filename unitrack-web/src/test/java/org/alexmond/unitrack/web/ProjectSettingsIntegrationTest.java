@@ -6,15 +6,20 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -86,6 +91,29 @@ class ProjectSettingsIntegrationTest {
 		MockMvc mvc = mvc();
 		long projectId = ingest(mvc, "settings-auth")[0];
 		mvc.perform(get("/projects/{id}/settings", projectId)).andExpect(redirectedUrl("/login"));
+	}
+
+	@Test
+	@WithMockUser
+	void settingsPageRendersAndSavesForAuthenticatedUser() throws Exception {
+		MockMvc mvc = mvc();
+		long projectId = ingest(mvc, "settings-ui")[0];
+
+		mvc.perform(get("/projects/{id}/settings", projectId))
+			.andExpect(status().isOk())
+			.andExpect(content().string(containsString("Quality gate")))
+			.andExpect(content().string(containsString("GitHub")));
+
+		mvc.perform(post("/projects/{id}/settings", projectId).param("baseBranch", "release")
+			.param("minLineCoverage", "75")
+			.param("maxCoverageDropPct", "")
+			.param("failOnNewFailures", "false")
+			.param("ghEnabled", "true")
+			.param("ghContext", "ci/coverage")
+			.param("ghPrComment", "")).andExpect(status().is3xxRedirection());
+
+		assertThat(settings.gateConfig(projectId).baseBranch()).isEqualTo("release");
+		assertThat(settings.gateConfig(projectId).minLineCoverage()).isEqualTo(75.0);
 	}
 
 }
