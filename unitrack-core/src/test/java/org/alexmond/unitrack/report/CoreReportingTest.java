@@ -69,6 +69,9 @@ class CoreReportingTest {
 	@Autowired
 	private PerfRunRegressionService perfRunRegression;
 
+	@Autowired
+	private PerfRunDetailService perfRunDetail;
+
 	private static String tc(String name, double time, boolean fail) {
 		String body = "<testcase name=\"" + name + "\" classname=\"com.x.G\" time=\"" + time + "\"";
 		return fail ? body + "><failure message=\"boom\" type=\"java.lang.AssertionError\">trace</failure></testcase>"
@@ -221,6 +224,37 @@ class CoreReportingTest {
 			assertThat(r.regressed()).isTrue();
 			assertThat(r.rules()).anyMatch((rule) -> rule.name().equals("latency-p95") && !rule.passed());
 			assertThat(r.rules()).anyMatch((rule) -> rule.name().equals("error-rate") && !rule.passed());
+		});
+	}
+
+	@Test
+	void perfRunDetailExposesPerLabelRowsAndBaselineDelta() {
+		byte[] good = "timeStamp,elapsed,label,success\n1000,100,GET /a,true\n1100,100,GET /a,true\n1200,80,GET /b,true\n"
+			.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+		byte[] worse = "timeStamp,elapsed,label,success\n1000,300,GET /a,true\n1100,300,GET /a,false\n1200,80,GET /b,true\n"
+			.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+		var baseline = this.perfIngest.ingest(
+				new IngestRequest("perfdetail", null, "main", "default", "b", null, null, null),
+				List.of(() -> new ByteArrayInputStream(good)));
+		var current = this.perfIngest.ingest(
+				new IngestRequest("perfdetail", null, "main", "default", "c", null, null, null),
+				List.of(() -> new ByteArrayInputStream(worse)));
+
+		assertThat(this.perfRunDetail.detail(-1L)).isEmpty();
+		assertThat(this.perfRunDetail.detail(baseline.getId())).hasValueSatisfying((d) -> {
+			assertThat(d.projectName()).isEqualTo("perfdetail");
+			assertThat(d.labels()).hasSize(2);
+			// No prior run -> no baseline delta.
+			assertThat(d.labels()).allMatch((row) -> row.p95DeltaPct() == null);
+			assertThat(d.regression()).isNotNull();
+		});
+		assertThat(this.perfRunDetail.detail(current.getId())).hasValueSatisfying((d) -> {
+			assertThat(d.runId()).isEqualTo(current.getId());
+			assertThat(d.labels()).hasSize(2);
+			// GET /a went 100->300ms vs the baseline -> positive p95 delta.
+			assertThat(d.labels()).anyMatch(
+					(row) -> row.label().equals("GET /a") && row.baselineP95Ms() != null && row.p95DeltaPct() > 0);
+			assertThat(d.regression().regressed()).isTrue();
 		});
 	}
 

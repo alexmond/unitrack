@@ -30,7 +30,7 @@
     <table th:unless="${perfRuns.isEmpty()}">
         <thead>
         <tr><th>When</th><th>Commit</th><th>Format</th><th class="num">Samples</th><th class="num">p95</th>
-            <th class="num">Throughput</th><th class="num">Errors</th><th></th></tr>
+            <th class="num">Throughput</th><th class="num">Errors</th><th></th><th></th></tr>
         </thead>
         <tbody>
         <tr th:each="r : ${perfRuns}">
@@ -44,6 +44,7 @@
                 <span class="badge" th:classappend="${r.ok} ? 'pass' : 'fail'"
                       th:text="${#numbers.formatDecimal(r.errorPct,1,2)} + '%'">0%</span>
             </td>
+            <td><a th:href="@{/perf-runs/{id}(id=${r.id})}">details</a></td>
         </tr>
         </tbody>
     </table>

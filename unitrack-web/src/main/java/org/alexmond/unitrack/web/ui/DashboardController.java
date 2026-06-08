@@ -8,6 +8,7 @@ import org.alexmond.unitrack.report.BlameService;
 import org.alexmond.unitrack.report.DurationPoint;
 import org.alexmond.unitrack.report.FailureClusteringService;
 import org.alexmond.unitrack.report.PerfRegressionService;
+import org.alexmond.unitrack.report.PerfRunDetailService;
 import org.alexmond.unitrack.report.PerfTrendPoint;
 import org.alexmond.unitrack.report.PerformanceService;
 import org.alexmond.unitrack.report.PerformanceSummary;
@@ -62,6 +63,8 @@ public class DashboardController {
 	private final BlameService blame;
 
 	private final PerfRegressionService perfRegression;
+
+	private final PerfRunDetailService perfRunDetail;
 
 	@GetMapping("/")
 	public String index(Model model) {
@@ -155,6 +158,13 @@ public class DashboardController {
 		model.addAttribute("trendThroughput", toJson(trend.stream().map((p) -> round(p.throughputRps())).toList()));
 		model.addAttribute("trendError", toJson(trend.stream().map((p) -> round(p.errorPct())).toList()));
 		return "perf";
+	}
+
+	@GetMapping("/perf-runs/{id}")
+	public String perfRun(@PathVariable Long id, Model model) {
+		model.addAttribute("detail", perfRunDetail.detail(id)
+			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Perf run not found")));
+		return "perf-run";
 	}
 
 	@GetMapping("/projects/{id}/test")

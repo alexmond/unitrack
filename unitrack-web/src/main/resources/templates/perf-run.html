@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/common :: head('UniTrack — Perf run #' + ${detail.runId})}"></head>
+<body>
+<header th:replace="~{fragments/common :: topbar}"></header>
+
+<main class="container">
+    <p class="crumbs">
+        <a th:href="@{/}">Projects</a> /
+        <a th:href="@{/projects/{id}(id=${detail.projectId})}" th:text="${detail.projectName}">project</a> /
+        <a th:href="@{/projects/{id}/perf(id=${detail.projectId})}">Load tests</a> /
+        Run #<span th:text="${detail.runId}">1</span>
+    </p>
+    <h1>
+        Perf run #<span th:text="${detail.runId}">1</span>
+        <span th:if="${detail.regression != null}" class="badge"
+              th:classappend="${detail.regression.passed()} ? 'pass' : 'fail'"
+              th:text="${detail.regression.status()}">PASSED</span>
+    </h1>
+    <p class="muted">
+        <span th:text="${detail.branch} ?: 'no branch'">main</span> ·
+        format <code class="mono" th:text="${detail.format}">jmeter</code> ·
+        <code class="mono" th:text="${detail.commitSha != null ? #strings.abbreviate(detail.commitSha,9) : '—'}">abc1234</code> ·
+        <span th:text="${#temporals.format(detail.createdAt, 'yyyy-MM-dd HH:mm')}">date</span>
+    </p>
+
+    <div class="stat-row">
+        <div class="stat"><div class="label">p50</div><div class="value" th:text="${#numbers.formatDecimal(detail.p50Ms,1,0)} + ' ms'">0 ms</div></div>
+        <div class="stat"><div class="label">p90</div><div class="value" th:text="${#numbers.formatDecimal(detail.p90Ms,1,0)} + ' ms'">0 ms</div></div>
+        <div class="stat"><div class="label">p95</div><div class="value" style="color:var(--blue)" th:text="${#numbers.formatDecimal(detail.p95Ms,1,0)} + ' ms'">0 ms</div></div>
+        <div class="stat"><div class="label">p99</div><div class="value" style="color:var(--amber)" th:text="${#numbers.formatDecimal(detail.p99Ms,1,0)} + ' ms'">0 ms</div></div>
+        <div class="stat"><div class="label">Throughput</div><div class="value" th:text="${#numbers.formatDecimal(detail.throughputRps,1,1)} + ' rps'">0 rps</div></div>
+        <div class="stat"><div class="label">Errors</div><div class="value" th:style="${detail.errorPct > 0} ? 'color:var(--red)' : 'color:var(--green)'" th:text="${#numbers.formatDecimal(detail.errorPct,1,2)} + '%'">0%</div></div>
+        <div class="stat"><div class="label">Samples</div><div class="value" th:text="${detail.sampleCount}">0</div></div>
+        <div class="stat"><div class="label">Duration</div><div class="value" th:text="${#numbers.formatDecimal(detail.durationMs / 1000.0,1,1)} + 's'">0s</div></div>
+    </div>
+
+    <div th:if="${detail.regression != null}" class="gate"
+         th:classappend="${detail.regression.passed()} ? 'gate-pass' : 'gate-fail'">
+        <div class="gate-head">
+            Quality gate vs baseline
+            <span class="badge" th:classappend="${detail.regression.passed()} ? 'pass' : 'fail'"
+                  th:text="${detail.regression.status()}">PASSED</span>
+        </div>
+        <div class="muted" th:if="${detail.regression.baselineFound()}">
+            vs baseline run
+            <a th:href="@{'/perf-runs/' + ${detail.regression.baselineRunId()}}"
+               th:text="'#' + ${detail.regression.baselineRunId()}">#0</a>
+            on <code class="mono" th:text="${detail.regression.baseBranch()}">main</code>
+        </div>
+        <div class="muted" th:unless="${detail.regression.baselineFound()}">
+            No prior run on <code class="mono" th:text="${detail.regression.baseBranch()}">main</code> to compare against —
+            error-rate rule only.
+        </div>
+        <ul class="gate-rules">
+            <li th:each="rule : ${detail.regression.rules()}">
+                <span th:if="${rule.passed()}" style="color:var(--green)">✓</span>
+                <span th:unless="${rule.passed()}" style="color:var(--red)">✗</span>
+                <code class="mono" th:text="${rule.name()}">rule</code>
+                <span class="muted" th:text="' — ' + ${rule.detail()}">detail</span>
+            </li>
+        </ul>
+    </div>
+
+    <h2>Per-label breakdown <span class="muted" th:text="'(' + ${detail.labels.size()} + ')'">(0)</span></h2>
+    <div th:if="${detail.labels.isEmpty()}" class="empty">No per-label data for this run (the format reports aggregate metrics only).</div>
+    <table th:unless="${detail.labels.isEmpty()}">
+        <thead>
+        <tr><th>Label</th><th class="num">Samples</th><th class="num">Errors</th>
+            <th class="num">p50</th><th class="num">p90</th><th class="num">p95</th><th class="num">p99</th>
+            <th class="num">p95 Δ vs base</th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="l : ${detail.labels}">
+            <td><code class="mono" th:text="${l.label()}">GET /</code></td>
+            <td class="num" th:text="${l.sampleCount()}">0</td>
+            <td class="num">
+                <span class="badge" th:classappend="${l.errorPct() > 0} ? 'fail' : 'pass'"
+                      th:text="${#numbers.formatDecimal(l.errorPct(),1,2)} + '%'">0%</span>
+            </td>
+            <td class="num" th:text="${#numbers.formatDecimal(l.p50Ms(),1,0)}">0</td>
+            <td class="num" th:text="${#numbers.formatDecimal(l.p90Ms(),1,0)}">0</td>
+            <td class="num" th:text="${#numbers.formatDecimal(l.p95Ms(),1,0)}">0</td>
+            <td class="num" th:text="${#numbers.formatDecimal(l.p99Ms(),1,0)}">0</td>
+            <td class="num">
+                <span th:if="${l.p95DeltaPct() == null}" class="muted">—</span>
+                <span th:if="${l.p95DeltaPct() != null}"
+                      th:style="${l.p95DeltaPct() > 0} ? 'color:var(--red)' : 'color:var(--green)'"
+                      th:text="(${l.p95DeltaPct() > 0} ? '+' : '') + ${#numbers.formatDecimal(l.p95DeltaPct(),1,1)} + '%'">+0%</span>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</main>
+</body>
+</html>
