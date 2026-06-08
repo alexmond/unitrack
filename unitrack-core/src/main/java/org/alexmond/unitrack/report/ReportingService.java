@@ -40,6 +40,8 @@ public class ReportingService {
 
 	private final CoverageFileEntryRepository coverageFiles;
 
+	private final org.alexmond.unitrack.repository.PerfRunRepository perfRuns;
+
 	public List<Project> listProjects() {
 		return projects.findAllByOrderByNameAsc();
 	}
@@ -65,6 +67,16 @@ public class ReportingService {
 
 	public Optional<TestRun> findRun(Long id) {
 		return runs.findById(id);
+	}
+
+	/** Recent perf runs (newest first) for a project. */
+	public List<org.alexmond.unitrack.domain.PerfRun> recentPerfRuns(Long projectId, int limit) {
+		return perfRuns.findByProjectIdOrderByCreatedAtDesc(projectId, PageRequest.ofSize(limit));
+	}
+
+	/** Performance trend for a project, oldest run first (for charting). */
+	public List<PerfTrendPoint> perfTrend(Long projectId, int limit) {
+		return recentPerfRuns(projectId, limit).reversed().stream().map(PerfTrendPoint::of).toList();
 	}
 
 	public Optional<Project> findProjectByName(String name) {

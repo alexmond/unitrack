@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/common :: head('UniTrack — ' + ${project.name} + ' load tests')}"></head>
+<body>
+<header th:replace="~{fragments/common :: topbar}"></header>
+
+<main class="container">
+    <p class="crumbs">
+        <a th:href="@{/}">Projects</a> /
+        <a th:href="@{/projects/{id}(id=${project.id})}" th:text="${project.name}">project</a> /
+        <span>Load tests</span>
+    </p>
+    <h1 th:text="${project.name} + ' — load tests'">project — load tests</h1>
+
+    <div th:unless="${hasPerf}" class="empty">No performance runs yet. Upload a JMeter JTL with
+        <code class="mono">--perf results.jtl</code>.</div>
+
+    <div th:if="${hasPerf}">
+        <h2>Latency <span class="muted">(p50 / p90 / p99, ms)</span></h2>
+        <div class="chart-wrap"><canvas id="latencyChart" height="90"></canvas></div>
+
+        <h2>Throughput <span class="muted">(req/s)</span></h2>
+        <div class="chart-wrap"><canvas id="throughputChart" height="80"></canvas></div>
+
+        <h2>Error rate <span class="muted">(%)</span></h2>
+        <div class="chart-wrap"><canvas id="errorChart" height="70"></canvas></div>
+    </div>
+
+    <h2>Recent perf runs</h2>
+    <table th:unless="${perfRuns.isEmpty()}">
+        <thead>
+        <tr><th>When</th><th>Commit</th><th>Format</th><th class="num">Samples</th><th class="num">p95</th>
+            <th class="num">Throughput</th><th class="num">Errors</th><th></th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="r : ${perfRuns}">
+            <td class="muted" th:text="${#temporals.format(r.createdAt, 'MMM dd HH:mm')}">when</td>
+            <td><code class="mono" th:text="${r.commitSha != null ? #strings.abbreviate(r.commitSha,9) : '—'}">sha</code></td>
+            <td class="muted" th:text="${r.format}">jmeter</td>
+            <td class="num" th:text="${r.sampleCount}">0</td>
+            <td class="num" th:text="${#numbers.formatDecimal(r.p95Ms,1,0)} + ' ms'">0 ms</td>
+            <td class="num" th:text="${#numbers.formatDecimal(r.throughputRps,1,1)} + ' rps'">0 rps</td>
+            <td class="num">
+                <span class="badge" th:classappend="${r.ok} ? 'pass' : 'fail'"
+                      th:text="${#numbers.formatDecimal(r.errorPct,1,2)} + '%'">0%</span>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script th:inline="javascript">
+    const labels = JSON.parse(/*[[${trendLabels}]]*/ '[]');
+    const p50 = JSON.parse(/*[[${trendP50}]]*/ '[]');
+    const p90 = JSON.parse(/*[[${trendP90}]]*/ '[]');
+    const p99 = JSON.parse(/*[[${trendP99}]]*/ '[]');
+    const throughput = JSON.parse(/*[[${trendThroughput}]]*/ '[]');
+    const errorPct = JSON.parse(/*[[${trendError}]]*/ '[]');
+    if (labels.length > 0 && window.Chart) {
+        const css = getComputedStyle(document.documentElement);
+        const muted = css.getPropertyValue('--muted').trim() || '#8b98a5';
+        const text = css.getPropertyValue('--text').trim() || '#e6edf3';
+        const grid = css.getPropertyValue('--border').trim() || '#2c343d';
+        const axes = { y: { beginAtZero: true, ticks: { color: muted }, grid: { color: grid } },
+                       x: { ticks: { color: muted }, grid: { color: grid } } };
+        const legend = { plugins: { legend: { labels: { color: text } } } };
+        new Chart(document.getElementById('latencyChart'), {
+            type: 'line',
+            data: { labels: labels, datasets: [
+                { label: 'p50', data: p50, borderColor: '#2ea043', tension: .25, spanGaps: true },
+                { label: 'p90', data: p90, borderColor: '#d29922', tension: .25, spanGaps: true },
+                { label: 'p99', data: p99, borderColor: '#f85149', tension: .25, spanGaps: true } ] },
+            options: { scales: axes, ...legend }
+        });
+        new Chart(document.getElementById('throughputChart'), {
+            type: 'line',
+            data: { labels: labels, datasets: [
+                { label: 'req/s', data: throughput, borderColor: '#4493f8',
+                  backgroundColor: 'rgba(68,147,248,.12)', tension: .25, spanGaps: true } ] },
+            options: { scales: axes, ...legend }
+        });
+        new Chart(document.getElementById('errorChart'), {
+            type: 'line',
+            data: { labels: labels, datasets: [
+                { label: 'error %', data: errorPct, borderColor: '#f85149',
+                  backgroundColor: 'rgba(248,81,73,.12)', tension: .25, spanGaps: true } ] },
+            options: { scales: axes, ...legend }
+        });
+    }
+</script>
+</body>
+</html>

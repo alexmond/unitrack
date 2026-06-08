@@ -190,6 +190,11 @@ class CoreReportingTest {
 		assertThat(run.getP95Ms()).isGreaterThan(0);
 		assertThat(run.isOk()).isFalse();
 		assertThat(this.perfTransactions.findByPerfRunIdOrderByMeanMsDesc(run.getId())).hasSize(2);
+
+		Long projectId = run.getProject().getId();
+		assertThat(this.reporting.recentPerfRuns(projectId, 10)).isNotEmpty();
+		assertThat(this.reporting.perfTrend(projectId, 30)).isNotEmpty();
+		assertThat(this.reporting.perfTrend(projectId, 30).get(0).p95Ms()).isGreaterThan(0);
 	}
 
 	@Test

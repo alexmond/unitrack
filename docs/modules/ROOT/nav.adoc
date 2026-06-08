@@ -12,6 +12,7 @@
 ** xref:failure-clustering.adoc[Failure Clustering & Triage]
 ** xref:test-regression.adoc[Test Regression Report]
 ** xref:unit-test-performance.adoc[Unit-test Performance]
+** xref:load-testing.adoc[Load / Performance Tests]
 ** xref:github-checks.adoc[GitHub PR Checks]
 * xref:accounts.adoc[Accounts & API Tokens]
 * xref:configuration.adoc[Configuration]
