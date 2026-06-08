@@ -66,6 +66,9 @@ class CoreReportingTest {
 	@Autowired
 	private org.alexmond.unitrack.repository.PerfTransactionRepository perfTransactions;
 
+	@Autowired
+	private PerfRunRegressionService perfRunRegression;
+
 	private static String tc(String name, double time, boolean fail) {
 		String body = "<testcase name=\"" + name + "\" classname=\"com.x.G\" time=\"" + time + "\"";
 		return fail ? body + "><failure message=\"boom\" type=\"java.lang.AssertionError\">trace</failure></testcase>"
@@ -187,6 +190,33 @@ class CoreReportingTest {
 		assertThat(run.getP95Ms()).isGreaterThan(0);
 		assertThat(run.isOk()).isFalse();
 		assertThat(this.perfTransactions.findByPerfRunIdOrderByMeanMsDesc(run.getId())).hasSize(2);
+	}
+
+	@Test
+	void perfRunRegressionFlagsLatencyAndErrorsVsBaseline() {
+		byte[] good = "timeStamp,elapsed,label,success\n1000,100,GET /a,true\n1100,100,GET /a,true\n1200,100,GET /a,true\n"
+			.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+		byte[] bad = "timeStamp,elapsed,label,success\n1000,500,GET /a,false\n1100,500,GET /a,true\n1200,500,GET /a,true\n"
+			.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+		var baseline = this.perfIngest.ingest(
+				new IngestRequest("perfreg", null, "main", "default", "b", null, null, null),
+				List.of(() -> new ByteArrayInputStream(good)));
+		var current = this.perfIngest.ingest(
+				new IngestRequest("perfreg", null, "main", "default", "c", null, null, null),
+				List.of(() -> new ByteArrayInputStream(bad)));
+
+		// Baseline run has no prior run -> no regression.
+		assertThat(this.perfRunRegression.evaluate(baseline.getId())).hasValueSatisfying((r) -> {
+			assertThat(r.baselineFound()).isFalse();
+			assertThat(r.passed()).isTrue();
+		});
+		// Current: p95 100->500ms and 33% errors -> regressed on latency + error rate.
+		assertThat(this.perfRunRegression.evaluate(current.getId())).hasValueSatisfying((r) -> {
+			assertThat(r.baselineFound()).isTrue();
+			assertThat(r.regressed()).isTrue();
+			assertThat(r.rules()).anyMatch((rule) -> rule.name().equals("latency-p95") && !rule.passed());
+			assertThat(r.rules()).anyMatch((rule) -> rule.name().equals("error-rate") && !rule.passed());
+		});
 	}
 
 }
