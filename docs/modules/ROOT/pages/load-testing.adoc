@@ -1,0 +1,59 @@
+= Load / Performance Tests
+
+Alongside unit tests and coverage, UniTrack ingests *load/performance-test* results -- latency
+percentiles, throughput and error rate -- keyed by project/branch/commit like a test run, so a
+team gets self-hosted, free, per-commit performance-regression tracking without a separate
+SaaS or a Grafana stack.
+
+== Uploading
+
+Add a `perf` file to the xref:ingestion.adoc[ingest] upload. The MVP format is *JMeter JTL*
+(the CSV results file, `jmeter -l results.jtl`); the parser computes p50/p90/p95/p99 latency,
+throughput and error rate from the per-sample data, overall and per request label.
+
+[source,bash]
+----
+scripts/unitrack-upload.sh --project myapp --commit "$GIT_SHA" --perf results.jtl
+# or perf alongside tests + coverage in one upload:
+scripts/unitrack-upload.sh --project myapp --commit "$GIT_SHA" \
+  --junit 'target/surefire-reports/TEST-*.xml' --perf results.jtl
+----
+
+A perf upload may be sent on its own (no `junit` needed); the response carries a `perfRunId`.
+
+== Trends
+
+The project *Load tests* page (`/projects/{id}/perf`) charts, over recent runs:
+
+* *Latency* -- p50 / p90 / p99 lines (ms)
+* *Throughput* -- requests/second
+* *Error rate* -- percent
+
+plus a table of recent perf runs. `GET /api/v1/projects/{id}/perf-trend` returns the same
+series as JSON.
+
+== Regression gate
+
+`GET /api/v1/perf-runs/{id}/regression` compares a run to its baseline (latest prior perf run
+on the base branch with the same flag) on three rules:
+
+[cols="2,1,3"]
+|===
+| Rule | Threshold (`unitrack.performance.*`) | Fails when
+
+| latency-p95 | `latency-regression-pct` (15%) | p95 latency rises more than the limit vs baseline.
+| throughput  | `throughput-drop-pct` (10%)    | throughput drops more than the limit vs baseline.
+| error-rate  | `max-error-pct` (1%)           | the run's error rate exceeds the limit.
+|===
+
+It returns *200* within thresholds and *422* on regression, so a CI step can fail the build on
+the HTTP status (the JSON body carries the per-rule detail either way). With no baseline yet,
+only the error-rate rule applies.
+
+[source,bash]
+----
+curl --fail "$UNITRACK_URL/api/v1/perf-runs/$PERF_RUN_ID/regression"   # exits non-zero on 422
+----
+
+NOTE: More formats (k6 JSON summary, Gatling) and a per-label run-detail view are planned --
+see the roadmap.

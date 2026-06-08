@@ -8,6 +8,7 @@ import org.alexmond.unitrack.report.BlameService;
 import org.alexmond.unitrack.report.DurationPoint;
 import org.alexmond.unitrack.report.FailureClusteringService;
 import org.alexmond.unitrack.report.PerfRegressionService;
+import org.alexmond.unitrack.report.PerfTrendPoint;
 import org.alexmond.unitrack.report.PerformanceService;
 import org.alexmond.unitrack.report.PerformanceSummary;
 import org.alexmond.unitrack.report.QualityGateService;
@@ -137,6 +138,23 @@ public class DashboardController {
 		model.addAttribute("trendSeconds",
 				toJson(summary.suiteTimeTrend().stream().map((p) -> round(p.durationMs() / 1000.0)).toList()));
 		return "performance";
+	}
+
+	@GetMapping("/projects/{id}/perf")
+	public String perf(@PathVariable Long id, Model model) {
+		Project project = reporting.findProject(id)
+			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found"));
+		List<PerfTrendPoint> trend = reporting.perfTrend(id, TREND_LIMIT);
+		model.addAttribute("project", project);
+		model.addAttribute("perfRuns", reporting.recentPerfRuns(id, RUN_LIST_LIMIT));
+		model.addAttribute("hasPerf", !trend.isEmpty());
+		model.addAttribute("trendLabels", toJson(trend.stream().map(PerfTrendPoint::shortSha).toList()));
+		model.addAttribute("trendP50", toJson(trend.stream().map((p) -> round(p.p50Ms())).toList()));
+		model.addAttribute("trendP90", toJson(trend.stream().map((p) -> round(p.p90Ms())).toList()));
+		model.addAttribute("trendP99", toJson(trend.stream().map((p) -> round(p.p99Ms())).toList()));
+		model.addAttribute("trendThroughput", toJson(trend.stream().map((p) -> round(p.throughputRps())).toList()));
+		model.addAttribute("trendError", toJson(trend.stream().map((p) -> round(p.errorPct())).toList()));
+		return "perf";
 	}
 
 	@GetMapping("/projects/{id}/test")

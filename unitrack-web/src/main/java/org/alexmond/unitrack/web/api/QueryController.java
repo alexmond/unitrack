@@ -59,6 +59,15 @@ public class QueryController {
 		return ResponseEntity.ok(clustering.cluster(id));
 	}
 
+	@GetMapping("/projects/{id}/perf-trend")
+	public ResponseEntity<List<org.alexmond.unitrack.report.PerfTrendPoint>> perfTrend(@PathVariable Long id,
+			@RequestParam(defaultValue = "30") int limit) {
+		if (reporting.findProject(id).isEmpty()) {
+			return ResponseEntity.notFound().build();
+		}
+		return ResponseEntity.ok(reporting.perfTrend(id, clamp(limit)));
+	}
+
 	@GetMapping("/projects/{id}/runs")
 	public ResponseEntity<List<ApiResponses.RunJson>> runs(@PathVariable Long id,
 			@RequestParam(defaultValue = "50") int limit) {
