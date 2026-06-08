@@ -36,6 +36,14 @@ The project *Load tests* page (`/projects/{id}/perf`) charts, over recent runs:
 plus a table of recent perf runs. `GET /api/v1/projects/{id}/perf-trend` returns the same
 series as JSON.
 
+== Run detail
+
+Each row in the recent-runs table links to a *run-detail* page (`/perf-runs/{id}`) showing the
+run's summary metrics (p50/p90/p95/p99, throughput, error rate, samples, duration), the
+quality-gate verdict with its per-rule pass/fail breakdown, and a *per-label table*: samples,
+error rate and percentiles for every request label, each with its p95 delta versus the same
+label in the baseline run. `GET /api/v1/perf-runs/{id}` returns the same detail as JSON.
+
 == Regression gate
 
 `GET /api/v1/perf-runs/{id}/regression` compares a run to its baseline (latest prior perf run
@@ -59,4 +67,4 @@ only the error-rate rule applies.
 curl --fail "$UNITRACK_URL/api/v1/perf-runs/$PERF_RUN_ID/regression"   # exits non-zero on 422
 ----
 
-NOTE: Gatling and a per-label run-detail view are planned -- see the roadmap.
+NOTE: Gatling support is planned -- see the roadmap.
