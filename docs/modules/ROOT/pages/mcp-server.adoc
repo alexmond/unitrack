@@ -1,0 +1,77 @@
+= MCP Server
+
+UniTrack ships a built-in **Model Context Protocol (MCP)** server so AI assistants (Claude
+and others) can query its data directly -- "what's flaky in project X?", "did coverage drop on
+the last run?", "summarize this run's failures" -- answered straight from UniTrack.
+
+It is built on **Spring AI**'s MCP server starter and exposes a set of *read-only* tools
+backed by the same services the UI and REST API use. No mutations are possible through MCP.
+
+== Transport
+
+The server speaks MCP over HTTP+SSE, served by the running web app:
+
+[cols="1,3"]
+|===
+| Endpoint | Purpose
+
+| `GET /sse`            | Opens the SSE stream; its first event carries the per-session message URI.
+| `POST /mcp/message`   | Client -> server JSON-RPC messages (`?sessionId=...`).
+|===
+
+== Tools
+
+[cols="1,3"]
+|===
+| Tool | Description
+
+| `listProjects`        | All projects with id, name, repo URL and run count.
+| `getProjectRuns`      | Recent runs for a project (by id or name): status, totals, coverage, commit.
+| `getRunDetail`        | One run's summary, quality-gate verdict, coverage, and failing tests.
+| `getQualityGate`      | The gate verdict for a run (passed/failed + each rule's detail).
+| `getCoverage`         | Line/branch coverage percentages and counts for a run.
+| `getFlakyTests`       | Flaky tests for a project (failure rate + status).
+| `getFailureClusters`  | Recent failures grouped by signature, most frequent first.
+|===
+
+Project-scoped tools accept either the numeric id or the exact project name; run-scoped tools
+take a run id (discover both with `listProjects` / `getProjectRuns`).
+
+== Connecting Claude
+
+Point an MCP client at the SSE endpoint. For a self-hosted instance at `https://unitrack.example`:
+
+[source,json]
+----
+{
+  "mcpServers": {
+    "unitrack": {
+      "url": "https://unitrack.example/sse"
+    }
+  }
+}
+----
+
+== Authentication
+
+The MCP endpoints follow the app's normal security (see xref:accounts.adoc[Accounts & API
+Tokens]):
+
+* In **open mode** (the default) they are reachable without credentials.
+* When open mode is off, send a personal API token on the SSE/message requests --
+  `Authorization: Bearer <token>` or `X-UniTrack-Token: <token>`, the same tokens the REST API
+  uses.
+
+== Configuration
+
+[source,yaml]
+----
+spring:
+  ai:
+    mcp:
+      server:
+        name: unitrack
+        version: 0.1.0
+        instructions: >-
+          Guidance shown to the assistant on how to use the tools.
+----

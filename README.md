@@ -47,6 +47,9 @@ deployment. The published site is built from a separate documentation playbook r
   change password) and personal API tokens (`Authorization: Bearer …`) for authenticating the API.
   Ships in **open mode** by default (APIs stay public) so existing CI keeps working.
 - **REST API** — JSON endpoints for projects, runs, and run detail.
+- **MCP server** — a built-in Model Context Protocol server (Spring AI) exposing read-only tools
+  (`listProjects`, `getRunDetail`, `getFlakyTests`, `getQualityGate`, …) over SSE, so AI
+  assistants like Claude can answer "what's flaky in project X?" straight from UniTrack.
 - **CI integration** — a `curl`-based uploader script and ready-to-copy GitHub Actions workflows.
 
 ## Architecture
