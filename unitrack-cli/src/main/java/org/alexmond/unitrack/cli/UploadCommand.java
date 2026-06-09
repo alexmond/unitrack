@@ -19,6 +19,11 @@ import picocli.CommandLine.Option;
 										// stdout/stderr
 class UploadCommand implements Callable<Integer> {
 
+	/** Server caps: 25 MB per file, 100 MB per request. */
+	private static final long MAX_FILE_BYTES = 25L * 1024 * 1024;
+
+	private static final long MAX_REQUEST_BYTES = 100L * 1024 * 1024;
+
 	@Option(names = "--url", defaultValue = "${env:UNITRACK_URL:-http://localhost:8080}",
 			description = "UniTrack server URL (env UNITRACK_URL).")
 	String url;
@@ -65,6 +70,12 @@ class UploadCommand implements Callable<Integer> {
 
 	@Option(names = "--allow-empty", description = "Allow an upload when no report files matched.")
 	boolean allowEmpty;
+
+	@Option(names = "--verbose", description = "Print the resolved request (token redacted) before sending.")
+	boolean verbose;
+
+	@Option(names = "--soft-fail", description = "Treat an upload/transport failure as a warning (exit 0).")
+	boolean softFail;
 
 	private final UploadClient client;
 
@@ -118,6 +129,18 @@ class UploadCommand implements Callable<Integer> {
 		files.put("jacoco", jacocoFiles);
 		files.put("perf", perfFiles);
 
+		List<Resource> allFiles = new ArrayList<>(junitFiles);
+		allFiles.addAll(jacocoFiles);
+		allFiles.addAll(perfFiles);
+		String oversize = oversizeError(allFiles, MAX_FILE_BYTES, MAX_REQUEST_BYTES);
+		if (oversize != null) {
+			System.err.println("error: " + oversize + ".");
+			return ExitCodes.REJECTED;
+		}
+		if (this.verbose) {
+			printVerbose(fields, allFiles);
+		}
+
 		if (this.dryRun) {
 			System.out.println("[dry-run] would POST to " + this.url + "/api/v1/ingest");
 			System.out.println("[dry-run] fields: " + fields);
@@ -135,9 +158,63 @@ class UploadCommand implements Callable<Integer> {
 			return ExitCodes.OK;
 		}
 		catch (UploadException ex) {
+			if (this.softFail && (ex.exitCode() == ExitCodes.TRANSPORT || ex.exitCode() == ExitCodes.REJECTED)) {
+				System.out.println("warning: upload failed (" + ex.getMessage() + ") — continuing due to --soft-fail.");
+				return ExitCodes.OK;
+			}
 			System.err.println("error: " + ex.getMessage());
 			return ex.exitCode();
 		}
+	}
+
+	private void printVerbose(Map<String, String> fields, List<Resource> files) {
+		System.out.println("[verbose] POST " + this.url + "/api/v1/ingest");
+		System.out.println("[verbose] token: " + (notBlank(this.token) ? "***" : "(none)"));
+		System.out.println("[verbose] fields: " + fields);
+		for (Resource r : files) {
+			System.out.println("[verbose] file: " + nameOf(r) + " (" + sizeOf(r) + " bytes)");
+		}
+	}
+
+	/**
+	 * Returns an error message if any file exceeds {@code maxFile} or the total exceeds
+	 * {@code maxTotal}; else null.
+	 */
+	static String oversizeError(List<Resource> files, long maxFile, long maxTotal) {
+		long total = 0;
+		for (Resource r : files) {
+			long len = sizeOf(r);
+			total += len;
+			if (len > maxFile) {
+				return nameOf(r) + " is " + mb(len) + " MB (max " + mb(maxFile) + " MB per file)";
+			}
+		}
+		if (total > maxTotal) {
+			return "total upload " + mb(total) + " MB exceeds the " + mb(maxTotal) + " MB request limit";
+		}
+		return null;
+	}
+
+	private static long sizeOf(Resource r) {
+		try {
+			return r.contentLength();
+		}
+		catch (java.io.IOException ex) {
+			return 0;
+		}
+	}
+
+	private static String nameOf(Resource r) {
+		String name = r.getFilename();
+		return (name != null) ? name : "file";
+	}
+
+	private static long mb(long bytes) {
+		return bytes / (1024 * 1024);
+	}
+
+	private static boolean notBlank(String s) {
+		return s != null && !s.isBlank();
 	}
 
 	private static String coalesce(String explicit, String detected) {

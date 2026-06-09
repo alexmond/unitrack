@@ -5,6 +5,10 @@ import java.util.Map;
 
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
+import java.time.Duration;
+
+import org.springframework.core.retry.RetryPolicy;
+import org.springframework.core.retry.RetryTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
@@ -30,7 +34,12 @@ class UploadClientTest {
 	private UploadClient newClient() {
 		this.builder = RestClient.builder();
 		this.server = MockRestServiceServer.bindTo(this.builder).build();
-		this.client = new UploadClient(this.builder);
+		RetryPolicy policy = RetryPolicy.builder()
+			.maxRetries(2)
+			.delay(Duration.ofMillis(1))
+			.includes(RetryableUploadException.class)
+			.build();
+		this.client = new UploadClient(this.builder, new RetryTemplate(policy));
 		return this.client;
 	}
 
@@ -68,6 +77,20 @@ class UploadClientTest {
 		assertThatThrownBy(() -> this.client.ingest("http://unitrack.test", null, Map.of("project", "demo"), Map.of()))
 			.isInstanceOfSatisfying(UploadException.class,
 					(ex) -> assertThat(ex.exitCode()).isEqualTo(ExitCodes.TRANSPORT));
+	}
+
+	@Test
+	void retriesTransient5xxThenSucceeds() {
+		newClient();
+		this.server.expect(requestTo("http://unitrack.test/api/v1/ingest"))
+			.andRespond(withStatus(HttpStatus.SERVICE_UNAVAILABLE));
+		this.server.expect(requestTo("http://unitrack.test/api/v1/ingest"))
+			.andRespond(withSuccess("{\"runId\":7}", MediaType.APPLICATION_JSON));
+
+		IngestResponse r = this.client.ingest("http://unitrack.test", null, Map.of("project", "demo"), Map.of());
+
+		assertThat(r.runId()).isEqualTo(7L);
+		this.server.verify();
 	}
 
 	@Test

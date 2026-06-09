@@ -9,6 +9,8 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.ArgumentCaptor;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -84,6 +86,52 @@ class UploadCommandTest {
 
 		assertThat(c.call()).isEqualTo(ExitCodes.OK);
 		verify(this.client).ingest(any(), any(), any(), any());
+	}
+
+	@Test
+	void softFailDowngradesTransportFailureToSuccess(@TempDir Path dir) throws IOException {
+		Files.writeString(dir.resolve("TEST-a.xml"), "<testsuite/>");
+		given(this.client.ingest(any(), any(), any(), any()))
+			.willThrow(new UploadException(ExitCodes.TRANSPORT, "down"));
+		UploadCommand c = command();
+		c.junit = List.of(dir + "/TEST-*.xml");
+		c.softFail = true;
+
+		assertThat(c.call()).isEqualTo(ExitCodes.OK);
+	}
+
+	@Test
+	void verbosePrintsResolvedRequestAndUploads(@TempDir Path dir) throws IOException {
+		Files.writeString(dir.resolve("TEST-a.xml"), "<testsuite/>");
+		given(this.client.ingest(any(), any(), any(), any())).willReturn(new IngestResponse(1L));
+		UploadCommand c = command();
+		c.token = "secret";
+		c.verbose = true;
+		c.junit = List.of(dir + "/TEST-*.xml");
+
+		assertThat(c.call()).isEqualTo(ExitCodes.OK);
+	}
+
+	@Test
+	void oversizeErrorFlagsAnOversizedFileAndTotal(@TempDir Path dir) throws IOException {
+		Files.write(dir.resolve("big.xml"), new byte[2048]);
+		Files.write(dir.resolve("small.xml"), new byte[600]);
+		Resource big = new FileSystemResource(dir.resolve("big.xml"));
+		Resource small = new FileSystemResource(dir.resolve("small.xml"));
+
+		assertThat(UploadCommand.oversizeError(List.of(big), 1024, 100_000)).contains("big.xml");
+		assertThat(UploadCommand.oversizeError(List.of(small), 100_000, 1000)).isNull();
+		assertThat(UploadCommand.oversizeError(List.of(big, small), 100_000, 1000)).contains("total");
+	}
+
+	@Test
+	void rejectsUploadWhenAFileExceedsTheCap(@TempDir Path dir) throws IOException {
+		Files.write(dir.resolve("TEST-big.xml"), new byte[26 * 1024 * 1024]);
+		UploadCommand c = command();
+		c.junit = List.of(dir + "/TEST-big.xml");
+
+		assertThat(c.call()).isEqualTo(ExitCodes.REJECTED);
+		verifyNoInteractions(this.client);
 	}
 
 	@Test

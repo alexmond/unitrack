@@ -34,6 +34,8 @@
             <artifactId>picocli</artifactId>
             <version>${picocli.version}</version>
         </dependency>
+        <!-- Retry/backoff uses org.springframework.core.retry from spring-core
+             (Spring Framework 7) — no extra dependency needed. -->
         <!-- Reads the GitHub Actions event payload to recover the PR head SHA. -->
         <dependency>
             <groupId>tools.jackson.core</groupId>
