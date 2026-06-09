@@ -12,7 +12,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class CoverageParsersTest {
 
 	private final CoverageParsers parsers = new CoverageParsers(
-			List.of(new JacocoXmlParser(), new CoberturaXmlParser(), new LcovParser()));
+			List.of(new JacocoXmlParser(), new CoberturaXmlParser(), new LcovParser(), new OpenCoverXmlParser()));
 
 	private static final String COBERTURA = """
 			<?xml version="1.0"?>
@@ -54,6 +54,64 @@ class CoverageParsersTest {
 			end_of_record
 			""";
 
+	private static final String OPENCOVER = """
+			<?xml version="1.0" encoding="utf-8"?>
+			<CoverageSession>
+			  <Summary numSequencePoints="3" visitedSequencePoints="2" numBranchPoints="2" visitedBranchPoints="1"/>
+			  <Modules>
+			    <Module hash="AB-CD">
+			      <ModuleName>MyApp</ModuleName>
+			      <Files>
+			        <File uid="1" fullPath="C:\\src\\MyApp\\Foo.cs"/>
+			      </Files>
+			      <Classes>
+			        <Class>
+			          <FullName>MyApp.Foo</FullName>
+			          <Methods>
+			            <Method visited="true">
+			              <FileRef uid="1"/>
+			              <SequencePoints>
+			                <SequencePoint vc="3" sl="10" el="10"/>
+			                <SequencePoint vc="1" sl="11" el="11"/>
+			                <SequencePoint vc="0" sl="12" el="12"/>
+			              </SequencePoints>
+			              <BranchPoints>
+			                <BranchPoint vc="1" sl="11"/>
+			                <BranchPoint vc="0" sl="12"/>
+			              </BranchPoints>
+			            </Method>
+			          </Methods>
+			        </Class>
+			      </Classes>
+			    </Module>
+			  </Modules>
+			</CoverageSession>
+			""";
+
+	/**
+	 * coverage.py emits Cobertura XML — detected by the {@code <coverage>} root, like JVM
+	 * Cobertura.
+	 */
+	private static final String COVERAGE_PY = """
+			<?xml version="1.0" ?>
+			<!DOCTYPE coverage SYSTEM "http://cobertura.sourceforge.net/xml/coverage-04.dtd">
+			<coverage version="7.4.0" line-rate="0.5" branch-rate="0">
+			  <sources><source>/home/u/proj</source></sources>
+			  <packages>
+			    <package name="proj">
+			      <classes>
+			        <class name="foo.py" filename="proj/foo.py">
+			          <lines>
+			            <line number="1" hits="1"/>
+			            <line number="2" hits="0"/>
+			          </lines>
+			        </class>
+			      </classes>
+			    </package>
+			  </packages>
+			</coverage>
+			""";
+
 	private CoverageResults parse(String content) {
 		return this.parsers.parse(new ByteArrayInputStream(content.getBytes(StandardCharsets.UTF_8)));
 	}
@@ -81,6 +139,30 @@ class CoverageParsersTest {
 		assertThat(r.files()).hasSize(1);
 		assertThat(r.files().get(0).packageName()).isEqualTo("src/app");
 		assertThat(r.files().get(0).fileName()).isEqualTo("foo.js");
+	}
+
+	@Test
+	void detectsAndParsesOpenCover() {
+		CoverageResults r = parse(OPENCOVER);
+		// Sequence points grouped by line: sl 10 (vc3) + sl 11 (vc1) covered, sl 12 (vc0)
+		// missed.
+		assertThat(r.lineCovered()).isEqualTo(2);
+		assertThat(r.lineMissed()).isEqualTo(1);
+		// Branch points: vc1 covered, vc0 missed.
+		assertThat(r.branchCovered()).isEqualTo(1);
+		assertThat(r.branchMissed()).isEqualTo(1);
+		assertThat(r.files()).hasSize(1);
+		assertThat(r.files().get(0).fileName()).isEqualTo("Foo.cs");
+		assertThat(r.files().get(0).packageName()).isEqualTo("C:/src/MyApp");
+	}
+
+	@Test
+	void detectsAndParsesCoveragePyAsCobertura() {
+		CoverageResults r = parse(COVERAGE_PY);
+		assertThat(r.lineCovered()).isEqualTo(1);
+		assertThat(r.lineMissed()).isEqualTo(1);
+		assertThat(r.files()).hasSize(1);
+		assertThat(r.files().get(0).fileName()).isEqualTo("proj/foo.py");
 	}
 
 	@Test
