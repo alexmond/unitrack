@@ -18,31 +18,59 @@
         Username <code class="mono" th:text="${user.username}">admin</code> ·
         role <span class="badge pass" th:text="${user.role}">USER</span>
     </p>
-    <form method="post" th:action="@{/profile}" class="rule-form">
-        <input type="text" name="displayName" th:value="${user.displayName}" placeholder="Display name"/>
-        <input type="email" name="email" th:value="${user.email}" placeholder="Email"/>
-        <label class="check"><input type="checkbox" name="notifyGateFailure"
-                th:checked="${user.notifyGateFailure}"/> Email me on quality-gate failures</label>
-        <label class="check"><input type="checkbox" name="notifyTokenExpiry"
-                th:checked="${user.notifyTokenExpiry}"/> Email me before my API tokens expire</label>
-        <button class="btn btn-muted" type="submit">Save</button>
+    <form method="post" th:action="@{/profile}" style="max-width:420px">
+        <div class="mb-3">
+            <label class="form-label" for="displayName">Display name</label>
+            <input type="text" id="displayName" name="displayName" class="form-control"
+                   th:value="${user.displayName}"/>
+        </div>
+        <div class="mb-3">
+            <label class="form-label" for="email">Email</label>
+            <input type="email" id="email" name="email" class="form-control" th:value="${user.email}"/>
+        </div>
+        <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="notifyGateFailure" name="notifyGateFailure"
+                   th:checked="${user.notifyGateFailure}"/>
+            <label class="form-check-label" for="notifyGateFailure">Email me on quality-gate failures</label>
+        </div>
+        <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" id="notifyTokenExpiry" name="notifyTokenExpiry"
+                   th:checked="${user.notifyTokenExpiry}"/>
+            <label class="form-check-label" for="notifyTokenExpiry">Email me before my API tokens expire</label>
+        </div>
+        <button class="btn btn-primary" type="submit">Save</button>
     </form>
     <p class="muted" style="font-size:13px">Notifications are only sent when the server has email configured.</p>
 
     <h2>Change password</h2>
-    <form method="post" th:action="@{/profile/password}" class="rule-form">
-        <input type="password" name="currentPassword" placeholder="Current password" required/>
-        <input type="password" name="newPassword" placeholder="New password" required/>
-        <button class="btn btn-muted" type="submit">Change</button>
+    <form method="post" th:action="@{/profile/password}" class="d-flex flex-wrap gap-2 align-items-end">
+        <div>
+            <label class="form-label" for="currentPassword">Current password</label>
+            <input type="password" id="currentPassword" name="currentPassword" class="form-control"
+                   style="width:auto" required/>
+        </div>
+        <div>
+            <label class="form-label" for="newPassword">New password</label>
+            <input type="password" id="newPassword" name="newPassword" class="form-control"
+                   style="width:auto" required/>
+        </div>
+        <button class="btn btn-primary" type="submit">Change</button>
     </form>
 
     <h2>API tokens</h2>
     <p class="muted">Use a token to authenticate the REST/ingest API:
         <code class="mono">Authorization: Bearer &lt;token&gt;</code></p>
-    <form method="post" th:action="@{/profile/tokens}" class="rule-form">
-        <input type="text" name="name" placeholder="Token name (e.g. ci)" required/>
-        <input type="number" name="expiresDays" placeholder="Expires (days)"/>
-        <button class="btn btn-muted" type="submit">Generate</button>
+    <form method="post" th:action="@{/profile/tokens}" class="d-flex flex-wrap gap-2 align-items-end">
+        <div>
+            <label class="form-label" for="tokenName">Token name</label>
+            <input type="text" id="tokenName" name="name" class="form-control" style="width:auto"
+                   placeholder="e.g. ci" required/>
+        </div>
+        <div>
+            <label class="form-label" for="expiresDays">Expires (days)</label>
+            <input type="number" id="expiresDays" name="expiresDays" class="form-control" style="width:7rem"/>
+        </div>
+        <button class="btn btn-primary" type="submit">Generate</button>
     </form>
 
     <table th:unless="${tokens.isEmpty()}" style="margin-top:12px">
@@ -61,7 +89,7 @@
             <td>
                 <form th:if="${t.active}" method="post"
                       th:action="@{/profile/tokens/{id}/revoke(id=${t.id})}">
-                    <button class="btn" type="submit">Revoke</button>
+                    <button class="btn btn-sm btn-outline-danger" type="submit">Revoke</button>
                 </form>
             </td>
         </tr>

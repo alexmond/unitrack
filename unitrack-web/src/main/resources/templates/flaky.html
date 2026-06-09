@@ -46,9 +46,9 @@
                     <input type="hidden" name="name" th:value="${f.name()}"/>
                     <input type="hidden" name="className" th:value="${f.className()}"/>
                     <button th:if="${f.status().name() != 'QUARANTINED'}"
-                            name="status" value="QUARANTINED" class="btn">Quarantine</button>
+                            name="status" value="QUARANTINED" class="btn btn-sm btn-warning">Quarantine</button>
                     <button th:if="${f.status().name() == 'QUARANTINED'}"
-                            name="status" value="ACTIVE" class="btn btn-muted">Un-quarantine</button>
+                            name="status" value="ACTIVE" class="btn btn-sm btn-secondary">Un-quarantine</button>
                 </form>
             </td>
         </tr>

@@ -16,55 +16,64 @@
     <p class="muted">Per-project overrides. Leave a field blank to inherit the global default
         (shown in the placeholder).</p>
 
-    <form method="post" th:action="@{/projects/{id}/settings(id=${project.id})}" class="rule-form" style="flex-direction:column;align-items:flex-start;gap:10px;max-width:520px">
-        <label style="width:100%">Base branch
-            <input type="text" name="baseBranch" style="width:100%"
+    <form method="post" th:action="@{/projects/{id}/settings(id=${project.id})}" style="max-width:520px">
+        <div class="mb-3">
+            <label class="form-label" for="baseBranch">Base branch</label>
+            <input type="text" id="baseBranch" name="baseBranch" class="form-control"
                    th:value="${settings != null ? settings.baseBranch : null}"
                    th:placeholder="'inherit (' + ${globals.baseBranch()} + ')'"/>
-        </label>
-        <label style="width:100%">Minimum line coverage %
-            <input type="number" step="0.1" min="0" max="100" name="minLineCoverage" style="width:100%"
+        </div>
+        <div class="mb-3">
+            <label class="form-label" for="minLineCoverage">Minimum line coverage %</label>
+            <input type="number" step="0.1" min="0" max="100" id="minLineCoverage" name="minLineCoverage"
+                   class="form-control"
                    th:value="${settings != null and settings.minLineCoverage != null ? settings.minLineCoverage : ''}"
                    th:placeholder="${globals.minLineCoverage() != null ? 'inherit (' + globals.minLineCoverage() + ')' : 'inherit (none)'}"/>
-        </label>
-        <label style="width:100%">Max coverage drop (pp)
-            <input type="number" step="0.1" min="0" name="maxCoverageDropPct" style="width:100%"
+        </div>
+        <div class="mb-3">
+            <label class="form-label" for="maxCoverageDropPct">Max coverage drop (pp)</label>
+            <input type="number" step="0.1" min="0" id="maxCoverageDropPct" name="maxCoverageDropPct"
+                   class="form-control"
                    th:value="${settings != null and settings.maxCoverageDropPct != null ? settings.maxCoverageDropPct : ''}"
                    th:placeholder="'inherit (' + ${globals.maxCoverageDropPct()} + ')'"/>
-        </label>
-        <label style="width:100%">Fail on new failures
-            <select name="failOnNewFailures" style="width:100%">
+        </div>
+        <div class="mb-3">
+            <label class="form-label" for="failOnNewFailures">Fail on new failures</label>
+            <select id="failOnNewFailures" name="failOnNewFailures" class="form-select">
                 <option value="" th:selected="${settings == null or settings.failOnNewFailures == null}"
                         th:text="'Inherit (' + (${globals.failOnNewFailures()} ? 'on' : 'off') + ')'">Inherit</option>
                 <option value="true" th:selected="${settings != null and settings.failOnNewFailures == true}">On</option>
                 <option value="false" th:selected="${settings != null and settings.failOnNewFailures == false}">Off</option>
             </select>
-        </label>
+        </div>
         <h2 style="margin-top:18px">GitHub</h2>
         <p class="muted" style="margin-top:0">The token stays global; only these are per-project.</p>
-        <label style="width:100%">Publish commit status
-            <select name="ghEnabled" style="width:100%">
+        <div class="mb-3">
+            <label class="form-label" for="ghEnabled">Publish commit status</label>
+            <select id="ghEnabled" name="ghEnabled" class="form-select">
                 <option value="" th:selected="${settings == null or settings.ghEnabled == null}"
                         th:text="'Inherit (' + (${github.enabled} ? 'on' : 'off') + ')'">Inherit</option>
                 <option value="true" th:selected="${settings != null and settings.ghEnabled == true}">On</option>
                 <option value="false" th:selected="${settings != null and settings.ghEnabled == false}">Off</option>
             </select>
-        </label>
-        <label style="width:100%">Status context
-            <input type="text" name="ghContext" style="width:100%"
+        </div>
+        <div class="mb-3">
+            <label class="form-label" for="ghContext">Status context</label>
+            <input type="text" id="ghContext" name="ghContext" class="form-control"
                    th:value="${settings != null ? settings.ghContext : null}"
                    th:placeholder="'inherit (' + ${github.context} + ')'"/>
-        </label>
-        <label style="width:100%">PR comment
-            <select name="ghPrComment" style="width:100%">
+        </div>
+        <div class="mb-3">
+            <label class="form-label" for="ghPrComment">PR comment</label>
+            <select id="ghPrComment" name="ghPrComment" class="form-select">
                 <option value="" th:selected="${settings == null or settings.ghPrComment == null}"
                         th:text="'Inherit (' + (${github.prComment} ? 'on' : 'off') + ')'">Inherit</option>
                 <option value="true" th:selected="${settings != null and settings.ghPrComment == true}">On</option>
                 <option value="false" th:selected="${settings != null and settings.ghPrComment == false}">Off</option>
             </select>
-        </label>
+        </div>
 
-        <button class="btn" type="submit">Save settings</button>
+        <button class="btn btn-primary" type="submit">Save settings</button>
     </form>
 </main>
 </body>

@@ -28,7 +28,7 @@
             <td><code class="mono" th:text="${r.pattern()}">pattern</code></td>
             <td>
                 <form method="post" th:action="@{/projects/{id}/triage/rules/{ruleId}/delete(id=${project.id},ruleId=${r.id()})}">
-                    <button class="btn">Delete</button>
+                    <button class="btn btn-sm btn-danger" type="submit">Delete</button>
                 </form>
             </td>
         </tr>
@@ -36,12 +36,17 @@
     </table>
 
     <h2>Add rule</h2>
-    <form method="post" th:action="@{/projects/{id}/triage/rules(id=${project.id})}" class="rule-form">
-        <input type="text" name="name" placeholder="Name (e.g. OOM)" required/>
-        <input type="text" name="category" placeholder="Category (e.g. INFRASTRUCTURE)" required/>
-        <input type="text" name="pattern" placeholder="Pattern / regex (e.g. OutOfMemoryError)" required/>
-        <input type="number" name="priority" placeholder="Priority" value="100"/>
-        <button class="btn btn-muted" type="submit">Add</button>
+    <form method="post" th:action="@{/projects/{id}/triage/rules(id=${project.id})}"
+          class="d-flex flex-wrap gap-2 align-items-center">
+        <input type="text" name="name" class="form-control" style="width:auto;flex:1 1 9rem"
+               aria-label="Rule name" placeholder="Name (e.g. OOM)" required/>
+        <input type="text" name="category" class="form-control" style="width:auto;flex:1 1 11rem"
+               aria-label="Category" placeholder="Category (e.g. INFRASTRUCTURE)" required/>
+        <input type="text" name="pattern" class="form-control" style="width:auto;flex:1 1 13rem"
+               aria-label="Pattern / regex" placeholder="Pattern / regex (e.g. OutOfMemoryError)" required/>
+        <input type="number" name="priority" class="form-control" style="width:6rem"
+               aria-label="Priority" placeholder="Priority" value="100"/>
+        <button class="btn btn-primary" type="submit">Add</button>
     </form>
 </main>
 </body>
