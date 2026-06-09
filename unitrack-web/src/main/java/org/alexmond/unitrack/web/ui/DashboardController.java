@@ -26,6 +26,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.util.HashMap;
 import java.util.List;
@@ -94,6 +95,7 @@ public class DashboardController {
 		model.addAttribute("trendLabels", toJson(trend.stream().map(TestRun::getShortSha).toList()));
 		model.addAttribute("trendPassRate", toJson(trend.stream().map((r) -> round(r.passRate())).toList()));
 		model.addAttribute("trendCoverage", toJson(trend.stream().map(TestRun::getLineCoveragePct).toList()));
+		model.addAttribute("uploadSnippet", uploadSnippet(project.getName()));
 		return "project";
 	}
 
@@ -180,6 +182,17 @@ public class DashboardController {
 		model.addAttribute("trendLabels", toJson(trend.points().stream().map(DurationPoint::shortSha).toList()));
 		model.addAttribute("trendMs", toJson(trend.points().stream().map(DurationPoint::durationMs).toList()));
 		return "test";
+	}
+
+	/**
+	 * A ready-to-paste CLI command for pushing this project's results, using the current
+	 * server URL.
+	 */
+	private static String uploadSnippet(String projectName) {
+		String base = ServletUriComponentsBuilder.fromCurrentContextPath().build().toUriString();
+		return "java -jar unitrack-cli.jar upload \\\n" + "  --url " + base + " \\\n" + "  --project \"" + projectName
+				+ "\" \\\n" + "  --junit \"target/surefire-reports/*.xml\" \\\n"
+				+ "  --jacoco \"target/site/jacoco/jacoco.xml\"";
 	}
 
 	/** Serializes a list of Strings/Numbers/nulls to a JSON array for the trend chart. */

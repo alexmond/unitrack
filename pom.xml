@@ -64,6 +64,7 @@
     <modules>
         <module>unitrack-core</module>
         <module>unitrack-web</module>
+        <module>unitrack-cli</module>
     </modules>
 
     <dependencyManagement>

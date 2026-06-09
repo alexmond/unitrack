@@ -3,6 +3,7 @@
 * xref:architecture.adoc[Architecture]
 * xref:ingestion.adoc[Reporting Results]
 ** xref:cli-reference.adoc[CLI & CI Integration]
+** xref:cli.adoc[UniTrack CLI uploader]
 ** xref:rest-api.adoc[REST API]
 * xref:features.adoc[Features]
 ** xref:flaky-detection.adoc[Flaky Detection]
