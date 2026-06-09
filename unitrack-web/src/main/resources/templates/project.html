@@ -16,7 +16,7 @@
         <p class="muted">Upload this project's JUnit + coverage from any CI with the UniTrack CLI
             (a runnable JAR, or via the Docker image / GitHub Action):</p>
         <div class="snippet">
-            <button type="button" class="btn btn-muted snippet-copy"
+            <button type="button" class="btn btn-sm btn-secondary snippet-copy"
                     onclick="navigator.clipboard.writeText(this.nextElementSibling.innerText); this.textContent='Copied';">Copy</button>
             <pre th:text="${uploadSnippet}">java -jar unitrack-cli.jar upload ...</pre>
         </div>

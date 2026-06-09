@@ -242,19 +242,6 @@ details.failure pre {
 }
 code.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
 
-.btn {
-    background: var(--red);
-    color: #fff;
-    border: none;
-    border-radius: 6px;
-    padding: 5px 12px;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-}
-.btn:hover { filter: brightness(1.1); }
-.btn.btn-muted { background: var(--panel-2); color: var(--text); border: 1px solid var(--border); }
-
 .gate {
     border: 1px solid var(--border);
     border-left: 4px solid var(--muted);
@@ -269,14 +256,6 @@ code.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-si
 .gate-rules { margin: 0; padding-left: 18px; }
 .gate-rules li { margin: 3px 0; }
 
-.rule-form { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-.rule-form input {
-    background: var(--panel); border: 1px solid var(--border); border-radius: 6px;
-    color: var(--text); padding: 7px 10px; font-size: 13px;
-}
-.rule-form input[type="number"] { width: 90px; }
-.rule-form .check { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; }
-.rule-form .check input { margin: 0; }
 
 .cluster-body { padding: 10px 16px; border-top: 1px solid var(--border); }
 .cluster-body ul { margin: 6px 0; padding-left: 18px; }

@@ -27,7 +27,7 @@
             <td>
                 <form method="post" th:action="@{/projects/{id}/members/{mid}/remove(id=${project.id},mid=${m.id()})}"
                       style="display:inline">
-                    <button class="btn btn-muted" type="submit">Remove</button>
+                    <button class="btn btn-sm btn-outline-danger" type="submit">Remove</button>
                 </form>
             </td>
         </tr>
@@ -36,12 +36,14 @@
     <div th:if="${members.isEmpty()}" class="empty">No members yet — add one below.</div>
 
     <h2>Add or update a member</h2>
-    <form method="post" th:action="@{/projects/{id}/members(id=${project.id})}" class="rule-form">
-        <input type="text" name="username" placeholder="Username" required/>
-        <select name="role">
+    <form method="post" th:action="@{/projects/{id}/members(id=${project.id})}"
+          class="d-flex flex-wrap gap-2 align-items-center">
+        <input type="text" name="username" class="form-control" style="width:auto;flex:1 1 12rem"
+               aria-label="Username" placeholder="Username" required/>
+        <select name="role" class="form-select" style="width:auto" aria-label="Role">
             <option th:each="r : ${roles}" th:value="${r}" th:text="${r}">ROLE</option>
         </select>
-        <button class="btn" type="submit">Save member</button>
+        <button class="btn btn-primary" type="submit">Save member</button>
     </form>
 </main>
 </body>
