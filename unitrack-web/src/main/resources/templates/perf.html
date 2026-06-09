@@ -11,6 +11,7 @@
         <span>Load tests</span>
     </p>
     <h1 th:text="${project.name} + ' — load tests'">project — load tests</h1>
+    <nav th:replace="~{fragments/common :: subnav(${project.id}, 'load')}"></nav>
 
     <div th:unless="${hasPerf}" class="empty">No performance runs yet. Upload a JMeter JTL with
         <code class="mono">--perf results.jtl</code>.</div>

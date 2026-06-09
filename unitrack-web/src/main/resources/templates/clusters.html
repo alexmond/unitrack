@@ -11,6 +11,7 @@
         Failure clusters
     </p>
     <h1>Failure clusters</h1>
+    <nav th:replace="~{fragments/common :: subnav(${project.id}, 'clusters')}"></nav>
     <p class="muted">Recent failures grouped by a normalized signature (type, message, top stack frame) — most frequent first.</p>
 
     <div th:if="${clusters.isEmpty()}" class="empty">No recent failures to cluster. 🎉</div>

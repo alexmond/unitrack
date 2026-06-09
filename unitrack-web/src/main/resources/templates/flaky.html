@@ -11,6 +11,7 @@
         Flaky tests
     </p>
     <h1>Flaky tests</h1>
+    <nav th:replace="~{fragments/common :: subnav(${project.id}, 'flaky')}"></nav>
     <p class="muted">Tests that both passed and failed for the same commit — likely non-deterministic.</p>
 
     <div th:if="${flaky.isEmpty()}" class="empty">No flaky tests detected. 🎉</div>
