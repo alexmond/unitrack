@@ -29,6 +29,16 @@ spring:
       max-file-size: 25MB
       max-request-size: 100MB
 
+  ai:
+    mcp:
+      server:
+        name: unitrack
+        version: 0.1.0
+        instructions: >-
+          UniTrack exposes read-only tools to inspect JUnit test results, code coverage,
+          flaky tests, failure clusters and quality gates. Call listProjects first to
+          discover project names/ids, then drill into runs by id.
+
 server:
   port: ${PORT:8080}
 

@@ -57,6 +57,8 @@
 
         <maven-gpg-plugin.version>3.2.8</maven-gpg-plugin.version>
         <central-publishing-maven-plugin.version>0.10.0</central-publishing-maven-plugin.version>
+
+        <spring-ai.version>1.1.7</spring-ai.version>
     </properties>
 
     <modules>
@@ -71,6 +73,14 @@
                 <groupId>org.alexmond</groupId>
                 <artifactId>unitrack-core</artifactId>
                 <version>${project.version}</version>
+            </dependency>
+            <!-- Spring AI (MCP server) — 1.1.x line targets Spring Boot 4 / Spring Framework 7 -->
+            <dependency>
+                <groupId>org.springframework.ai</groupId>
+                <artifactId>spring-ai-bom</artifactId>
+                <version>${spring-ai.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
             </dependency>
         </dependencies>
     </dependencyManagement>
