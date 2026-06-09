@@ -15,7 +15,7 @@
         Lowest priority wins; the first match assigns the category.</p>
 
     <div th:if="${rules.isEmpty()}" class="empty">No rules yet — add one below.</div>
-    <table th:unless="${rules.isEmpty()}">
+    <table class="table table-hover align-middle" th:unless="${rules.isEmpty()}">
         <thead>
         <tr><th class="num">Priority</th><th>Name</th><th>Category</th><th>Pattern</th><th></th></tr>
         </thead>

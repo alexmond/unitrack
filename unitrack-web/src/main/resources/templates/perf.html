@@ -27,7 +27,7 @@
     </div>
 
     <h2>Recent perf runs</h2>
-    <table th:unless="${perfRuns.isEmpty()}">
+    <table class="table table-hover align-middle" th:unless="${perfRuns.isEmpty()}">
         <thead>
         <tr><th>When</th><th>Commit</th><th>Format</th><th class="num">Samples</th><th class="num">p95</th>
             <th class="num">Throughput</th><th class="num">Errors</th><th></th><th></th></tr>
