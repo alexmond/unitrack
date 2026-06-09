@@ -50,6 +50,20 @@ branch** (the project's base branch, default `main`), UniTrack emails the projec
 
 Failures on feature branches do not notify -- only the watched branch does, to keep noise down.
 
+== Token-expiry reminder
+
+A daily scheduled job emails the owner of any xref:accounts.adoc[personal API token] that is
+within **7 days** of expiring, so it can be rotated before CI starts failing on a dead token.
+Each token is reminded at most once. Tokens with no expiry, or whose owner has no email, are
+skipped. The schedule defaults to 08:00 daily and is overridable:
+
+[source,yaml]
+----
+unitrack:
+  notifications:
+    token-expiry-cron: "0 0 8 * * *"   # Spring cron expression
+----
+
 == Settings
 
 [cols="2,3"]
@@ -59,5 +73,6 @@ Failures on feature branches do not notify -- only the watched branch does, to k
 | `unitrack.notifications.enabled`      | Master switch (default `false`).
 | `unitrack.notifications.from-address` | From address for outgoing mail.
 | `unitrack.notifications.base-url`     | Base URL for absolute links in emails.
+| `unitrack.notifications.token-expiry-cron` | Cron for the token-expiry reminder job (default 08:00 daily).
 | `spring.mail.*`                       | Standard Spring Boot SMTP configuration.
 |===
