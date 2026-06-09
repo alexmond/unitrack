@@ -12,6 +12,20 @@
     </p>
     <nav th:replace="~{fragments/common :: subnav(${project.id}, 'overview')}"></nav>
 
+    <details class="howto">
+        <summary>📤 Push results from CI</summary>
+        <p class="muted">Upload this project's JUnit + coverage from any CI with the UniTrack CLI
+            (a runnable JAR, or via the Docker image / GitHub Action):</p>
+        <div class="snippet">
+            <button type="button" class="btn btn-muted snippet-copy"
+                    onclick="navigator.clipboard.writeText(this.nextElementSibling.innerText); this.textContent='Copied';">Copy</button>
+            <pre th:text="${uploadSnippet}">java -jar unitrack-cli.jar upload ...</pre>
+        </div>
+        <p class="muted">If the server requires a token, set <code class="mono">UNITRACK_TOKEN</code>
+            (mint one on your <a th:href="@{/profile}">profile</a>). Gate a build with
+            <code class="mono">java -jar unitrack-cli.jar gate --project ... --commit $SHA</code>.</p>
+    </details>
+
     <h2>Trends</h2>
     <div class="chart-wrap">
         <canvas id="trendChart" height="90"></canvas>
