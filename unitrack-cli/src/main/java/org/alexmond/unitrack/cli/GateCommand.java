@@ -24,7 +24,7 @@ class GateCommand implements Callable<Integer> {
 	@Option(names = "--token", defaultValue = "${env:UNITRACK_TOKEN}", description = "API token (env UNITRACK_TOKEN).")
 	String token;
 
-	@Option(names = "--project", required = true, description = "Project name.")
+	@Option(names = "--project", description = "Project name (auto-detected from CI when omitted).")
 	String project;
 
 	@Option(names = "--commit", description = "Gate the latest run for this commit (preferred).")
@@ -38,14 +38,25 @@ class GateCommand implements Callable<Integer> {
 
 	private final UploadClient client;
 
-	GateCommand(UploadClient client) {
+	private final CiMetadataDetector detector;
+
+	GateCommand(UploadClient client, CiMetadataDetector detector) {
 		this.client = client;
+		this.detector = detector;
 	}
 
 	@Override
 	public Integer call() {
+		CiMetadata ci = this.detector.detect();
+		String resolvedProject = coalesce(this.project, ci.project());
+		if (resolvedProject == null || resolvedProject.isBlank()) {
+			System.err.println("error: --project is required (and could not be detected from the CI environment).");
+			return ExitCodes.USAGE;
+		}
+		String resolvedCommit = coalesce(this.commit, ci.commit());
+		String resolvedBranch = coalesce(this.branch, ci.branch());
 		try {
-			GateResponse gate = this.client.gate(this.url, this.token, this.project, this.commit, this.branch,
+			GateResponse gate = this.client.gate(this.url, this.token, resolvedProject, resolvedCommit, resolvedBranch,
 					this.flag);
 			if (!gate.found()) {
 				System.err.println("error: no run found for the given project/commit/branch.");
@@ -62,6 +73,10 @@ class GateCommand implements Callable<Integer> {
 			System.err.println("error: " + ex.getMessage());
 			return ex.exitCode();
 		}
+	}
+
+	private static String coalesce(String explicit, String detected) {
+		return (explicit != null && !explicit.isBlank()) ? explicit : detected;
 	}
 
 }

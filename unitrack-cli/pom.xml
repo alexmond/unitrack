@@ -34,6 +34,11 @@
             <artifactId>picocli</artifactId>
             <version>${picocli.version}</version>
         </dependency>
+        <!-- Reads the GitHub Actions event payload to recover the PR head SHA. -->
+        <dependency>
+            <groupId>tools.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
 
         <dependency>
             <groupId>org.springframework.boot</groupId>
