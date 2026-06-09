@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>UniTrack</title>
+    <!-- Single include point for every page: Bootstrap first, then app.css (which bridges Bootstrap's
+         --bs-* onto our theme tokens). Version matches bootstrap.version in pom.xml. -->
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap/5.3.8/css/bootstrap.min.css}"/>
+    <link rel="stylesheet" th:href="@{/css/app.css}"/>
+    <!-- Applies the saved theme before paint (no flash); falls back to OS preference. -->
+    <script th:inline="none">
+        (function () {
+            var root = document.documentElement;
+            function icon(t) {
+                var b = document.getElementById('theme-toggle');
+                if (b) { b.textContent = (t === 'light' ? '☾' : '☀'); }
+            }
+            function apply(t) { root.setAttribute('data-theme', t); root.setAttribute('data-bs-theme', t); icon(t); }
+            var saved = localStorage.getItem('theme');
+            apply(saved || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'));
+            window.__toggleTheme = function () {
+                var t = (root.getAttribute('data-theme') === 'light') ? 'dark' : 'light';
+                localStorage.setItem('theme', t);
+                apply(t);
+            };
+            document.addEventListener('DOMContentLoaded', function () { icon(root.getAttribute('data-theme')); });
+        })();
+    </script>
+</head>
+<body>
+<header th:replace="~{fragments/common :: topbar}"></header>
+<main class="container" layout:fragment="content">
+    <p>Page content.</p>
+</main>
+<footer th:replace="~{fragments/common :: footer}"></footer>
+<th:block layout:fragment="scripts"></th:block>
+</body>
+</html>

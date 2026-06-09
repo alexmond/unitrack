@@ -73,20 +73,19 @@ class FullPageScreenshotUiTest {
 		};
 	}
 
-	private long ingestRun() {
+	private String ingestRun() {
 		MultiValueMap<String, Object> form = new LinkedMultiValueMap<>();
-		form.add("project", "demo");
+		form.add("project", "screens");
 		form.add("branch", "main");
 		form.add("commit", "abc1234");
 		form.add("junit", named(junit(), "TEST-G.xml"));
 		form.add("jacoco", named(JACOCO, "jacoco.xml"));
-		String body = post(form);
-		return ((Number) JsonPath.read(body, "$.runId")).longValue();
+		return post(form);
 	}
 
 	private long ingestPerf() {
 		MultiValueMap<String, Object> form = new LinkedMultiValueMap<>();
-		form.add("project", "demo");
+		form.add("project", "screens");
 		form.add("branch", "main");
 		form.add("commit", "abc1234");
 		form.add("perf", named(JTL, "results.jtl"));
@@ -140,12 +139,11 @@ class FullPageScreenshotUiTest {
 
 	@Test
 	void capturesEveryPageInBothThemes() throws Exception {
-		long runId = ingestRun();
+		String runBody = ingestRun();
+		long runId = ((Number) JsonPath.read(runBody, "$.runId")).longValue();
+		long projectId = ((Number) JsonPath.read(runBody, "$.projectId")).longValue();
 		long perfRunId = ingestPerf();
 		String base = "http://localhost:" + this.port;
-		// projectId is 1 (single project seeded above); resolve defensively via the run
-		// if needed.
-		long projectId = 1;
 
 		Map<String, String> routes = new LinkedHashMap<>();
 		routes.put("index", base + "/");
