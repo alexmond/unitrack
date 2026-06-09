@@ -42,8 +42,11 @@ public class AccountController {
 
 	@PostMapping("/profile")
 	public String updateProfile(Authentication auth, @RequestParam(required = false) String displayName,
-			@RequestParam(required = false) String email, RedirectAttributes ra) {
-		users.updateProfile(auth.getName(), displayName, email);
+			@RequestParam(required = false) String email,
+			@RequestParam(name = "notifyGateFailure", defaultValue = "false") boolean notifyGateFailure,
+			@RequestParam(name = "notifyTokenExpiry", defaultValue = "false") boolean notifyTokenExpiry,
+			RedirectAttributes ra) {
+		users.updateProfile(auth.getName(), displayName, email, notifyGateFailure, notifyTokenExpiry);
 		ra.addFlashAttribute("msg", "Profile updated.");
 		return "redirect:/profile";
 	}

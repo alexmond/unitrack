@@ -61,7 +61,7 @@ public class TokenExpiryReminder {
 		for (ApiToken token : due) {
 			User owner = token.getUser();
 			String email = (owner != null) ? owner.getEmail() : null;
-			if (email != null && !email.isBlank()) {
+			if (owner != null && owner.isNotifyTokenExpiry() && email != null && !email.isBlank()) {
 				this.notifications.send(email, subject(token), body(token));
 				sent++;
 			}

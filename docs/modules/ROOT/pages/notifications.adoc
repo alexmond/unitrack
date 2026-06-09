@@ -64,6 +64,17 @@ unitrack:
     token-expiry-cron: "0 0 8 * * *"   # Spring cron expression
 ----
 
+== Per-user preferences
+
+Each user controls which emails they receive from their **profile page** -- two toggles, both on
+by default:
+
+* *Email me on quality-gate failures*
+* *Email me before my API tokens expire*
+
+Opting out suppresses that notification type for that user (other recipients are unaffected). A
+token whose owner has opted out is still marked as reminded, so it is not re-checked daily.
+
 == Settings
 
 [cols="2,3"]
