@@ -52,6 +52,18 @@ management:
       probes:
         enabled: true
 
+unitrack:
+  notifications:
+    enabled: ${UNITRACK_NOTIFICATIONS_ENABLED:false}
+    from-address: ${UNITRACK_MAIL_FROM:unitrack@localhost}
+    base-url: ${UNITRACK_BASE_URL:http://localhost:8080}
+
+# To actually deliver mail, configure an SMTP server, e.g.:
+#   spring.mail.host: smtp.example.com
+#   spring.mail.port: 587
+#   spring.mail.username / spring.mail.password
+# Without spring.mail.host no JavaMailSender is created and notifications stay disabled.
+
 logging:
   level:
     org.alexmond.unitrack: INFO
