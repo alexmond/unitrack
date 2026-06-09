@@ -32,6 +32,54 @@
     --code-text: #d6dee7;
 }
 
+/* --- Bootstrap bridge: Bootstrap's --bs-* derive from the app tokens, so app.css stays the
+   single source of truth and Bootstrap components inherit the theme. app.css loads AFTER
+   bootstrap.min.css, so these override Bootstrap's own :root defaults. --- */
+:root {
+    --bs-body-bg: var(--bg);
+    --bs-body-color: var(--text);
+    --bs-secondary-bg: var(--panel);
+    --bs-tertiary-bg: var(--panel-2);
+    --bs-secondary-color: var(--muted);
+    --bs-tertiary-color: var(--muted);
+    --bs-emphasis-color: var(--text);
+    --bs-heading-color: var(--text);
+    --bs-border-color: var(--border);
+    --bs-border-radius: var(--radius);
+    --bs-link-color: var(--blue);
+    --bs-link-hover-color: var(--blue);
+    --bs-primary: var(--blue);
+    --bs-success: var(--green);
+    --bs-danger: var(--red);
+    --bs-warning: var(--amber);
+    --bs-code-color: var(--code-text);
+}
+
+/* rgb triplets must be literal per theme — var() cannot derive rgb from a hex token. */
+:root {
+    --bs-body-bg-rgb: 15, 20, 25;
+    --bs-body-color-rgb: 230, 237, 243;
+    --bs-emphasis-color-rgb: 230, 237, 243;
+    --bs-primary-rgb: 68, 147, 248;
+    --bs-success-rgb: 46, 160, 67;
+    --bs-danger-rgb: 229, 83, 75;
+    --bs-warning-rgb: 210, 153, 34;
+    --bs-link-color-rgb: 68, 147, 248;
+    --bs-border-color-translucent: rgba(255, 255, 255, .1);
+}
+
+:root[data-theme="light"] {
+    --bs-body-bg-rgb: 246, 248, 250;
+    --bs-body-color-rgb: 31, 35, 40;
+    --bs-emphasis-color-rgb: 31, 35, 40;
+    --bs-primary-rgb: 9, 105, 218;
+    --bs-success-rgb: 26, 127, 55;
+    --bs-danger-rgb: 207, 34, 46;
+    --bs-warning-rgb: 154, 103, 0;
+    --bs-link-color-rgb: 9, 105, 218;
+    --bs-border-color-translucent: rgba(0, 0, 0, .1);
+}
+
 .theme-toggle {
     margin-left: 16px;
     background: transparent;
@@ -110,6 +158,16 @@ a:hover { text-decoration: underline; }
 }
 
 .container { max-width: 1100px; margin: 0 auto; padding: 24px; }
+
+.footer {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    max-width: 1100px; margin: 24px auto 0; padding: 16px 24px;
+    border-top: 1px solid var(--border); color: var(--muted); font-size: 13px;
+}
+.footer .brand { font-weight: 700; color: var(--text); }
+.footer .brand span { color: var(--blue); }
+.footer .spacer { flex: 1; }
+.footer a { color: var(--muted); }
 
 h1 { font-size: 22px; margin: 0 0 4px; }
 h2 { font-size: 17px; margin: 28px 0 12px; }
