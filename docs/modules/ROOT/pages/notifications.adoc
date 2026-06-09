@@ -1,0 +1,63 @@
+= Email Notifications
+
+UniTrack can email project members when something needs attention -- starting with
+**quality-gate failures**. Notifications are **off by default** and send nothing until an SMTP
+server is configured.
+
+== Enabling
+
+Two things are required:
+
+. An SMTP server, via the standard Spring `spring.mail.*` properties.
+. `unitrack.notifications.enabled=true`.
+
+[source,yaml]
+----
+spring:
+  mail:
+    host: smtp.example.com
+    port: 587
+    username: ${MAIL_USER}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+
+unitrack:
+  notifications:
+    enabled: true
+    from-address: unitrack@example.com
+    base-url: https://unitrack.example      # used for links in emails
+----
+
+If `spring.mail.host` is unset, no mail sender is created and notifications stay disabled --
+the app starts and runs normally regardless. Sending is best-effort: a failure to deliver is
+logged and never affects ingest.
+
+== Quality-gate failure
+
+When a run is ingested and its xref:quality-gate.adoc[quality gate] **fails on the watched
+branch** (the project's base branch, default `main`), UniTrack emails the project's members.
+
+[cols="1,3"]
+|===
+| Aspect | Behaviour
+
+| Trigger    | Gate result is *FAILED* on a run whose branch equals the project's base branch.
+| Recipients | Project members who have an email address on file. No members with an address -> no email.
+| Content    | Project, run number, branch/commit, pass/fail totals, the failing gate rules, and a link to the run.
+|===
+
+Failures on feature branches do not notify -- only the watched branch does, to keep noise down.
+
+== Settings
+
+[cols="2,3"]
+|===
+| Property | Meaning
+
+| `unitrack.notifications.enabled`      | Master switch (default `false`).
+| `unitrack.notifications.from-address` | From address for outgoing mail.
+| `unitrack.notifications.base-url`     | Base URL for absolute links in emails.
+| `spring.mail.*`                       | Standard Spring Boot SMTP configuration.
+|===

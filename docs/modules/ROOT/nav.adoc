@@ -15,6 +15,7 @@
 ** xref:load-testing.adoc[Load / Performance Tests]
 ** xref:github-checks.adoc[GitHub PR Checks]
 ** xref:mcp-server.adoc[MCP Server (AI assistants)]
+** xref:notifications.adoc[Email Notifications]
 * xref:accounts.adoc[Accounts & API Tokens]
 * xref:configuration.adoc[Configuration]
 * xref:deployment.adoc[Deployment]

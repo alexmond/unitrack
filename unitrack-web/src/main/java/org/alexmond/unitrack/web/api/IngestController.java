@@ -16,6 +16,7 @@ import org.alexmond.unitrack.report.TestRegressionResult;
 import org.alexmond.unitrack.report.TestRegressionService;
 import org.alexmond.unitrack.web.github.GitHubPrCommentService;
 import org.alexmond.unitrack.web.github.GitHubStatusService;
+import org.alexmond.unitrack.web.notify.GateFailureNotifier;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -62,6 +63,8 @@ public class IngestController {
 
 	private final PerfRunRegressionService perfRunRegression;
 
+	private final GateFailureNotifier gateFailureNotifier;
+
 	@PostMapping(path = "/ingest", consumes = "multipart/form-data")
 	public ResponseEntity<ApiResponses.IngestResultJson> ingest(@RequestParam String project,
 			@RequestParam(required = false) String repoUrl, @RequestParam(required = false) String branch,
@@ -98,6 +101,7 @@ public class IngestController {
 		int newFailures = testRegression.diff(run.getId()).map(TestRegressionResult::newFailureCount).orElse(0);
 		int slowerTests = perfRegression.diff(run.getId()).map(PerfRegressionResult::slowerCount).orElse(0);
 		gitHubPrComment.publish(run, gate, delta, newFailures, slowerTests);
+		gateFailureNotifier.notifyIfFailed(run, gate);
 	}
 
 	private void publishPerfComment(PerfRun perfRun) {
