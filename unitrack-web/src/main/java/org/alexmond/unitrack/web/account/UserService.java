@@ -41,10 +41,13 @@ public class UserService {
 	}
 
 	@Transactional
-	public void updateProfile(String username, String displayName, String email) {
+	public void updateProfile(String username, String displayName, String email, boolean notifyGateFailure,
+			boolean notifyTokenExpiry) {
 		User user = require(username);
 		user.setDisplayName(displayName);
 		user.setEmail(email);
+		user.setNotifyGateFailure(notifyGateFailure);
+		user.setNotifyTokenExpiry(notifyTokenExpiry);
 	}
 
 	/**

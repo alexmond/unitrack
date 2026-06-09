@@ -84,6 +84,21 @@ class GateFailureNotifierTest {
 	}
 
 	@Test
+	void doesNotEmailMembersWhoOptedOut() {
+		given(notifications.enabled()).willReturn(true);
+		given(settings.gateConfig(7L)).willReturn(new GateConfig("main", 80.0, 5.0, true));
+		ProjectMembership m1 = member(1L);
+		given(memberships.findByProjectIdOrderByRoleAscIdAsc(7L)).willReturn(List.of(m1));
+		User optedOut = new User("u1", "U1", "dev@example", "h", Role.USER);
+		optedOut.setNotifyGateFailure(false);
+		given(users.findById(1L)).willReturn(Optional.of(optedOut));
+
+		notifier.notifyIfFailed(run("main"), failed());
+
+		verify(notifications, never()).send(anyString(), anyString(), anyString());
+	}
+
+	@Test
 	void skipsWhenGatePassed() {
 		QualityGateResult passed = new QualityGateResult(true, List.of());
 		notifier.notifyIfFailed(run("main"), passed);

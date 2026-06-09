@@ -65,6 +65,7 @@ public class GateFailureNotifier {
 			.stream()
 			.map((m) -> this.users.findById(m.getUserId()).orElse(null))
 			.filter(Objects::nonNull)
+			.filter(User::isNotifyGateFailure)
 			.map(User::getEmail)
 			.filter((e) -> e != null && !e.isBlank())
 			.distinct()

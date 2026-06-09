@@ -44,6 +44,14 @@ public class User {
 	@Column(nullable = false)
 	private Role role = Role.USER;
 
+	@Setter
+	@Column(name = "notify_gate_failure", nullable = false)
+	private boolean notifyGateFailure = true;
+
+	@Setter
+	@Column(name = "notify_token_expiry", nullable = false)
+	private boolean notifyTokenExpiry = true;
+
 	@Column(name = "created_at", nullable = false)
 	private Instant createdAt = Instant.now();
 

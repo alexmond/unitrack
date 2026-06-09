@@ -22,8 +22,13 @@
     <form method="post" th:action="@{/profile}" class="rule-form">
         <input type="text" name="displayName" th:value="${user.displayName}" placeholder="Display name"/>
         <input type="email" name="email" th:value="${user.email}" placeholder="Email"/>
+        <label class="check"><input type="checkbox" name="notifyGateFailure"
+                th:checked="${user.notifyGateFailure}"/> Email me on quality-gate failures</label>
+        <label class="check"><input type="checkbox" name="notifyTokenExpiry"
+                th:checked="${user.notifyTokenExpiry}"/> Email me before my API tokens expire</label>
         <button class="btn btn-muted" type="submit">Save</button>
     </form>
+    <p class="muted" style="font-size:13px">Notifications are only sent when the server has email configured.</p>
 
     <h2>Change password</h2>
     <form method="post" th:action="@{/profile/password}" class="rule-form">

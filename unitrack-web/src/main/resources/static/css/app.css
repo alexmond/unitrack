@@ -207,6 +207,8 @@ code.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-si
     color: var(--text); padding: 7px 10px; font-size: 13px;
 }
 .rule-form input[type="number"] { width: 90px; }
+.rule-form .check { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; }
+.rule-form .check input { margin: 0; }
 
 .cluster-body { padding: 10px 16px; border-top: 1px solid var(--border); }
 .cluster-body ul { margin: 6px 0; padding-left: 18px; }

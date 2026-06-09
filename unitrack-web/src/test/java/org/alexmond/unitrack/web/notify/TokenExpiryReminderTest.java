@@ -58,6 +58,23 @@ class TokenExpiryReminderTest {
 	}
 
 	@Test
+	void respectsOptOutButStillMarksTokenReminded() {
+		Instant now = Instant.now();
+		given(notifications.enabled()).willReturn(true);
+		ApiToken optedOut = token("ci", "dev@example", now.plus(2, ChronoUnit.DAYS));
+		optedOut.getUser().setNotifyTokenExpiry(false);
+		given(tokens.findByRevokedFalseAndExpiryRemindedAtIsNullAndExpiresAtBetween(eq(now), any()))
+			.willReturn(List.of(optedOut));
+
+		int sent = reminder.sendDueReminders(now);
+
+		assertThat(sent).isZero();
+		verify(notifications, never()).send(anyString(), anyString(), anyString());
+		assertThat(optedOut.getExpiryRemindedAt()).isEqualTo(now);
+		verify(tokens).save(optedOut);
+	}
+
+	@Test
 	void noOpAndNoQueryWhenNotificationsDisabled() {
 		given(notifications.enabled()).willReturn(false);
 		reminder.run(); // also exercises the scheduled entry point
