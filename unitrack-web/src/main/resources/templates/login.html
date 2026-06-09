@@ -1,10 +1,9 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{fragments/common :: head('UniTrack — Sign in')}"></head>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout}">
+<head><title th:text="'UniTrack — Sign in'">UniTrack</title></head>
 <body>
-<header th:replace="~{fragments/common :: topbar}"></header>
 
-<main class="container" style="max-width: 380px">
+<main class="container" style="max-width: 380px" layout:fragment="content">
     <h1>Sign in</h1>
     <div th:if="${param.error}" class="empty" style="color:var(--red)">Invalid username or password.</div>
     <div th:if="${param.logout}" class="muted">You have been signed out.</div>
@@ -15,6 +14,5 @@
         <button class="btn btn-muted" type="submit">Sign in</button>
     </form>
 </main>
-<footer th:replace="~{fragments/common :: footer}"></footer>
 </body>
 </html>
