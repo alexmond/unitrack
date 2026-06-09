@@ -101,21 +101,7 @@ class UploadClient {
 	 */
 	private <T> T withRetry(String baseUrl, Supplier<T> call) {
 		try {
-			return this.retry.execute(() -> {
-				try {
-					return call.get();
-				}
-				catch (RestClientResponseException ex) {
-					if (isRetryable(ex.getStatusCode())) {
-						throw new RetryableUploadException("server returned HTTP " + ex.getStatusCode().value(), ex);
-					}
-					int code = ex.getStatusCode().is4xxClientError() ? ExitCodes.REJECTED : ExitCodes.TRANSPORT;
-					throw new UploadException(code, "server returned HTTP " + ex.getStatusCode().value(), ex);
-				}
-				catch (ResourceAccessException ex) {
-					throw new RetryableUploadException("could not reach " + baseUrl + " (" + ex.getMessage() + ")", ex);
-				}
-			});
+			return this.retry.execute(() -> attempt(baseUrl, call));
 		}
 		catch (RetryException ex) {
 			// A non-retryable HTTP error surfaced (mapped already), or retries were
@@ -125,6 +111,26 @@ class UploadClient {
 				throw uploadFailure;
 			}
 			throw new UploadException(ExitCodes.TRANSPORT, rootCause(ex).getMessage(), ex);
+		}
+	}
+
+	/**
+	 * One HTTP attempt; classifies failures into retryable vs terminal for the retry
+	 * policy.
+	 */
+	private <T> T attempt(String baseUrl, Supplier<T> call) {
+		try {
+			return call.get();
+		}
+		catch (RestClientResponseException ex) {
+			if (isRetryable(ex.getStatusCode())) {
+				throw new RetryableUploadException("server returned HTTP " + ex.getStatusCode().value(), ex);
+			}
+			int code = ex.getStatusCode().is4xxClientError() ? ExitCodes.REJECTED : ExitCodes.TRANSPORT;
+			throw new UploadException(code, "server returned HTTP " + ex.getStatusCode().value(), ex);
+		}
+		catch (ResourceAccessException ex) {
+			throw new RetryableUploadException("could not reach " + baseUrl + " (" + ex.getMessage() + ")", ex);
 		}
 	}
 
