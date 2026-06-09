@@ -27,7 +27,7 @@ class UploadCommand implements Callable<Integer> {
 			description = "API token, sent as a Bearer header (env UNITRACK_TOKEN).")
 	String token;
 
-	@Option(names = "--project", required = true, description = "Project name.")
+	@Option(names = "--project", description = "Project name (auto-detected from CI when omitted).")
 	String project;
 
 	@Option(names = "--branch", description = "Branch name.")
@@ -70,9 +70,12 @@ class UploadCommand implements Callable<Integer> {
 
 	private final ReportResolver resolver;
 
-	UploadCommand(UploadClient client, ReportResolver resolver) {
+	private final CiMetadataDetector detector;
+
+	UploadCommand(UploadClient client, ReportResolver resolver, CiMetadataDetector detector) {
 		this.client = client;
 		this.resolver = resolver;
+		this.detector = detector;
 	}
 
 	@Override
@@ -89,15 +92,27 @@ class UploadCommand implements Callable<Integer> {
 			return ExitCodes.USAGE;
 		}
 
+		// Explicit flags win; anything omitted is filled from the detected CI
+		// environment.
+		CiMetadata ci = this.detector.detect();
+		String resolvedProject = coalesce(this.project, ci.project());
+		if (resolvedProject == null || resolvedProject.isBlank()) {
+			System.err.println("error: --project is required (and could not be detected from the CI environment).");
+			return ExitCodes.USAGE;
+		}
+		if (ci.ciProvider() != null) {
+			System.out.println("Detected CI: " + ci.ciProvider());
+		}
+
 		Map<String, String> fields = new LinkedHashMap<>();
-		fields.put("project", this.project);
-		fields.put("branch", this.branch);
-		fields.put("commit", this.commit);
-		fields.put("buildUrl", this.buildUrl);
-		fields.put("repoUrl", this.repoUrl);
+		fields.put("project", resolvedProject);
+		fields.put("branch", coalesce(this.branch, ci.branch()));
+		fields.put("commit", coalesce(this.commit, ci.commit()));
+		fields.put("buildUrl", coalesce(this.buildUrl, ci.buildUrl()));
+		fields.put("repoUrl", coalesce(this.repoUrl, ci.repoUrl()));
 		fields.put("flag", this.flag);
-		fields.put("runKey", this.runKey);
-		fields.put("ciProvider", this.ciProvider);
+		fields.put("runKey", coalesce(this.runKey, ci.runKey()));
+		fields.put("ciProvider", coalesce(this.ciProvider, ci.ciProvider()));
 		Map<String, List<Resource>> files = new LinkedHashMap<>();
 		files.put("junit", junitFiles);
 		files.put("jacoco", jacocoFiles);
@@ -123,6 +138,10 @@ class UploadCommand implements Callable<Integer> {
 			System.err.println("error: " + ex.getMessage());
 			return ex.exitCode();
 		}
+	}
+
+	private static String coalesce(String explicit, String detected) {
+		return (explicit != null && !explicit.isBlank()) ? explicit : detected;
 	}
 
 }

@@ -12,7 +12,7 @@ class GateCommandTest {
 	private final UploadClient client = mock(UploadClient.class);
 
 	private GateCommand command() {
-		GateCommand c = new GateCommand(this.client);
+		GateCommand c = new GateCommand(this.client, new CiMetadataDetector((k) -> null));
 		c.url = "http://unitrack.test";
 		c.project = "demo";
 		c.commit = "abc123";
