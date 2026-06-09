@@ -70,6 +70,45 @@ a:hover { text-decoration: underline; }
 .topbar .spacer { flex: 1; }
 .topbar nav a { color: var(--muted); margin-left: 16px; }
 
+/* Project section nav — a wrapping row of pills; the current section is a filled pill. */
+.subnav {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin: 14px 0 24px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+}
+.subnav a {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1;
+    white-space: nowrap;
+    transition: background .12s ease, border-color .12s ease, color .12s ease;
+}
+.subnav a:hover { background: var(--panel-2); color: var(--text); text-decoration: none; }
+.subnav a.current {
+    background: var(--panel);
+    border-color: var(--border);
+    color: var(--text);
+    font-weight: 600;
+}
+.subnav a:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.subnav .subnav-sep {
+    align-self: stretch;
+    width: 1px;
+    min-height: 18px;
+    margin: 0 5px;
+    background: var(--border);
+}
+
 .container { max-width: 1100px; margin: 0 auto; padding: 24px; }
 
 h1 { font-size: 22px; margin: 0 0 4px; }

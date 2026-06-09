@@ -11,6 +11,7 @@
         Triage rules
     </p>
     <h1>Triage rules</h1>
+    <nav th:replace="~{fragments/common :: subnav(${project.id}, 'triage')}"></nav>
     <p class="muted">Rules categorize failures by matching the failure text (type, message, stacktrace).
         Lowest priority wins; the first match assigns the category.</p>
 

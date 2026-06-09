@@ -42,5 +42,41 @@
             aria-label="Toggle light/dark theme" title="Toggle theme"
             onclick="window.__toggleTheme()">☀</button>
 </header>
+
+<nav th:fragment="subnav(projectId, active)" class="subnav" aria-label="Project sections">
+    <a th:href="@{/projects/{id}(id=${projectId})}"
+       th:classappend="${active == 'overview'} ? 'current'"
+       th:attr="aria-current=${active == 'overview'} ? 'page' : null">
+        <span aria-hidden="true">📊</span> Overview</a>
+    <a th:href="@{/projects/{id}/flaky(id=${projectId})}"
+       th:classappend="${active == 'flaky'} ? 'current'"
+       th:attr="aria-current=${active == 'flaky'} ? 'page' : null">
+        <span aria-hidden="true">🔁</span> Flaky tests</a>
+    <a th:href="@{/projects/{id}/performance(id=${projectId})}"
+       th:classappend="${active == 'timing'} ? 'current'"
+       th:attr="aria-current=${active == 'timing'} ? 'page' : null">
+        <span aria-hidden="true">⏱️</span> Test timing</a>
+    <a th:href="@{/projects/{id}/perf(id=${projectId})}"
+       th:classappend="${active == 'load'} ? 'current'"
+       th:attr="aria-current=${active == 'load'} ? 'page' : null">
+        <span aria-hidden="true">🚀</span> Load tests</a>
+    <a th:href="@{/projects/{id}/clusters(id=${projectId})}"
+       th:classappend="${active == 'clusters'} ? 'current'"
+       th:attr="aria-current=${active == 'clusters'} ? 'page' : null">
+        <span aria-hidden="true">🧩</span> Failure clusters</a>
+    <span class="subnav-sep" aria-hidden="true"></span>
+    <a th:href="@{/projects/{id}/triage(id=${projectId})}"
+       th:classappend="${active == 'triage'} ? 'current'"
+       th:attr="aria-current=${active == 'triage'} ? 'page' : null">
+        <span aria-hidden="true">🏷️</span> Triage rules</a>
+    <a th:href="@{/projects/{id}/settings(id=${projectId})}"
+       th:classappend="${active == 'settings'} ? 'current'"
+       th:attr="aria-current=${active == 'settings'} ? 'page' : null">
+        <span aria-hidden="true">⚙️</span> Settings</a>
+    <a th:href="@{/projects/{id}/members(id=${projectId})}"
+       th:classappend="${active == 'members'} ? 'current'"
+       th:attr="aria-current=${active == 'members'} ? 'page' : null">
+        <span aria-hidden="true">👥</span> Members</a>
+</nav>
 </body>
 </html>

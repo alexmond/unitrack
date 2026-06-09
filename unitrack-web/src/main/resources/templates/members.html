@@ -11,6 +11,7 @@
         <span>Members</span>
     </p>
     <h1 th:text="${project.name} + ' — members'">project — members</h1>
+    <nav th:replace="~{fragments/common :: subnav(${project.id}, 'members')}"></nav>
     <p class="muted">Owners can manage members; writers can edit settings/triage; readers can view.
         Global admins implicitly own every project.</p>
 

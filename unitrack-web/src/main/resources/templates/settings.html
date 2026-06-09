@@ -11,6 +11,7 @@
         <span>Settings</span>
     </p>
     <h1 th:text="${project.name} + ' — settings'">project — settings</h1>
+    <nav th:replace="~{fragments/common :: subnav(${project.id}, 'settings')}"></nav>
 
     <h2>Quality gate</h2>
     <p class="muted">Per-project overrides. Leave a field blank to inherit the global default

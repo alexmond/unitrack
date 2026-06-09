@@ -11,6 +11,7 @@
         <span>Performance</span>
     </p>
     <h1 th:text="${project.name} + ' — performance'">project — performance</h1>
+    <nav th:replace="~{fragments/common :: subnav(${project.id}, 'timing')}"></nav>
 
     <h2>Suite-time trend <span class="muted">(seconds per run)</span></h2>
     <div class="chart-wrap">
