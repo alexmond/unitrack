@@ -4,7 +4,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import org.alexmond.unitrack.domain.PerfRun;
 import org.alexmond.unitrack.domain.TestRun;
+import org.alexmond.unitrack.report.PerfRunRegression;
 import org.alexmond.unitrack.report.QualityGateResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,6 +25,12 @@ public class GitHubPrCommentService {
 
 	/** Hidden marker so we update our own comment instead of posting duplicates. */
 	static final String MARKER = "<!-- unitrack-report -->";
+
+	/**
+	 * Separate marker for the load-test comment, so it upserts independently of the test
+	 * report.
+	 */
+	static final String PERF_MARKER = "<!-- unitrack-perf-report -->";
 
 	private static final Logger log = LoggerFactory.getLogger(GitHubPrCommentService.class);
 
@@ -46,12 +54,30 @@ public class GitHubPrCommentService {
 	 * Upserts the PR comment for the run; silently skips when disabled or not applicable.
 	 */
 	public void publish(TestRun run, QualityGateResult gate, Double coverageDelta, int newFailures, int slowerTests) {
-		GitHubConfigResolver.Effective cfg = this.config.effective(run.getProject().getId());
+		upsert(run.getProject().getId(), run.getProject().getRepoUrl(), run.getCommitSha(), MARKER,
+				() -> render(run, gate, coverageDelta, newFailures, slowerTests));
+	}
+
+	/**
+	 * Upserts the load-test PR comment for a perf run; silently skips when disabled or
+	 * not applicable.
+	 */
+	public void publishPerf(PerfRun run, PerfRunRegression regression) {
+		upsert(run.getProject().getId(), run.getProject().getRepoUrl(), run.getCommitSha(), PERF_MARKER,
+				() -> renderPerf(run, regression));
+	}
+
+	/**
+	 * Shared comment upsert: resolve the PR for the commit, then create or update the
+	 * marked comment.
+	 */
+	private void upsert(Long projectId, String repoUrl, String sha, String marker,
+			java.util.function.Supplier<String> body) {
+		GitHubConfigResolver.Effective cfg = this.config.effective(projectId);
 		if (!cfg.enabled() || !cfg.prComment() || isBlank(this.props.getToken())) {
 			return;
 		}
-		String[] repo = GitHubStatusService.parseOwnerRepo(run.getProject().getRepoUrl());
-		String sha = run.getCommitSha();
+		String[] repo = GitHubStatusService.parseOwnerRepo(repoUrl);
 		if (repo == null || isBlank(sha)) {
 			return;
 		}
@@ -61,13 +87,13 @@ public class GitHubPrCommentService {
 				log.debug("No open PR for {}/{}@{}; skipping comment", repo[0], repo[1], sha);
 				return;
 			}
-			String body = render(run, gate, coverageDelta, newFailures, slowerTests);
-			Long existing = findExistingComment(repo, pr);
+			String rendered = body.get();
+			Long existing = findExistingComment(repo, pr, marker);
 			if (existing != null) {
-				updateComment(repo, existing, body);
+				updateComment(repo, existing, rendered);
 			}
 			else {
-				createComment(repo, pr, body);
+				createComment(repo, pr, rendered);
 			}
 			log.info("Posted UniTrack PR comment on {}/{}#{}", repo[0], repo[1], pr);
 		}
@@ -89,7 +115,7 @@ public class GitHubPrCommentService {
 		return (number instanceof Number n) ? n.intValue() : null;
 	}
 
-	private Long findExistingComment(String[] repo, int pr) {
+	private Long findExistingComment(String[] repo, int pr, String marker) {
 		List<Map<String, Object>> comments = this.restClient.get()
 			.uri(this.props.getApiUrl() + "/repos/{owner}/{repo}/issues/{pr}/comments", repo[0], repo[1], pr)
 			.headers(this::githubHeaders)
@@ -101,7 +127,7 @@ public class GitHubPrCommentService {
 		for (Map<String, Object> comment : comments) {
 			Object body = comment.get("body");
 			Object id = comment.get("id");
-			if (body instanceof String s && s.contains(MARKER) && id instanceof Number n) {
+			if (body instanceof String s && s.contains(marker) && id instanceof Number n) {
 				return n.longValue();
 			}
 		}
@@ -164,6 +190,42 @@ public class GitHubPrCommentService {
 		sb.append("\n[View run →](")
 			.append(this.props.getServerBaseUrl())
 			.append("/runs/")
+			.append(run.getId())
+			.append(")\n");
+		return sb.toString();
+	}
+
+	String renderPerf(PerfRun run, PerfRunRegression regression) {
+		boolean passed = (regression == null) || regression.passed();
+		String heading = passed ? "✅ perf gate passed" : "❌ perf gate failed";
+		StringBuilder sb = new StringBuilder(PERF_MARKER + "\n## UniTrack — load test — ");
+		sb.append(heading)
+			.append(String.format(Locale.ROOT, "%n%n| Metric | Value |%n|---|---|%n"
+					+ "| p95 latency | %.0f ms |%n| Throughput | %.1f rps |%n| Error rate | %.2f%% |%n| Samples | %d |%n",
+					run.getP95Ms(), run.getThroughputRps(), run.getErrorPct(), run.getSampleCount()));
+		if (regression != null) {
+			String baselineRef = regression.baselineFound() ? " #" + regression.baselineRunId() : "";
+			sb.append("\n### Gate vs baseline")
+				.append(baselineRef)
+				.append("\n\n| Rule | Status | Detail |\n|---|---|---|\n");
+			for (PerfRunRegression.Rule rule : regression.rules()) {
+				sb.append("| ")
+					.append(rule.name())
+					.append(" | ")
+					.append(rule.passed() ? "✅" : "❌")
+					.append(" | ")
+					.append(rule.detail())
+					.append(" |\n");
+			}
+			if (!regression.baselineFound()) {
+				sb.append("\n_No prior run on `")
+					.append(regression.baseBranch())
+					.append("` to compare against — error-rate rule only._\n");
+			}
+		}
+		sb.append("\n[View perf run →](")
+			.append(this.props.getServerBaseUrl())
+			.append("/perf-runs/")
 			.append(run.getId())
 			.append(")\n");
 		return sb.toString();

@@ -67,6 +67,30 @@ are added as rows when present. Disable with `unitrack.github.pr-comment=false` 
 the commit status. Requires the token to have pull-request write (`issues`/`pull_requests`)
 permission.
 
+When a xref:load-testing.adoc[load-test] upload carries a commit on an open PR, a *separate
+perf comment* (its own marker, upserted independently of the test report) is posted with the
+run's p95 latency, throughput, error rate and samples, plus the
+xref:load-testing.adoc#_regression_gate[perf-gate verdict] per rule vs the baseline:
+
+[source]
+----
+## UniTrack — load test — ❌ perf gate failed
+
+| Metric | Value |
+|---|---|
+| p95 latency | 210 ms |
+| Throughput | 120.5 rps |
+| Error rate | 0.00% |
+| Samples | 300 |
+
+### Gate vs baseline #41
+
+| Rule | Status | Detail |
+|---|---|---|
+| latency-p95 | ❌ | p95 210ms vs baseline 100ms (+110.0%, max +15.0%) |
+| error-rate | ✅ | 0.00% errors (max 1.00%) |
+----
+
 == Requirements
 
 * The upload must include both `commit` and `repoUrl` so UniTrack knows which commit on

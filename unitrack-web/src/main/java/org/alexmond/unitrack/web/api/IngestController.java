@@ -8,6 +8,8 @@ import org.alexmond.unitrack.ingest.IngestService;
 import org.alexmond.unitrack.ingest.PerfIngestService;
 import org.alexmond.unitrack.report.PerfRegressionResult;
 import org.alexmond.unitrack.report.PerfRegressionService;
+import org.alexmond.unitrack.report.PerfRunRegression;
+import org.alexmond.unitrack.report.PerfRunRegressionService;
 import org.alexmond.unitrack.report.QualityGateResult;
 import org.alexmond.unitrack.report.QualityGateService;
 import org.alexmond.unitrack.report.TestRegressionResult;
@@ -58,6 +60,8 @@ public class IngestController {
 
 	private final PerfIngestService perfIngest;
 
+	private final PerfRunRegressionService perfRunRegression;
+
 	@PostMapping(path = "/ingest", consumes = "multipart/form-data")
 	public ResponseEntity<ApiResponses.IngestResultJson> ingest(@RequestParam String project,
 			@RequestParam(required = false) String repoUrl, @RequestParam(required = false) String branch,
@@ -81,6 +85,9 @@ public class IngestController {
 			publishGitHubStatus(run);
 		}
 		PerfRun perfRun = perfStreams.isEmpty() ? null : perfIngest.ingest(meta, perfStreams);
+		if (perfRun != null) {
+			publishPerfComment(perfRun);
+		}
 		return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponses.IngestResultJson.of(run, perfRun));
 	}
 
@@ -91,6 +98,11 @@ public class IngestController {
 		int newFailures = testRegression.diff(run.getId()).map(TestRegressionResult::newFailureCount).orElse(0);
 		int slowerTests = perfRegression.diff(run.getId()).map(PerfRegressionResult::slowerCount).orElse(0);
 		gitHubPrComment.publish(run, gate, delta, newFailures, slowerTests);
+	}
+
+	private void publishPerfComment(PerfRun perfRun) {
+		PerfRunRegression regression = perfRunRegression.evaluate(perfRun.getId()).orElse(null);
+		gitHubPrComment.publishPerf(perfRun, regression);
 	}
 
 	private static List<Supplier<InputStream>> toSuppliers(List<MultipartFile> files) {

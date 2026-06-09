@@ -2,8 +2,10 @@ package org.alexmond.unitrack.web.github;
 
 import java.util.List;
 
+import org.alexmond.unitrack.domain.PerfRun;
 import org.alexmond.unitrack.domain.Project;
 import org.alexmond.unitrack.domain.TestRun;
+import org.alexmond.unitrack.report.PerfRunRegression;
 import org.alexmond.unitrack.report.QualityGateResult;
 import org.alexmond.unitrack.repository.ProjectSettingsRepository;
 import org.junit.jupiter.api.Test;
@@ -40,6 +42,23 @@ class GitHubPrCommentServiceTest {
 		run.applyTotals(3, 1, 0, 1, 100);
 		run.setLineCoveragePct(80.0);
 		return run;
+	}
+
+	private PerfRun perfRun() {
+		PerfRun perf = new PerfRun(new Project("demo", "https://github.com/octo/repo"), "feature", "default", "abc123",
+				null, null, "jmeter");
+		perf.setSampleCount(300);
+		perf.setErrorPct(0.0);
+		perf.setThroughputRps(120.5);
+		perf.setP95Ms(210.0);
+		return perf;
+	}
+
+	private PerfRunRegression perfRegression(boolean passed) {
+		return new PerfRunRegression(true, 7L, "main", passed,
+				List.of(new PerfRunRegression.Rule("latency-p95", passed,
+						"p95 210ms vs baseline 100ms (+110.0%, max +15.0%)"),
+						new PerfRunRegression.Rule("error-rate", true, "0.00% errors (max 1.00%)")));
 	}
 
 	/** Service whose resolver falls back to the global props (empty settings repo). */
@@ -128,6 +147,40 @@ class GitHubPrCommentServiceTest {
 		assertThat(body).contains("New failures | 2");
 		assertThat(body).contains("Slower tests | 1");
 		assertThat(body).contains("/runs/");
+	}
+
+	@Test
+	void rendersPerfTableWithRulesAndMarker() {
+		String body = svc(props(), RestClient.builder()).renderPerf(perfRun(), perfRegression(false));
+		assertThat(body).startsWith(GitHubPrCommentService.PERF_MARKER);
+		assertThat(body).contains("perf gate failed");
+		assertThat(body).contains("p95 latency | 210 ms");
+		assertThat(body).contains("Throughput | 120.5 rps");
+		assertThat(body).contains("| latency-p95 | ❌ |");
+		assertThat(body).contains("| error-rate | ✅ |");
+		assertThat(body).contains("/perf-runs/");
+	}
+
+	@Test
+	void createsPerfCommentUsingItsOwnMarker() {
+		GitHubProperties props = props();
+		RestClient.Builder builder = RestClient.builder();
+		MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+		GitHubPrCommentService service = svc(props, builder);
+
+		server.expect(requestTo("https://api.github.com/repos/octo/repo/commits/abc123/pulls"))
+			.andRespond(withSuccess("[{\"number\":7}]", MediaType.APPLICATION_JSON));
+		// An existing *test* comment must not be mistaken for the perf comment.
+		server.expect(requestTo("https://api.github.com/repos/octo/repo/issues/7/comments"))
+			.andRespond(withSuccess("[{\"id\":42,\"body\":\"" + GitHubPrCommentService.MARKER + " test\"}]",
+					MediaType.APPLICATION_JSON));
+		server.expect(requestTo("https://api.github.com/repos/octo/repo/issues/7/comments"))
+			.andExpect(method(HttpMethod.POST))
+			.andExpect(jsonPath("$.body").value(org.hamcrest.Matchers.containsString("load test")))
+			.andRespond(withStatus(HttpStatus.CREATED));
+
+		service.publishPerf(perfRun(), perfRegression(true));
+		server.verify();
 	}
 
 }
