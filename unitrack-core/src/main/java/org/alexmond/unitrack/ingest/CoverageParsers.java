@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * Auto-detects a coverage upload's format from its content and dispatches to the matching
- * {@link CoverageParser} (JaCoCo XML, Cobertura XML, or LCOV).
+ * {@link CoverageParser} (JaCoCo XML, Cobertura XML, LCOV, or OpenCover XML).
  */
 @Component
 @RequiredArgsConstructor
@@ -36,7 +36,7 @@ public class CoverageParsers {
 				return parser.parse(new ByteArrayInputStream(content));
 			}
 		}
-		throw new IngestException("Unrecognized coverage format (expected JaCoCo, Cobertura, or LCOV)");
+		throw new IngestException("Unrecognized coverage format (expected JaCoCo, Cobertura, LCOV, or OpenCover)");
 	}
 
 }

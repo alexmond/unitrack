@@ -20,9 +20,10 @@ deployment. The published site is built from a separate documentation playbook r
 
 ## Features
 
-- **Ingestion** — `POST /api/v1/ingest` accepts multipart Surefire/JUnit XML and JaCoCo XML, with
-  project/branch/commit/build metadata. Projects are auto-created on first upload. Multiple files
-  (e.g. sharded CI) are merged into one run.
+- **Ingestion** — `POST /api/v1/ingest` accepts multipart Surefire/JUnit XML and coverage in
+  JaCoCo, Cobertura, LCOV, or OpenCover format (auto-detected — so Python/JS/.NET projects report
+  coverage too), with project/branch/commit/build metadata. Projects are auto-created on first
+  upload. Multiple files (e.g. sharded CI) are merged into one run.
 - **Storage** — PostgreSQL via Spring Data JPA, schema managed by Flyway.
 - **Trends & history** — pass-rate and line-coverage trend charts per project; full run history.
 - **Flaky-test detection** — flags tests that both passed and failed for the same commit, with
