@@ -46,6 +46,14 @@ java -jar unitrack-cli.jar upload --junit "target/surefire-reports/*.xml" --jaco
 * `--run-key` merges sharded uploads into one run; `--flag` tags a component.
 * `--dry-run` resolves files and prints what would be sent, without uploading.
 * `--allow-empty` permits an upload when no report files matched (otherwise that is an error).
+* `--verbose` prints the resolved request (token redacted) before sending.
+* `--soft-fail` treats an upload/transport failure as a warning (exit 0), so a flaky network
+  never reddens a green build.
+
+Transient failures (network errors, HTTP 429/502/503/504) are retried with exponential backoff,
+using the `org.springframework.core.retry` support built into Spring Framework 7 (no extra
+dependency). Uploads over the server's size caps (25 MB/file, 100 MB/request) are rejected
+before sending, with a clear message.
 
 The project page in the UI shows a ready-to-paste command for each project ("Push results from
 CI").

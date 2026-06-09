@@ -3,10 +3,14 @@ package org.alexmond.unitrack.cli;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.springframework.core.io.Resource;
+import org.springframework.core.retry.RetryException;
+import org.springframework.core.retry.RetryTemplate;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
@@ -15,7 +19,10 @@ import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
-/** Thin HTTP client over the UniTrack ingest + gate endpoints. */
+/**
+ * Thin HTTP client over the UniTrack ingest + gate endpoints, with retry on transient
+ * failures.
+ */
 @Component
 class UploadClient {
 
@@ -25,10 +32,15 @@ class UploadClient {
 
 	private static final Pattern STATUS = Pattern.compile("\"status\"\\s*:\\s*\"([^\"]*)\"");
 
+	private static final int MAX_CAUSE_DEPTH = 20;
+
 	private final RestClient.Builder builder;
 
-	UploadClient(RestClient.Builder builder) {
+	private final RetryTemplate retry;
+
+	UploadClient(RestClient.Builder builder, RetryTemplate retry) {
 		this.builder = builder;
+		this.retry = retry;
 	}
 
 	/**
@@ -43,7 +55,7 @@ class UploadClient {
 			}
 		});
 		files.forEach((field, list) -> list.forEach((r) -> parts.add(field, r)));
-		try {
+		return withRetry(baseUrl, () -> {
 			String body = client(baseUrl, token).post()
 				.uri("/api/v1/ingest")
 				.contentType(MediaType.MULTIPART_FORM_DATA)
@@ -51,15 +63,7 @@ class UploadClient {
 				.retrieve()
 				.body(String.class);
 			return new IngestResponse(extractLong(body));
-		}
-		catch (RestClientResponseException ex) {
-			int code = ex.getStatusCode().is4xxClientError() ? ExitCodes.REJECTED : ExitCodes.TRANSPORT;
-			throw new UploadException(code, "server returned HTTP " + ex.getStatusCode().value(), ex);
-		}
-		catch (ResourceAccessException ex) {
-			throw new UploadException(ExitCodes.TRANSPORT, "could not reach " + baseUrl + " (" + ex.getMessage() + ")",
-					ex);
-		}
+		});
 	}
 
 	/**
@@ -67,28 +71,85 @@ class UploadClient {
 	 * {@code found=false} on 404.
 	 */
 	GateResponse gate(String baseUrl, String token, String project, String commit, String branch, String flag) {
-		try {
-			String body = client(baseUrl, token).get()
-				.uri((uri) -> uri.path("/api/v1/gate")
-					.queryParam("project", project)
-					.queryParamIfPresent("commit", Optional.ofNullable(blankToNull(commit)))
-					.queryParamIfPresent("branch", Optional.ofNullable(blankToNull(branch)))
-					.queryParamIfPresent("flag", Optional.ofNullable(blankToNull(flag)))
-					.build())
-				.retrieve()
-				.body(String.class);
-			return new GateResponse(true, extractBool(body), extractStatus(body));
-		}
-		catch (RestClientResponseException ex) {
-			if (ex.getStatusCode().value() == 404) {
-				return new GateResponse(false, false, null);
+		return withRetry(baseUrl, () -> {
+			try {
+				String body = client(baseUrl, token).get()
+					.uri((uri) -> uri.path("/api/v1/gate")
+						.queryParam("project", project)
+						.queryParamIfPresent("commit", Optional.ofNullable(blankToNull(commit)))
+						.queryParamIfPresent("branch", Optional.ofNullable(blankToNull(branch)))
+						.queryParamIfPresent("flag", Optional.ofNullable(blankToNull(flag)))
+						.build())
+					.retrieve()
+					.body(String.class);
+				return new GateResponse(true, extractBool(body), extractStatus(body));
 			}
-			throw new UploadException(ExitCodes.TRANSPORT, "server returned HTTP " + ex.getStatusCode().value(), ex);
+			catch (RestClientResponseException ex) {
+				if (ex.getStatusCode().value() == 404) {
+					return new GateResponse(false, false, null);
+				}
+				throw ex;
+			}
+		});
+	}
+
+	/**
+	 * Runs an HTTP call under the retry policy: transient failures
+	 * ({@link RetryableUploadException}, raised on network errors and retryable 5xx) are
+	 * re-attempted and, if they survive, become a {@link ExitCodes#TRANSPORT} error;
+	 * other HTTP errors map to the right exit code immediately.
+	 */
+	private <T> T withRetry(String baseUrl, Supplier<T> call) {
+		try {
+			return this.retry.execute(() -> {
+				try {
+					return call.get();
+				}
+				catch (RestClientResponseException ex) {
+					if (isRetryable(ex.getStatusCode())) {
+						throw new RetryableUploadException("server returned HTTP " + ex.getStatusCode().value(), ex);
+					}
+					int code = ex.getStatusCode().is4xxClientError() ? ExitCodes.REJECTED : ExitCodes.TRANSPORT;
+					throw new UploadException(code, "server returned HTTP " + ex.getStatusCode().value(), ex);
+				}
+				catch (ResourceAccessException ex) {
+					throw new RetryableUploadException("could not reach " + baseUrl + " (" + ex.getMessage() + ")", ex);
+				}
+			});
 		}
-		catch (ResourceAccessException ex) {
-			throw new UploadException(ExitCodes.TRANSPORT, "could not reach " + baseUrl + " (" + ex.getMessage() + ")",
-					ex);
+		catch (RetryException ex) {
+			// A non-retryable HTTP error surfaced (mapped already), or retries were
+			// exhausted.
+			UploadException uploadFailure = findUploadException(ex);
+			if (uploadFailure != null) {
+				throw uploadFailure;
+			}
+			throw new UploadException(ExitCodes.TRANSPORT, rootCause(ex).getMessage(), ex);
 		}
+	}
+
+	private static UploadException findUploadException(Throwable thrown) {
+		Throwable current = thrown;
+		for (int depth = 0; depth < MAX_CAUSE_DEPTH && current != null; depth++) {
+			if (current instanceof UploadException uploadFailure) {
+				return uploadFailure;
+			}
+			current = current.getCause();
+		}
+		return null;
+	}
+
+	private static Throwable rootCause(Throwable thrown) {
+		Throwable current = thrown;
+		for (int depth = 0; depth < MAX_CAUSE_DEPTH && current.getCause() != null; depth++) {
+			current = current.getCause();
+		}
+		return current;
+	}
+
+	private static boolean isRetryable(HttpStatusCode status) {
+		int code = status.value();
+		return code == 429 || code == 502 || code == 503 || code == 504;
 	}
 
 	private RestClient client(String baseUrl, String token) {
