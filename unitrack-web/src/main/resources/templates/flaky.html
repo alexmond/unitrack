@@ -15,7 +15,7 @@
 
     <div th:if="${flaky.isEmpty()}" class="empty">No flaky tests detected. 🎉</div>
 
-    <table th:unless="${flaky.isEmpty()}">
+    <table class="table table-hover align-middle" th:unless="${flaky.isEmpty()}">
         <thead>
         <tr>
             <th>Test</th>

@@ -63,7 +63,7 @@
 
     <h2>Per-label breakdown <span class="muted" th:text="'(' + ${detail.labels.size()} + ')'">(0)</span></h2>
     <div th:if="${detail.labels.isEmpty()}" class="empty">No per-label data for this run (the format reports aggregate metrics only).</div>
-    <table th:unless="${detail.labels.isEmpty()}">
+    <table class="table table-hover align-middle" th:unless="${detail.labels.isEmpty()}">
         <thead>
         <tr><th>Label</th><th class="num">Samples</th><th class="num">Errors</th>
             <th class="num">p50</th><th class="num">p90</th><th class="num">p95</th><th class="num">p99</th>

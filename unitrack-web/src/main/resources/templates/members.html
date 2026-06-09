@@ -16,7 +16,7 @@
 
     <div th:if="${param.error}" style="color:var(--red)">No such user.</div>
 
-    <table th:unless="${members.isEmpty()}">
+    <table class="table table-hover align-middle" th:unless="${members.isEmpty()}">
         <thead>
         <tr><th>User</th><th>Role</th><th></th></tr>
         </thead>
