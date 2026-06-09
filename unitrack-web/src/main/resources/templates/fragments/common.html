@@ -4,6 +4,9 @@
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title th:text="${title}">UniTrack</title>
+    <!-- Single include point for all pages: Bootstrap first, then app.css (which bridges Bootstrap's
+         --bs-* onto our theme tokens and overrides where needed). Version matches bootstrap.version in pom.xml. -->
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap/5.3.8/css/bootstrap.min.css}"/>
     <link rel="stylesheet" th:href="@{/css/app.css}"/>
     <!-- Applies the saved theme before paint (no flash); falls back to OS preference. -->
     <script th:inline="none">
@@ -13,7 +16,7 @@
                 var b = document.getElementById('theme-toggle');
                 if (b) { b.textContent = (t === 'light' ? '☾' : '☀'); }
             }
-            function apply(t) { root.setAttribute('data-theme', t); icon(t); }
+            function apply(t) { root.setAttribute('data-theme', t); root.setAttribute('data-bs-theme', t); icon(t); }
             var saved = localStorage.getItem('theme');
             apply(saved || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'));
             window.__toggleTheme = function () {
@@ -78,5 +81,13 @@
        th:attr="aria-current=${active == 'members'} ? 'page' : null">
         <span aria-hidden="true">👥</span> Members</a>
 </nav>
+
+<footer th:fragment="footer" class="footer">
+    <span class="brand">Uni<span>Track</span></span>
+    <span class="muted">— self-hosted test &amp; coverage tracking</span>
+    <span class="spacer"></span>
+    <a th:href="@{/actuator/health}">Health</a>
+    <a href="https://github.com/alexmond/unitrack" rel="noopener">GitHub</a>
+</footer>
 </body>
 </html>

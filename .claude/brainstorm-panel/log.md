@@ -2,6 +2,14 @@
 
 Evidence from past panels in this repo. Bias future proposals with it; it's not law.
 
+## 2026-06-09 — Bootstrap app-wide adoption, re-eval (choosing between options)
+- Proposed: UI/Frontend Architect (director), Design-system Guardian, Build/WebJars Engineer, Migration Strategist, Accessibility Advocate, Restraint Skeptic, QA (pre-seated). User added/removed: none.
+- Style: swarm → director-led, 1 round (strong substantive convergence). Vote: **0 ADOPT-APPWIDE / 5 ADOPT-PARTIAL / 2 STAY-CUSTOM** (Architect + Skeptic).
+- UNANIMOUS substance regardless of label: (1) **no big-bang 16-template rewrite**; (2) Bootstrap's real win is JS-wired components (modal/dropdown focus-trap) — UniTrack has **zero** today; (3) first modal → native `<dialog>` (0 deps) before Bootstrap JS; (4) IF adopting, **bridge-first**: `--bs-*: var(--app-*)` (app tokens master), toggle also sets `data-bs-theme`, ~20-30-line bridge lands before any component; keep theme tokens, Chart.js var-reads, status badges, `.gate/.bar/details.failure/.snippet/pill-subnav`.
+- Only real split = **timing** (start incremental now vs wait for a trigger). Trigger to justify full adoption: ≥2 focus-managed JS components, OR a responsive/mobile need, OR ≥2 active contributors. None true today.
+- Recurring (4th run): Restraint Skeptic wins dependency-scope — BUT this run is a genuine 5-2 split; the disagreement is "start now vs wait," not "how." If the user keeps re-invoking Bootstrap, that itself may be the trigger (maintainer preference) — honor it via the bridge-first incremental path, not a big-bang.
+- Note (durable tech): `org.webjars:bootstrap:5.3.8` (Boot BOM does NOT manage it — pin version); Spring Boot 4 serves `/webjars/**` by default (add-mappings on); assets ship in-jar (offline-good for self-hosted); CSS-only ~30KB (skip `bootstrap.bundle.min.js`/Popper until a modal/dropdown lands); skip `webjars-locator` (hardcode versioned path, single-source via a `${bootstrap.version}` property); keep emoji (no Bootstrap Icons). Bridge needs `-rgb` token forms set literally per-theme. Chart.js does NOT re-render on theme toggle today (pre-existing, not a migration bug).
+
 ## 2026-06-09 — Client-side result-pushing / CI uploader (design → epic+tickets)
 - Proposed: DevEx Director, Competitive Analyst (web research), Release/Packaging Engineer, SDET, Polyglot Ecosystem Advocate, Security/Supply-chain, YAGNI Skeptic. User added: **QA** ("add qa person"). User removed: none.
   - Signal (3rd consecutive design target the user adds a QA/consumer seat): **graduate — seat QA + SDET by default on design/product targets here.** QA(upload-reliability) and SDET(pipeline-author) were genuinely distinct and both pulled weight (QA: fail-loud-on-0-match + a real exit-code contract; SDET: PR head-SHA vs merge-SHA, `if: always()`, shard runKey).
