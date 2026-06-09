@@ -57,6 +57,10 @@ public class ApiToken {
 	@Setter
 	private boolean revoked;
 
+	@Setter
+	@Column(name = "expiry_reminded_at")
+	private Instant expiryRemindedAt;
+
 	public ApiToken(User user, String name, String tokenHash, String prefix, Instant expiresAt) {
 		this.user = user;
 		this.name = name;
