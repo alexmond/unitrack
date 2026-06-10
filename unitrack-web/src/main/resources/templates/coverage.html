@@ -28,14 +28,21 @@
 
         <div class="stat-row">
             <div class="stat"><div class="label">Line</div>
-                <div class="value" style="color:var(--blue)"
+                <div class="value"
+                     th:classappend="${coverage.linePct >= 80} ? 'lvl-good' : (${coverage.linePct >= 50} ? 'lvl-warn' : 'lvl-bad')"
                      th:text="${#numbers.formatDecimal(coverage.linePct,1,1)} + '%'">0%</div></div>
             <div class="stat"><div class="label">Branch</div>
-                <div class="value" th:text="${#numbers.formatDecimal(coverage.branchPct,1,1)} + '%'">0%</div></div>
+                <div class="value"
+                     th:classappend="${coverage.branchPct >= 80} ? 'lvl-good' : (${coverage.branchPct >= 50} ? 'lvl-warn' : 'lvl-bad')"
+                     th:text="${#numbers.formatDecimal(coverage.branchPct,1,1)} + '%'">0%</div></div>
             <div class="stat"><div class="label">Instruction</div>
-                <div class="value" th:text="${#numbers.formatDecimal(coverage.instructionPct,1,1)} + '%'">0%</div></div>
+                <div class="value"
+                     th:classappend="${coverage.instructionPct >= 80} ? 'lvl-good' : (${coverage.instructionPct >= 50} ? 'lvl-warn' : 'lvl-bad')"
+                     th:text="${#numbers.formatDecimal(coverage.instructionPct,1,1)} + '%'">0%</div></div>
             <div class="stat"><div class="label">Method</div>
-                <div class="value" th:text="${#numbers.formatDecimal(coverage.methodPct,1,1)} + '%'">0%</div></div>
+                <div class="value"
+                     th:classappend="${coverage.methodPct >= 80} ? 'lvl-good' : (${coverage.methodPct >= 50} ? 'lvl-warn' : 'lvl-bad')"
+                     th:text="${#numbers.formatDecimal(coverage.methodPct,1,1)} + '%'">0%</div></div>
         </div>
 
         <h2>Line-coverage trend</h2>

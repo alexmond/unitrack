@@ -5,7 +5,7 @@
     --panel-2: #222a33;
     --border: #2c343d;
     --text: #e6edf3;
-    --muted: #8b98a5;
+    --muted: #99a7b4;
     --green: #2ea043;
     --red: #e5534b;
     --amber: #d29922;
@@ -22,7 +22,7 @@
     --panel-2: #eef1f4;
     --border: #d6dbe1;
     --text: #1f2328;
-    --muted: #5b6570;
+    --muted: #4a5563;
     --green: #1a7f37;
     --red: #cf222e;
     --amber: #9a6700;
@@ -215,7 +215,7 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .badge.skip { background: rgba(210,153,34,.15); color: var(--amber); }
 .badge.error { background: rgba(229,83,75,.22); color: var(--red); }
 
-.bar { height: 8px; border-radius: 999px; background: var(--panel-2); overflow: hidden; min-width: 90px; }
+.bar { height: 8px; border-radius: 999px; background: var(--panel-2); box-shadow: inset 0 0 0 1px var(--border); overflow: hidden; min-width: 90px; }
 .bar > span { display: block; height: 100%; background: var(--green); }
 .bar.low > span { background: var(--red); }
 .bar.mid > span { background: var(--amber); }
@@ -271,3 +271,25 @@ details.output pre {
     margin: 0; padding: 12px 14px; background: var(--code-bg); color: var(--code-text);
     overflow-x: auto; font-size: 12.5px; border-top: 1px solid var(--border);
 }
+
+/* --- Tier 1: health-at-a-glance --- */
+
+/* Index project cards: a status-coloured left rail + a stat row, so each project's
+   health is legible without clicking in. */
+.health-card { border-left: 3px solid var(--border); }
+.health-card.ok { border-left-color: var(--green); }
+.health-card.bad { border-left-color: var(--red); }
+.health-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.health-head h3 { margin: 0; font-size: 16px; }
+.health-stats { display: flex; gap: 16px; align-items: baseline; flex-wrap: wrap; margin: 12px 0 8px; color: var(--muted); font-size: 13px; }
+.health-stats .num { font-size: 19px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+.health-foot { font-size: 12px; }
+
+/* Failed runs stand out in run tables (was indistinguishable from passing rows). */
+.table tbody tr.row-fail td { background: rgba(229, 83, 75, .07); }
+.table tbody tr.row-fail td:first-child { box-shadow: inset 3px 0 0 var(--red); }
+
+/* Threshold-coloured KPI values (coverage tiles). */
+.stat .value.lvl-good { color: var(--green); }
+.stat .value.lvl-warn { color: var(--amber); }
+.stat .value.lvl-bad { color: var(--red); }

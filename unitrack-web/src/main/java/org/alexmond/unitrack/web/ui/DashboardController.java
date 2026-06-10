@@ -29,6 +29,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -72,13 +74,16 @@ public class DashboardController {
 
 	@GetMapping("/")
 	public String index(Model model) {
-		List<Project> projects = reporting.listProjects();
+		List<Project> projects = new ArrayList<>(reporting.listProjects());
 		Map<Long, Long> runCounts = new HashMap<>();
 		Map<Long, TestRun> latest = new HashMap<>();
 		for (Project p : projects) {
 			runCounts.put(p.getId(), reporting.runCount(p.getId()));
 			reporting.recentRuns(p.getId(), 1).stream().findFirst().ifPresent((run) -> latest.put(p.getId(), run));
 		}
+		// Failing projects first, then no-runs, then by name — so trouble is at the top.
+		projects.sort(Comparator.comparingInt((Project p) -> healthRank(latest.get(p.getId())))
+			.thenComparing(Project::getName));
 		model.addAttribute("projects", projects);
 		model.addAttribute("runCounts", runCounts);
 		model.addAttribute("latest", latest);
@@ -95,7 +100,7 @@ public class DashboardController {
 		model.addAttribute("project", project);
 		model.addAttribute("runs", runs);
 		model.addAttribute("flags", reporting.flagSummaries(id));
-		model.addAttribute("trendLabels", toJson(trend.stream().map(TestRun::getShortSha).toList()));
+		model.addAttribute("trendLabels", toJson(labels(trend.stream().map(TestRun::getShortSha).toList())));
 		model.addAttribute("trendPassRate", toJson(trend.stream().map((r) -> round(r.passRate())).toList()));
 		model.addAttribute("trendCoverage", toJson(trend.stream().map(TestRun::getLineCoveragePct).toList()));
 		model.addAttribute("uploadSnippet", uploadSnippet(project.getName()));
@@ -114,7 +119,7 @@ public class DashboardController {
 			model.addAttribute("packages", reporting.coveragePackages(c.getId()));
 			model.addAttribute("worstFiles", reporting.coverageFiles(c.getId(), COVERAGE_FILE_LIMIT));
 			List<TestRun> trend = reporting.trendRuns(id, TREND_LIMIT);
-			model.addAttribute("trendLabels", toJson(trend.stream().map(TestRun::getShortSha).toList()));
+			model.addAttribute("trendLabels", toJson(labels(trend.stream().map(TestRun::getShortSha).toList())));
 			model.addAttribute("trendCoverage", toJson(trend.stream().map(TestRun::getLineCoveragePct).toList()));
 		});
 		return "coverage";
@@ -161,7 +166,7 @@ public class DashboardController {
 		model.addAttribute("slowest", summary.slowestInLatestRun());
 		model.addAttribute("latestRunId", summary.latestRunId());
 		model.addAttribute("trendLabels",
-				toJson(summary.suiteTimeTrend().stream().map(DurationPoint::shortSha).toList()));
+				toJson(labels(summary.suiteTimeTrend().stream().map(DurationPoint::shortSha).toList())));
 		model.addAttribute("trendSeconds",
 				toJson(summary.suiteTimeTrend().stream().map((p) -> round(p.durationMs() / 1000.0)).toList()));
 		return "performance";
@@ -175,7 +180,7 @@ public class DashboardController {
 		model.addAttribute("project", project);
 		model.addAttribute("perfRuns", reporting.recentPerfRuns(id, RUN_LIST_LIMIT));
 		model.addAttribute("hasPerf", !trend.isEmpty());
-		model.addAttribute("trendLabels", toJson(trend.stream().map(PerfTrendPoint::shortSha).toList()));
+		model.addAttribute("trendLabels", toJson(labels(trend.stream().map(PerfTrendPoint::shortSha).toList())));
 		model.addAttribute("trendP50", toJson(trend.stream().map((p) -> round(p.p50Ms())).toList()));
 		model.addAttribute("trendP90", toJson(trend.stream().map((p) -> round(p.p90Ms())).toList()));
 		model.addAttribute("trendP99", toJson(trend.stream().map((p) -> round(p.p99Ms())).toList()));
@@ -201,7 +206,8 @@ public class DashboardController {
 		model.addAttribute("className", className);
 		model.addAttribute("name", name);
 		model.addAttribute("points", trend.points());
-		model.addAttribute("trendLabels", toJson(trend.points().stream().map(DurationPoint::shortSha).toList()));
+		model.addAttribute("trendLabels",
+				toJson(labels(trend.points().stream().map(DurationPoint::shortSha).toList())));
 		model.addAttribute("trendMs", toJson(trend.points().stream().map(DurationPoint::durationMs).toList()));
 		return "test";
 	}
@@ -215,6 +221,28 @@ public class DashboardController {
 		return "java -jar unitrack-cli.jar upload \\\n" + "  --url " + base + " \\\n" + "  --project \"" + projectName
 				+ "\" \\\n" + "  --junit \"target/surefire-reports/*.xml\" \\\n"
 				+ "  --jacoco \"target/site/jacoco/jacoco.xml\"";
+	}
+
+	/**
+	 * 0 = latest run failing, 1 = passing, 2 = no runs — for sorting the project list.
+	 */
+	private static int healthRank(TestRun run) {
+		if (run == null) {
+			return 2;
+		}
+		return "PASSED".equals(run.getStatus()) ? 1 : 0;
+	}
+
+	/** Trend X labels with duplicate SHAs disambiguated (a re-run of the same commit). */
+	private static List<String> labels(List<String> shas) {
+		Map<String, Integer> seen = new HashMap<>();
+		List<String> out = new ArrayList<>(shas.size());
+		for (String s : shas) {
+			String label = (s == null || s.isBlank()) ? "—" : s;
+			int n = seen.merge(label, 1, Integer::sum);
+			out.add((n == 1) ? label : label + " ·" + n);
+		}
+		return out;
 	}
 
 	/** Serializes a list of Strings/Numbers/nulls to a JSON array for the trend chart. */
