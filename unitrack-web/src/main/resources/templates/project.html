@@ -51,6 +51,31 @@
         </table>
     </div>
 
+    <div th:if="${!pullRequests.isEmpty()}">
+        <h2>Pull requests</h2>
+        <table class="table table-hover align-middle">
+            <thead>
+            <tr><th>PR</th><th>Branch</th><th>Status</th><th class="num">Coverage</th>
+                <th class="num">Runs</th><th>Latest</th></tr>
+            </thead>
+            <tbody>
+            <tr th:each="p : ${pullRequests}" th:classappend="${p.lastStatus() != 'PASSED'} ? 'row-fail'">
+                <td><a th:href="@{/projects/{id}/pr/{pr}(id=${project.id},pr=${p.number()})}"
+                       th:text="'#' + ${p.number()}">#1</a></td>
+                <td><code class="mono" th:text="${p.headBranch()} ?: '—'">feature/x</code>
+                    <span class="muted" th:if="${p.baseBranch() != null}" th:text="'→ ' + ${p.baseBranch()}">→ main</span></td>
+                <td><span class="badge" th:classappend="${p.lastStatus() == 'PASSED'} ? 'pass' : 'fail'"
+                          th:text="${p.lastStatus()}">PASSED</span></td>
+                <td class="num pct"
+                    th:text="${p.lastCoveragePct() != null} ? ${#numbers.formatDecimal(p.lastCoveragePct(),1,1)} + '%' : '—'">—</td>
+                <td class="num" th:text="${p.runCount()}">0</td>
+                <td><a th:href="@{/runs/{id}(id=${p.lastRunId()})}"
+                       th:text="${#temporals.format(p.lastRunAt(), 'MMM dd HH:mm')}">date</a></td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
     <h2>Recent runs</h2>
     <div th:if="${runs.isEmpty()}" class="empty">No runs uploaded yet.</div>
     <table class="table table-hover align-middle" th:unless="${runs.isEmpty()}">
