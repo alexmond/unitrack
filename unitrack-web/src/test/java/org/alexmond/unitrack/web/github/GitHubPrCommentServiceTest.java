@@ -143,10 +143,21 @@ class GitHubPrCommentServiceTest {
 				1);
 		assertThat(body).startsWith(GitHubPrCommentService.MARKER);
 		assertThat(body).contains("3 passed · 1 failed · 1 skipped (5 total)");
-		assertThat(body).contains("80.0% (-1.5pp)");
+		assertThat(body).contains("80.0% (-1.5pp vs base)");
 		assertThat(body).contains("New failures | 2");
 		assertThat(body).contains("Slower tests | 1");
 		assertThat(body).contains("/runs/");
+		assertThat(body).doesNotContain("View pull request");
+	}
+
+	@Test
+	void rendersPullRequestLinkForPrRun() {
+		TestRun run = run();
+		run.setPrNumber(42);
+		run.setBaseBranch("main");
+		String body = svc(props(), RestClient.builder()).render(run, new QualityGateResult(true, List.of()), 1.0, 0, 0);
+		assertThat(body).contains("View pull request");
+		assertThat(body).contains("/pr/42");
 	}
 
 	@Test

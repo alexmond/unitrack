@@ -176,7 +176,7 @@ public class GitHubPrCommentService {
 		if (run.getLineCoveragePct() != null) {
 			sb.append("| Coverage | ").append(String.format(Locale.ROOT, "%.1f%%", run.getLineCoveragePct()));
 			if (coverageDelta != null) {
-				sb.append(String.format(Locale.ROOT, " (%+.1fpp)", coverageDelta));
+				sb.append(String.format(Locale.ROOT, " (%+.1fpp vs base)", coverageDelta));
 			}
 			sb.append(" |\n");
 		}
@@ -192,6 +192,15 @@ public class GitHubPrCommentService {
 			.append("/runs/")
 			.append(run.getId())
 			.append(")\n");
+		if (run.getPrNumber() != null) {
+			sb.append("[View pull request →](")
+				.append(this.props.getServerBaseUrl())
+				.append("/projects/")
+				.append(run.getProject().getId())
+				.append("/pr/")
+				.append(run.getPrNumber())
+				.append(")\n");
+		}
 		return sb.toString();
 	}
 
