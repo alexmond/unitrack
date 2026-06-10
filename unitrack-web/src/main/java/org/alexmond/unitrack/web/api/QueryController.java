@@ -6,6 +6,8 @@ import org.alexmond.unitrack.domain.TestRun;
 import org.alexmond.unitrack.report.FailureCluster;
 import org.alexmond.unitrack.report.FailureClusteringService;
 import org.alexmond.unitrack.report.FlagSummary;
+import org.alexmond.unitrack.report.PullRequestService;
+import org.alexmond.unitrack.report.PullRequestSummary;
 import org.alexmond.unitrack.report.ReportingService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -28,6 +30,8 @@ public class QueryController {
 
 	private final FailureClusteringService clustering;
 
+	private final PullRequestService pullRequests;
+
 	@GetMapping("/projects")
 	public List<ApiResponses.ProjectJson> projects() {
 		return reporting.listProjects()
@@ -49,6 +53,14 @@ public class QueryController {
 			return ResponseEntity.notFound().build();
 		}
 		return ResponseEntity.ok(reporting.flagSummaries(id));
+	}
+
+	@GetMapping("/projects/{id}/pull-requests")
+	public ResponseEntity<List<PullRequestSummary>> pullRequests(@PathVariable Long id) {
+		if (reporting.findProject(id).isEmpty()) {
+			return ResponseEntity.notFound().build();
+		}
+		return ResponseEntity.ok(pullRequests.list(id));
 	}
 
 	@GetMapping("/projects/{id}/failure-clusters")
