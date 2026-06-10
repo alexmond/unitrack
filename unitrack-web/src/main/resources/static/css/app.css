@@ -301,3 +301,23 @@ details.output pre {
 .stat .value.lvl-good { color: var(--green); }
 .stat .value.lvl-warn { color: var(--amber); }
 .stat .value.lvl-bad { color: var(--red); }
+
+/* --- Tier 2: pass-rate donut — pure CSS conic-gradient, themes via tokens (no Chart.js).
+   Set --p (pass %) and --f (fail %) inline; the remainder (skipped) renders amber. --- */
+.hero { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; margin: 16px 0 6px; }
+.donut-fig { position: relative; width: 104px; height: 104px; flex: 0 0 auto; }
+.donut {
+    width: 100%; height: 100%; border-radius: 50%;
+    background: conic-gradient(
+        var(--green) 0 calc(var(--p, 100) * 1%),
+        var(--red) calc(var(--p, 100) * 1%) calc((var(--p, 100) + var(--f, 0)) * 1%),
+        var(--amber) calc((var(--p, 100) + var(--f, 0)) * 1%) 100%);
+    -webkit-mask: radial-gradient(transparent 60%, #000 61%);
+            mask: radial-gradient(transparent 60%, #000 61%);
+}
+.donut-center {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; pointer-events: none;
+}
+.donut-pct { font-size: 23px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text); line-height: 1; }
+.donut-sub { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-top: 3px; }

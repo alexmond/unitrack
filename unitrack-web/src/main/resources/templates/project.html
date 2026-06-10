@@ -11,6 +11,32 @@
     </p>
     <nav th:replace="~{fragments/common :: subnav(${project.id}, 'overview')}"></nav>
 
+    <div class="hero" th:if="${!runs.isEmpty()}"
+         th:with="r=${runs[0]},failpct=${runs[0].totalTests > 0 ? (runs[0].failed + runs[0].errors) * 100.0 / runs[0].totalTests : 0}">
+        <div class="donut-fig">
+            <div class="donut" th:style="'--p:' + ${r.passRate()} + ';--f:' + ${failpct}"></div>
+            <div class="donut-center">
+                <span class="donut-pct" th:text="${#numbers.formatDecimal(r.passRate(),1,0)} + '%'">100%</span>
+                <span class="donut-sub">pass</span>
+            </div>
+        </div>
+        <div>
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+                <span class="badge" th:classappend="${r.status == 'PASSED'} ? 'pass' : 'fail'"
+                      th:text="${r.status}">PASSED</span>
+                <span class="muted" th:text="${r.passed} + '/' + ${r.totalTests} + ' passed'">0/0</span>
+                <span class="muted pct" th:if="${r.lineCoveragePct != null}"
+                      th:text="'cov ' + ${#numbers.formatDecimal(r.lineCoveragePct,1,1)} + '%'">cov</span>
+            </div>
+            <p class="muted" style="margin:8px 0 0">
+                Latest run <a th:href="@{/runs/{id}(id=${r.id})}"
+                              th:text="${r.shortSha} ?: ('#' + ${r.id})">abc1234</a>
+                on <code class="mono" th:text="${r.branch} ?: '—'">main</code>
+                · <span th:text="${#temporals.format(r.createdAt, 'MMM dd HH:mm')}">date</span>
+            </p>
+        </div>
+    </div>
+
     <details class="howto">
         <summary>📤 Push results from CI</summary>
         <p class="muted">Upload this project's JUnit + coverage from any CI with the UniTrack CLI
