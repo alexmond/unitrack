@@ -4,9 +4,26 @@ Reference screenshots of competitor tools, captured for [`../competitor-analysis
 Each is the vendor's own marketing/docs image; see the source URL. Use them only for internal
 feature comparison.
 
-> Captured 2026-06-07. Allure Report, SonarQube and ReportPortal serve their images behind
-> bot/hotlink protection — those rows below need a manual screen-grab from the live UI; the
-> source URL points at the page that shows the screen.
+> Codecov/Datadog/Trunk captured 2026-06-07 (vendor marketing/docs images). Allure Report
+> added 2026-06-09 by headless-Chrome capture of the live demo (`demo.allurereport.org`).
+> SonarQube and ReportPortal still serve their marketing images behind bot/hotlink protection —
+> the rows under "Still to capture" need a manual or authenticated-demo grab.
+
+## Allure Report
+
+Captured 2026-06-09 from the live OSS demo report at https://demo.allurereport.org/
+(headless Chrome, Overview then per-view via the in-app nav). The reference UI UniTrack
+is benchmarked against for the rich test-detail / dashboard story.
+
+| File | Shows | UniTrack parallel | Source |
+|---|---|---|---|
+| `allure-report-hero.png` | Marketing composite (donut + trend + suites) | Project overview + trends | allurereport.org |
+| `allure-report-overview.png` | Live Overview dashboard (pass donut, trend, suites, categories, executors) | Project overview page | demo.allurereport.org/# |
+| `allure-report-suites.png` | Suites tree (per-suite pass/fail) | Recent runs + suites | demo.allurereport.org/#suites |
+| `allure-report-graphs.png` | Status/severity/duration/retries/categories trend graphs | Trend charts, perf trends | demo.allurereport.org/#graph |
+| `allure-report-behaviors.png` | Behaviors (BDD features/stories) + failure marks | _gap — BDD grouping_ | demo.allurereport.org/#behaviors |
+| `allure-report-timeline.png` | Execution timeline | _gap — timeline view_ | demo.allurereport.org/#timeline |
+| `allure-report-categories.png` | Defect categories (e.g. Product defects) | **Triage rules / failure clusters** | demo.allurereport.org/#categories |
 
 ## Codecov
 
@@ -46,7 +63,6 @@ download — grab them manually from the live UI / docs:
 
 | Want | Screen | Source page |
 |---|---|---|
-| Allure Report | Test-results dashboard, behaviors, history | https://allurereport.org/ (hero), https://demo.qameta.io |
 | SonarQube | My Account → Security (token create/expiry) | https://docs.sonarsource.com/sonarqube-server/user-guide/managing-tokens/ |
 | SonarQube | Project dashboard / quality gate | https://www.sonarsource.com/products/sonarqube/ |
 | ReportPortal | Profile → API keys; Edit personal info | https://reportportal.io/docs/user-account/EditPersonalInformation/ |

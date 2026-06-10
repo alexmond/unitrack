@@ -171,9 +171,10 @@ read APIs are open), **no user accounts or profiles**, **no API tokens**, and **
 Reference UI captures of the competitors live in [`images/`](images/) with a per-screenshot
 index ([`images/README.md`](images/README.md)) mapping each to the UniTrack feature it parallels
 — Codecov (coverage, flags, components, report-merging, PR/GitHub checks, Slack), Datadog
-(flaky management, policies, notifications), and Trunk (quarantine, failure grouping, PR comment,
-status history). The index also lists the auth/config/profile screens still to capture from
-Allure, SonarQube and ReportPortal (their image hosts block automated download).
+(flaky management, policies, notifications), Trunk (quarantine, failure grouping, PR comment,
+status history), and **Allure Report** (Overview, Suites, Graphs, Behaviors, Timeline, Categories
+— captured from the live OSS demo). The index also lists the auth/config/profile screens still to
+capture from SonarQube and ReportPortal (their image hosts block automated download).
 
 ---
 
