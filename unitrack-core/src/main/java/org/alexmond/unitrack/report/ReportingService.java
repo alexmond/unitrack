@@ -19,8 +19,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.TreeMap;
 
 /** Read-side queries shared by the REST API and the web dashboard. */
 @Service
@@ -126,6 +128,32 @@ public class ReportingService {
 	public List<CoverageFileEntry> coverageFiles(Long reportId, int limit) {
 		List<CoverageFileEntry> all = coverageFiles.findByReportIdOrderByLineMissedDescPackageNameAsc(reportId);
 		return (all.size() > limit) ? all.subList(0, limit) : all;
+	}
+
+	/**
+	 * The most recent coverage report for a project (latest run that carried coverage).
+	 */
+	public Optional<CoverageReport> latestCoverage(Long projectId) {
+		return coverageReports.findLatestForProject(projectId, PageRequest.ofSize(1)).stream().findFirst();
+	}
+
+	/** Per-package line/branch totals for a coverage report, sorted by package name. */
+	public List<CoveragePackage> coveragePackages(Long reportId) {
+		Map<String, int[]> byPackage = new TreeMap<>();
+		for (CoverageFileEntry f : coverageFiles.findByReportIdOrderByLineMissedDescPackageNameAsc(reportId)) {
+			String pkg = (f.getPackageName() == null || f.getPackageName().isBlank()) ? "(default)"
+					: f.getPackageName();
+			int[] a = byPackage.computeIfAbsent(pkg, (k) -> new int[4]);
+			a[0] += f.getLineCovered();
+			a[1] += f.getLineMissed();
+			a[2] += f.getBranchCovered();
+			a[3] += f.getBranchMissed();
+		}
+		return byPackage.entrySet()
+			.stream()
+			.map((e) -> new CoveragePackage(e.getKey(), e.getValue()[0], e.getValue()[1], e.getValue()[2],
+					e.getValue()[3]))
+			.toList();
 	}
 
 }
