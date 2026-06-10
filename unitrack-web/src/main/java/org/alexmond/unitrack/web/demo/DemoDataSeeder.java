@@ -142,9 +142,43 @@ public class DemoDataSeeder implements ApplicationRunner {
 	private void ingest(String project, String repo, String branch, String flag, String commit, List<Case> cases,
 			int lineCovered, int lineMissed, int branchCovered, int branchMissed) {
 		IngestRequest meta = new IngestRequest(project, repo, branch, flag, commit, null, "demo", null);
-		String junitXml = junit(cases);
-		String jacocoXml = jacoco(lineCovered, lineMissed, branchCovered, branchMissed);
-		ingest.ingest(meta, List.of(supplier(junitXml)), List.of(supplier(jacocoXml)));
+		List<FileCov> files = distribute(lineCovered, lineMissed, branchCovered, branchMissed);
+		// Each project uploads coverage in a different format, so the demo exercises
+		// every
+		// parser (the coverage field auto-detects format on ingest).
+		String coverageReport = switch (coverageFormatFor(project)) {
+			case COBERTURA -> cobertura(files);
+			case LCOV -> lcov(files);
+			default -> jacoco(files, lineCovered, lineMissed, branchCovered, branchMissed);
+		};
+		ingest.ingest(meta, List.of(supplier(junit(cases))), List.of(supplier(coverageReport)));
+	}
+
+	private static CovFmt coverageFormatFor(String project) {
+		return switch (project) {
+			case "billing-api" -> CovFmt.COBERTURA;
+			case "web-frontend" -> CovFmt.LCOV;
+			default -> CovFmt.JACOCO;
+		};
+	}
+
+	/**
+	 * Spreads the run totals across a fixed set of files (one well-covered, one poorly)
+	 * so every coverage format renders a realistic per-file/per-package breakdown.
+	 */
+	private static List<FileCov> distribute(int lineCovered, int lineMissed, int branchCovered, int branchMissed) {
+		String[][] weights = { { "com/acme/service", "OrderService.java", "0.30", "0.08" },
+				{ "com/acme/service", "PricingEngine.java", "0.12", "0.46" },
+				{ "com/acme/web", "ApiController.java", "0.33", "0.21" },
+				{ "com/acme/util", "JsonMapper.java", "0.25", "0.25" } };
+		List<FileCov> files = new ArrayList<>();
+		for (String[] w : weights) {
+			double wc = Double.parseDouble(w[2]);
+			double wm = Double.parseDouble(w[3]);
+			files.add(new FileCov(w[0], w[1], (int) Math.round(lineCovered * wc), (int) Math.round(lineMissed * wm),
+					(int) Math.round(branchCovered * wc), (int) Math.round(branchMissed * wm)));
+		}
+		return files;
 	}
 
 	private void ingestPerf(String project, String repo, String commit, double scale, double errFraction) {
@@ -223,40 +257,29 @@ public class DemoDataSeeder implements ApplicationRunner {
 
 	/**
 	 * Builds a JaCoCo report whose report-level counters are exactly the requested totals
-	 * (so the headline % is stable), with the same totals spread across a few
-	 * packages/files — one well-covered, one poorly-covered — so the coverage page has a
-	 * realistic breakdown.
+	 * (so the headline % is stable), with the per-{@code sourcefile} breakdown from
+	 * {@code files}.
 	 */
-	private static String jacoco(int lineCovered, int lineMissed, int branchCovered, int branchMissed) {
-		// package, file, covered-weight, missed-weight (weights sum to ~1.0 across the
-		// set).
-		String[][] files = { { "com/acme/service", "OrderService.java", "0.30", "0.08" },
-				{ "com/acme/service", "PricingEngine.java", "0.12", "0.46" },
-				{ "com/acme/web", "ApiController.java", "0.33", "0.21" },
-				{ "com/acme/util", "JsonMapper.java", "0.25", "0.25" } };
+	private static String jacoco(List<FileCov> files, int lineCovered, int lineMissed, int branchCovered,
+			int branchMissed) {
 		StringBuilder sb = new StringBuilder("<?xml version=\"1.0\"?><report name=\"demo\">");
 		String lastPkg = null;
-		boolean pkgOpen = false;
-		for (String[] f : files) {
-			String pkg = f[0];
-			if (!pkg.equals(lastPkg)) {
-				if (pkgOpen) {
+		for (FileCov f : files) {
+			if (!f.pkg().equals(lastPkg)) {
+				if (lastPkg != null) {
 					sb.append("</package>");
 				}
-				sb.append("<package name=\"").append(pkg).append("\">");
-				pkgOpen = true;
-				lastPkg = pkg;
+				sb.append("<package name=\"").append(f.pkg()).append("\">");
+				lastPkg = f.pkg();
 			}
-			double wc = Double.parseDouble(f[2]);
-			double wm = Double.parseDouble(f[3]);
 			sb.append("<sourcefile name=\"")
-				.append(f[1])
+				.append(f.file())
 				.append("\">")
-				.append(counter("LINE", (int) Math.round(lineCovered * wc), (int) Math.round(lineMissed * wm)))
-				.append(counter("BRANCH", (int) Math.round(branchCovered * wc), (int) Math.round(branchMissed * wm)))
+				.append(counter("LINE", f.lineCovered(), f.lineMissed()))
+				.append(counter("BRANCH", f.branchCovered(), f.branchMissed()))
 				.append("</sourcefile>");
 		}
-		if (pkgOpen) {
+		if (lastPkg != null) {
 			sb.append("</package>");
 		}
 		return sb.append(counter("INSTRUCTION", lineCovered * 3, lineMissed * 3))
@@ -265,6 +288,76 @@ public class DemoDataSeeder implements ApplicationRunner {
 			.append(counter("METHOD", lineCovered / 20, lineMissed / 20))
 			.append("</report>")
 			.toString();
+	}
+
+	/**
+	 * Cobertura XML: per-class {@code <line hits=..>}; branch info rides the first
+	 * covered line.
+	 */
+	private static String cobertura(List<FileCov> files) {
+		StringBuilder sb = new StringBuilder("<?xml version=\"1.0\"?><coverage line-rate=\"0.0\"><packages>");
+		String lastPkg = null;
+		for (FileCov f : files) {
+			if (!f.pkg().equals(lastPkg)) {
+				if (lastPkg != null) {
+					sb.append("</classes></package>");
+				}
+				sb.append("<package name=\"").append(f.pkg()).append("\"><classes>");
+				lastPkg = f.pkg();
+			}
+			sb.append("<class name=\"").append(f.file()).append("\" filename=\"").append(f.path()).append("\"><lines>");
+			int branchTotal = f.branchCovered() + f.branchMissed();
+			int n = 0;
+			for (int i = 0; i < f.lineCovered(); i++) {
+				n++;
+				if (i == 0 && branchTotal > 0) {
+					sb.append("<line number=\"")
+						.append(n)
+						.append("\" hits=\"1\" branch=\"true\" condition-coverage=\"x% (")
+						.append(f.branchCovered())
+						.append('/')
+						.append(branchTotal)
+						.append(")\"/>");
+				}
+				else {
+					sb.append("<line number=\"").append(n).append("\" hits=\"1\"/>");
+				}
+			}
+			for (int i = 0; i < f.lineMissed(); i++) {
+				n++;
+				sb.append("<line number=\"").append(n).append("\" hits=\"0\"/>");
+			}
+			sb.append("</lines></class>");
+		}
+		if (lastPkg != null) {
+			sb.append("</classes></package>");
+		}
+		return sb.append("</packages></coverage>").toString();
+	}
+
+	/**
+	 * LCOV .info: {@code DA:} per line, {@code BRDA:} per branch, one record per file.
+	 */
+	private static String lcov(List<FileCov> files) {
+		StringBuilder sb = new StringBuilder();
+		for (FileCov f : files) {
+			sb.append("SF:").append(f.path()).append('\n');
+			int n = 0;
+			for (int i = 0; i < f.lineCovered(); i++) {
+				sb.append("DA:").append(++n).append(",1\n");
+			}
+			for (int i = 0; i < f.lineMissed(); i++) {
+				sb.append("DA:").append(++n).append(",0\n");
+			}
+			for (int i = 0; i < f.branchCovered(); i++) {
+				sb.append("BRDA:1,0,").append(i).append(",1\n");
+			}
+			for (int i = 0; i < f.branchMissed(); i++) {
+				sb.append("BRDA:1,0,").append(f.branchCovered() + i).append(",-\n");
+			}
+			sb.append("end_of_record\n");
+		}
+		return sb.toString();
 	}
 
 	private static String counter(String type, int covered, int missed) {
@@ -277,6 +370,22 @@ public class DemoDataSeeder implements ApplicationRunner {
 	}
 
 	private record Case(String className, String name, boolean fail, String type, String message) {
+	}
+
+	private enum CovFmt {
+
+		JACOCO, COBERTURA, LCOV
+
+	}
+
+	/** One source file's covered/missed line + branch counts. */
+	private record FileCov(String pkg, String file, int lineCovered, int lineMissed, int branchCovered,
+			int branchMissed) {
+
+		String path() {
+			return pkg + '/' + file;
+		}
+
 	}
 
 }
