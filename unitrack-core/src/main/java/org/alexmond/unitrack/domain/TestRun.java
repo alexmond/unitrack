@@ -85,6 +85,19 @@ public class TestRun {
 	@Column(name = "run_key")
 	private String runKey;
 
+	/**
+	 * For a pull/merge-request build: the target branch the change merges into; null
+	 * otherwise.
+	 */
+	@Setter
+	@Column(name = "base_branch")
+	private String baseBranch;
+
+	/** Pull/merge-request number this run belongs to; null for ordinary branch builds. */
+	@Setter
+	@Column(name = "pr_number")
+	private Integer prNumber;
+
 	/** Number of uploads merged into this run. */
 	@Column(nullable = false)
 	private int uploads = 1;

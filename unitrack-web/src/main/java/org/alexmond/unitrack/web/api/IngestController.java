@@ -70,7 +70,8 @@ public class IngestController {
 			@RequestParam(required = false) String repoUrl, @RequestParam(required = false) String branch,
 			@RequestParam(required = false) String flag, @RequestParam(required = false) String commit,
 			@RequestParam(required = false) String buildUrl, @RequestParam(required = false) String ciProvider,
-			@RequestParam(required = false) String runKey,
+			@RequestParam(required = false) String runKey, @RequestParam(required = false) String baseBranch,
+			@RequestParam(required = false) Integer prNumber,
 			@RequestParam(name = "junit", required = false) List<MultipartFile> junit,
 			@RequestParam(name = "jacoco", required = false) List<MultipartFile> jacoco,
 			@RequestParam(name = "perf", required = false) List<MultipartFile> perf) {
@@ -81,7 +82,8 @@ public class IngestController {
 			throw new IngestException("Provide at least one 'junit' or 'perf' file");
 		}
 
-		IngestRequest meta = new IngestRequest(project, repoUrl, branch, flag, commit, buildUrl, ciProvider, runKey);
+		IngestRequest meta = new IngestRequest(project, repoUrl, branch, flag, commit, buildUrl, ciProvider, runKey,
+				baseBranch, prNumber);
 		TestRun run = null;
 		if (!junitStreams.isEmpty()) {
 			run = ingestService.ingest(meta, junitStreams, toSuppliers(jacoco));

@@ -76,6 +76,8 @@ public class IngestService {
 			run = new TestRun(project, blankToNull(meta.branch()), meta.flag(), blankToNull(meta.commit()),
 					blankToNull(meta.buildUrl()), blankToNull(meta.ciProvider()));
 			run.setRunKey(runKey);
+			run.setBaseBranch(blankToNull(meta.baseBranch()));
+			run.setPrNumber(meta.prNumber());
 			run.applyTotals(merged.passed(), merged.failures(), merged.errors(), merged.skipped(), merged.durationMs());
 		}
 		runs.save(run);
