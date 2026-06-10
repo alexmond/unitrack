@@ -27,13 +27,23 @@
         <a th:if="${run.buildUrl != null}" th:href="${run.buildUrl}">· build</a>
     </p>
 
-    <div class="stat-row">
-        <div class="stat"><div class="label">Tests</div><div class="value" th:text="${run.totalTests}">0</div></div>
-        <div class="stat"><div class="label">Passed</div><div class="value" style="color:var(--green)" th:text="${run.passed}">0</div></div>
-        <div class="stat"><div class="label">Failed</div><div class="value" style="color:var(--red)" th:text="${run.failed + run.errors}">0</div></div>
-        <div class="stat"><div class="label">Skipped</div><div class="value" style="color:var(--amber)" th:text="${run.skipped}">0</div></div>
-        <div class="stat"><div class="label">Duration</div><div class="value" th:text="${#numbers.formatDecimal(run.durationMs / 1000.0,1,1)} + 's'">0s</div></div>
-        <div class="stat" th:if="${coverage != null}"><div class="label">Line cov</div><div class="value" style="color:var(--blue)" th:text="${#numbers.formatDecimal(coverage.linePct,1,1)} + '%'">0%</div></div>
+    <div class="hero">
+        <div class="donut-fig"
+             th:with="failpct=${run.totalTests > 0 ? (run.failed + run.errors) * 100.0 / run.totalTests : 0}">
+            <div class="donut" th:style="'--p:' + ${run.passRate()} + ';--f:' + ${failpct}"></div>
+            <div class="donut-center">
+                <span class="donut-pct" th:text="${#numbers.formatDecimal(run.passRate(),1,0)} + '%'">100%</span>
+                <span class="donut-sub">pass</span>
+            </div>
+        </div>
+        <div class="stat-row" style="margin:0">
+            <div class="stat"><div class="label">Tests</div><div class="value" th:text="${run.totalTests}">0</div></div>
+            <div class="stat"><div class="label">Passed</div><div class="value" style="color:var(--green)" th:text="${run.passed}">0</div></div>
+            <div class="stat"><div class="label">Failed</div><div class="value" style="color:var(--red)" th:text="${run.failed + run.errors}">0</div></div>
+            <div class="stat"><div class="label">Skipped</div><div class="value" style="color:var(--amber)" th:text="${run.skipped}">0</div></div>
+            <div class="stat"><div class="label">Duration</div><div class="value" th:text="${#numbers.formatDecimal(run.durationMs / 1000.0,1,1)} + 's'">0s</div></div>
+            <div class="stat" th:if="${coverage != null}"><div class="label">Line cov</div><div class="value" style="color:var(--blue)" th:text="${#numbers.formatDecimal(coverage.linePct,1,1)} + '%'">0%</div></div>
+        </div>
     </div>
 
     <div th:if="${gate != null and !gate.rules().isEmpty()}" class="gate"
