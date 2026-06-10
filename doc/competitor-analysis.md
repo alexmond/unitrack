@@ -172,9 +172,11 @@ Reference UI captures of the competitors live in [`images/`](images/) with a per
 index ([`images/README.md`](images/README.md)) mapping each to the UniTrack feature it parallels
 — Codecov (coverage, flags, components, report-merging, PR/GitHub checks, Slack), Datadog
 (flaky management, policies, notifications), Trunk (quarantine, failure grouping, PR comment,
-status history), and **Allure Report** (Overview, Suites, Graphs, Behaviors, Timeline, Categories
-— captured from the live OSS demo). The index also lists the auth/config/profile screens still to
-capture from SonarQube and ReportPortal (their image hosts block automated download).
+status history), **Allure Report** (Overview, Suites, Graphs, Behaviors, Timeline, Categories),
+**SonarQube Cloud** (quality-gate health dashboard), **ReportPortal** (configurable widget
+dashboard, launches/defect view, login), and **Coveralls** (repo coverage report) — captured from
+live demos / public projects. Only Allure TestOps and the SonarQube token page remain to grab
+(behind a login).
 
 ---
 
