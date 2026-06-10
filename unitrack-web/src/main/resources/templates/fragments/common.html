@@ -25,6 +25,10 @@
        th:classappend="${active == 'overview'} ? 'current'"
        th:attr="aria-current=${active == 'overview'} ? 'page' : null">
         <span aria-hidden="true">📊</span> Overview</a>
+    <a th:href="@{/projects/{id}/coverage(id=${projectId})}"
+       th:classappend="${active == 'coverage'} ? 'current'"
+       th:attr="aria-current=${active == 'coverage'} ? 'page' : null">
+        <span aria-hidden="true">☂️</span> Coverage</a>
     <a th:href="@{/projects/{id}/flaky(id=${projectId})}"
        th:classappend="${active == 'flaky'} ? 'current'"
        th:attr="aria-current=${active == 'flaky'} ? 'page' : null">

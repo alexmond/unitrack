@@ -99,6 +99,24 @@ public class DashboardController {
 		return "project";
 	}
 
+	@GetMapping("/projects/{id}/coverage")
+	public String coverage(@PathVariable Long id, Model model) {
+		Project project = reporting.findProject(id)
+			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found"));
+		model.addAttribute("project", project);
+		Optional<CoverageReport> report = reporting.latestCoverage(id);
+		model.addAttribute("coverage", report.orElse(null));
+		report.ifPresent((c) -> {
+			model.addAttribute("run", c.getRun());
+			model.addAttribute("packages", reporting.coveragePackages(c.getId()));
+			model.addAttribute("worstFiles", reporting.coverageFiles(c.getId(), COVERAGE_FILE_LIMIT));
+			List<TestRun> trend = reporting.trendRuns(id, TREND_LIMIT);
+			model.addAttribute("trendLabels", toJson(trend.stream().map(TestRun::getShortSha).toList()));
+			model.addAttribute("trendCoverage", toJson(trend.stream().map(TestRun::getLineCoveragePct).toList()));
+		});
+		return "coverage";
+	}
+
 	@GetMapping("/projects/{id}/clusters")
 	public String clusters(@PathVariable Long id, Model model) {
 		Project project = reporting.findProject(id)

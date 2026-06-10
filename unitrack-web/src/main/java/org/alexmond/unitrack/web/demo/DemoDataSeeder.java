@@ -221,13 +221,50 @@ public class DemoDataSeeder implements ApplicationRunner {
 		return sb.append("</testsuite>").toString();
 	}
 
+	/**
+	 * Builds a JaCoCo report whose report-level counters are exactly the requested totals
+	 * (so the headline % is stable), with the same totals spread across a few
+	 * packages/files — one well-covered, one poorly-covered — so the coverage page has a
+	 * realistic breakdown.
+	 */
 	private static String jacoco(int lineCovered, int lineMissed, int branchCovered, int branchMissed) {
-		return "<?xml version=\"1.0\"?><report name=\"demo\"><package name=\"com/acme\">"
-				+ "<sourcefile name=\"Service.java\">" + counter("LINE", lineCovered, lineMissed)
-				+ counter("BRANCH", branchCovered, branchMissed) + "</sourcefile></package>"
-				+ counter("INSTRUCTION", lineCovered * 3, lineMissed * 3) + counter("LINE", lineCovered, lineMissed)
-				+ counter("BRANCH", branchCovered, branchMissed) + counter("METHOD", lineCovered / 20, lineMissed / 20)
-				+ "</report>";
+		// package, file, covered-weight, missed-weight (weights sum to ~1.0 across the
+		// set).
+		String[][] files = { { "com/acme/service", "OrderService.java", "0.30", "0.08" },
+				{ "com/acme/service", "PricingEngine.java", "0.12", "0.46" },
+				{ "com/acme/web", "ApiController.java", "0.33", "0.21" },
+				{ "com/acme/util", "JsonMapper.java", "0.25", "0.25" } };
+		StringBuilder sb = new StringBuilder("<?xml version=\"1.0\"?><report name=\"demo\">");
+		String lastPkg = null;
+		boolean pkgOpen = false;
+		for (String[] f : files) {
+			String pkg = f[0];
+			if (!pkg.equals(lastPkg)) {
+				if (pkgOpen) {
+					sb.append("</package>");
+				}
+				sb.append("<package name=\"").append(pkg).append("\">");
+				pkgOpen = true;
+				lastPkg = pkg;
+			}
+			double wc = Double.parseDouble(f[2]);
+			double wm = Double.parseDouble(f[3]);
+			sb.append("<sourcefile name=\"")
+				.append(f[1])
+				.append("\">")
+				.append(counter("LINE", (int) Math.round(lineCovered * wc), (int) Math.round(lineMissed * wm)))
+				.append(counter("BRANCH", (int) Math.round(branchCovered * wc), (int) Math.round(branchMissed * wm)))
+				.append("</sourcefile>");
+		}
+		if (pkgOpen) {
+			sb.append("</package>");
+		}
+		return sb.append(counter("INSTRUCTION", lineCovered * 3, lineMissed * 3))
+			.append(counter("LINE", lineCovered, lineMissed))
+			.append(counter("BRANCH", branchCovered, branchMissed))
+			.append(counter("METHOD", lineCovered / 20, lineMissed / 20))
+			.append("</report>")
+			.toString();
 	}
 
 	private static String counter(String type, int covered, int missed) {
