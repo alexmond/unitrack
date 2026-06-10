@@ -2,6 +2,14 @@
 
 Evidence from past panels in this repo. Bias future proposals with it; it's not law.
 
+## 2026-06-09 — #21 Configurable widgets + real-time ingest (design → epic+tickets)
+- Proposed: Product/UX Lead (director), Real-time Backend Architect, Frontend/Dashboard Engineer, Restraint/YAGNI Skeptic, QA/Reliability Tester. User added: **Competition/Market Specialist** ("add competition specialist and go"). User removed: none.
+  - Gate-edit signal: user adds a **competitor-research seat** on differentiator/roadmap targets (cf. the uploader run). The Competition specialist pulled real weight — cited `doc/competitor-analysis.md` to confirm SSE-over-broker and to *kill* the drag-drop widget grid as enterprise bloat. **Seat a Competition/Market analyst by default on differentiator-framed features here.**
+- Style: swarm → director-led, converged in **1 round** (strong: 5/6 aligned on transport AND sequencing). Vote: transport **SSE 5 / polling 1**; sequencing **realtime-first 4 / widgets-first 1 / cut-widgets 1**.
+- Outcome: SSE (`SseEmitter`, zero new deps) + `@TransactionalEventListener(AFTER_COMMIT)` decoupled broadcast (never fail ingest) + emitter registry + `/api/v1/events` + heartbeat; live index cards + project recent-runs/trend, page-scoped, no toasts. Widgets half **deferred + shrunk** to per-user show/hide via boolean columns on `User` (notification-prefs pattern) — NO drag-drop/catalog. Epic #21; tickets #145–#150.
+- Recurring (now 4×+): **Restraint Skeptic wins dependency-scope** — but here SSE already needs no new dep, so the Skeptic's real win was *shrinking the widgets half to near-zero* and *deferring it*, not cutting transport. The decoupling-from-ingest (QA's non-negotiable) + the AFTER_COMMIT contract were unanimous across backend/QA/product.
+- Note (domain): the **upload/CI client needs zero changes** for real-time — it just POSTs `/api/v1/ingest`; real-time is pure server→browser push to viewers. `@EnableScheduling` already on (heartbeat is free). No SSE/WS stack exists today → greenfield, dependency-free. nginx footgun to document: `proxy_buffering off` + `X-Accel-Buffering: no` header or SSE silently never flushes.
+
 ## 2026-06-09 — Bootstrap app-wide adoption, re-eval (choosing between options)
 - Proposed: UI/Frontend Architect (director), Design-system Guardian, Build/WebJars Engineer, Migration Strategist, Accessibility Advocate, Restraint Skeptic, QA (pre-seated). User added/removed: none.
 - Style: swarm → director-led, 1 round (strong substantive convergence). Vote: **0 ADOPT-APPWIDE / 5 ADOPT-PARTIAL / 2 STAY-CUSTOM** (Architect + Skeptic).
