@@ -13,6 +13,7 @@ import org.alexmond.unitrack.report.PerfRunDetailService;
 import org.alexmond.unitrack.report.PerfTrendPoint;
 import org.alexmond.unitrack.report.PerformanceService;
 import org.alexmond.unitrack.report.PerformanceSummary;
+import org.alexmond.unitrack.report.PullRequestService;
 import org.alexmond.unitrack.report.QualityGateService;
 import org.alexmond.unitrack.report.ReportingService;
 import org.alexmond.unitrack.report.TestDurationTrend;
@@ -72,6 +73,8 @@ public class DashboardController {
 
 	private final CoverageDiffService coverageDiff;
 
+	private final PullRequestService pullRequests;
+
 	@GetMapping("/")
 	public String index(Model model) {
 		List<Project> projects = new ArrayList<>(reporting.listProjects());
@@ -103,6 +106,7 @@ public class DashboardController {
 		model.addAttribute("trendLabels", toJson(labels(trend.stream().map(TestRun::getShortSha).toList())));
 		model.addAttribute("trendPassRate", toJson(trend.stream().map((r) -> round(r.passRate())).toList()));
 		model.addAttribute("trendCoverage", toJson(trend.stream().map(TestRun::getLineCoveragePct).toList()));
+		model.addAttribute("pullRequests", pullRequests.list(id));
 		model.addAttribute("uploadSnippet", uploadSnippet(project.getName()));
 		return "project";
 	}
@@ -123,6 +127,25 @@ public class DashboardController {
 			model.addAttribute("trendCoverage", toJson(trend.stream().map(TestRun::getLineCoveragePct).toList()));
 		});
 		return "coverage";
+	}
+
+	@GetMapping("/projects/{id}/pr/{pr}")
+	public String pullRequest(@PathVariable Long id, @PathVariable Integer pr, Model model) {
+		Project project = reporting.findProject(id)
+			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found"));
+		List<TestRun> prRuns = pullRequests.runsFor(id, pr);
+		if (prRuns.isEmpty()) {
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Pull request not found");
+		}
+		TestRun latest = prRuns.get(0);
+		model.addAttribute("project", project);
+		model.addAttribute("pr", pr);
+		model.addAttribute("latest", latest);
+		model.addAttribute("runs", prRuns);
+		model.addAttribute("gate", qualityGate.evaluate(latest.getId()).orElse(null));
+		model.addAttribute("regression", regression.diff(latest.getId()).orElse(null));
+		model.addAttribute("coverageDiff", coverageDiff.diff(latest.getId()).orElse(null));
+		return "pr";
 	}
 
 	@GetMapping("/projects/{id}/clusters")

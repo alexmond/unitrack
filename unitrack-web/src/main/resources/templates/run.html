@@ -13,9 +13,10 @@
         Run #<span th:text="${run.id}">1</span>
         <span class="badge" th:classappend="${run.status == 'PASSED'} ? 'pass' : 'fail'"
               th:text="${run.status}">PASSED</span>
-        <span th:if="${run.prNumber != null}" class="badge"
-              style="background:rgba(68,147,248,.15);color:var(--blue)"
-              th:text="'PR #' + ${run.prNumber} + (${run.baseBranch != null} ? ' → ' + ${run.baseBranch} : '')">PR #1 → main</span>
+        <a th:if="${run.prNumber != null}" class="badge"
+           style="background:rgba(68,147,248,.15);color:var(--blue);text-decoration:none"
+           th:href="@{/projects/{id}/pr/{pr}(id=${run.project.id},pr=${run.prNumber})}"
+           th:text="'PR #' + ${run.prNumber} + (${run.baseBranch != null} ? ' → ' + ${run.baseBranch} : '')">PR #1 → main</a>
     </h1>
     <p class="muted">
         <span th:text="${run.branch} ?: 'no branch'">main</span> ·
