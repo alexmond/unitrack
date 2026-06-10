@@ -5,9 +5,10 @@ Each is the vendor's own marketing/docs image; see the source URL. Use them only
 feature comparison.
 
 > Codecov/Datadog/Trunk captured 2026-06-07 (vendor marketing/docs images). Allure Report
-> (2026-06-09) and SonarQube Cloud / ReportPortal / Coveralls (2026-06-10) captured by
-> headless Chrome from their live demos / public projects. Only Allure TestOps and the
-> SonarQube token page remain under "Still to capture" (behind a login).
+> (2026-06-09), SonarQube Cloud / ReportPortal / Coveralls (2026-06-10, live demos / public
+> projects via headless Chrome), and Allure TestOps + the SonarQube token page (2026-06-10,
+> vendor docs — both live screens are login-gated). Essentially the whole analysis is now
+> illustrated; see "Still to capture" for the one remaining screen.
 
 ## Allure Report
 
@@ -25,14 +26,16 @@ is benchmarked against for the rich test-detail / dashboard story.
 | `allure-report-timeline.png` | Execution timeline | _gap — timeline view_ | demo.allurereport.org/#timeline |
 | `allure-report-categories.png` | Defect categories (e.g. Product defects) | **Triage rules / failure clusters** | demo.allurereport.org/#categories |
 
-## SonarQube Cloud
+## SonarQube
 
-Captured 2026-06-10 from a public project on https://sonarcloud.io (no login needed for
-public projects; headless Chrome).
+`sonarcloud-overview.png` captured 2026-06-10 from a public project on https://sonarcloud.io
+(no login; headless Chrome). `sonarqube-tokens.png` from the SonarQube Server docs (the token
+screen sits behind a personal login).
 
 | File | Shows | UniTrack parallel | Source |
 |---|---|---|---|
 | `sonarcloud-overview.png` | Project health dashboard — Quality Gate **Passed**, coverage %, duplications, security rating | **Quality gate** + coverage page | sonarcloud.io/project/overview |
+| `sonarqube-tokens.png` | My Account → Security: Generate Tokens (name/type/**expires in**) + revoke | **API tokens** (create/expiry/revoke) | docs.sonarsource.com (managing-tokens) |
 
 ## ReportPortal
 
@@ -52,6 +55,16 @@ Captured 2026-06-10 from a public repo (no login; headless Chrome).
 | File | Shows | UniTrack parallel | Source |
 |---|---|---|---|
 | `coveralls-report.png` | Repo coverage report — % badge, build history, relevant-lines-covered trend, files | Coverage page + trends | coveralls.io/github/parroty/excoveralls |
+
+## Allure TestOps
+
+From the Allure TestOps docs (`docs.qameta.io`); the live demo (`demo.testops.cloud`) is behind
+OAuth. The commercial, "rich configurable" sibling of Allure Report.
+
+| File | Shows | UniTrack parallel | Source |
+|---|---|---|---|
+| `allure-testops-dashboard.png` | **Configurable widget dashboard** — Automation donut, automation-trend chart, longest-running tests, test-coverage widgets, "+ Widget" | **#21 configurable widgets** | docs.qameta.io/allure-testops |
+| `allure-testops-project.png` | Project page + left-nav (Test cases, Launches, Defects, Jobs, Settings) | Project sections / subnav | docs.qameta.io/allure-testops |
 
 ## Codecov
 
@@ -91,6 +104,7 @@ download — grab them manually from the live UI / docs:
 
 | Want | Screen | Source page |
 |---|---|---|
-| SonarQube | My Account → Security (token create/expiry) | https://docs.sonarsource.com/sonarqube-server/user-guide/managing-tokens/ |
 | ReportPortal | Profile → API keys; Edit personal info | https://demo.reportportal.io (Profile, behind login) |
-| Allure TestOps | Administration → Members (roles/RBAC); dashboard widgets | https://demo.testops.cloud (behind login) |
+
+Everything else in the analysis is now captured. The lone remaining screen (ReportPortal's
+profile/API-keys page) is reachable in the demo but wasn't grabbed in this pass.
