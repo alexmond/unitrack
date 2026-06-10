@@ -176,6 +176,39 @@
         </tbody>
     </table>
 
+    <div th:if="${coverageDiff != null and !coverageDiff.isEmpty()}">
+        <h2>Coverage change
+            <span class="muted">vs baseline
+                <a th:href="@{/runs/{id}(id=${coverageDiff.baselineRunId()})}"
+                   th:text="'run #' + ${coverageDiff.baselineRunId()}">run</a>
+                on <code class="mono" th:text="${coverageDiff.baseBranch()}">main</code></span>
+        </h2>
+        <p>
+            <span class="badge"
+                  th:classappend="${coverageDiff.totalDelta() >= 0} ? 'pass' : 'fail'"
+                  th:text="(${coverageDiff.totalDelta() >= 0} ? '+' : '') + ${#numbers.formatDecimal(coverageDiff.totalDelta(),1,1)} + ' pp overall'">+0.0 pp</span>
+        </p>
+        <table class="table table-hover align-middle">
+            <thead>
+            <tr><th>File</th><th></th><th class="num">Baseline</th><th class="num">This run</th><th class="num">Δ pp</th></tr>
+            </thead>
+            <tbody>
+            <tr th:each="d : ${coverageDiff.files()}">
+                <td><code class="mono" th:text="${d.path()}">path</code></td>
+                <td><span class="badge"
+                          th:classappend="${d.kind().name() == 'IMPROVED' or d.kind().name() == 'ADDED'} ? 'pass' : 'fail'"
+                          th:text="${d.kind().name().toLowerCase()}">changed</span></td>
+                <td class="num pct"
+                    th:text="${d.basePct() != null} ? ${#numbers.formatDecimal(d.basePct(),1,1)} + '%' : '—'">—</td>
+                <td class="num pct"
+                    th:text="${d.currentPct() != null} ? ${#numbers.formatDecimal(d.currentPct(),1,1)} + '%' : '—'">—</td>
+                <td class="num pct"
+                    th:text="(${d.delta() >= 0} ? '+' : '') + ${#numbers.formatDecimal(d.delta(),1,1)}">+0.0</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
     <div th:if="${coverage != null}">
         <h2>Coverage by file <span class="muted">(most missed first)</span></h2>
         <table class="table table-hover align-middle">

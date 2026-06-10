@@ -5,6 +5,7 @@ import org.alexmond.unitrack.domain.Project;
 import org.alexmond.unitrack.domain.TestCaseResult;
 import org.alexmond.unitrack.domain.TestRun;
 import org.alexmond.unitrack.report.BlameService;
+import org.alexmond.unitrack.report.CoverageDiffService;
 import org.alexmond.unitrack.report.DurationPoint;
 import org.alexmond.unitrack.report.FailureClusteringService;
 import org.alexmond.unitrack.report.PerfRegressionService;
@@ -66,6 +67,8 @@ public class DashboardController {
 	private final PerfRegressionService perfRegression;
 
 	private final PerfRunDetailService perfRunDetail;
+
+	private final CoverageDiffService coverageDiff;
 
 	@GetMapping("/")
 	public String index(Model model) {
@@ -144,6 +147,7 @@ public class DashboardController {
 		model.addAttribute("coverage", coverage.orElse(null));
 		List<?> files = coverage.map((c) -> reporting.coverageFiles(c.getId(), COVERAGE_FILE_LIMIT)).orElse(List.of());
 		model.addAttribute("coverageFiles", files);
+		model.addAttribute("coverageDiff", coverageDiff.diff(id).orElse(null));
 		model.addAttribute("slowest", performance.slowestInRun(id, SLOWEST_IN_RUN_LIMIT));
 		return "run";
 	}
