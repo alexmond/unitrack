@@ -173,10 +173,11 @@ index ([`images/README.md`](images/README.md)) mapping each to the UniTrack feat
 — Codecov (coverage, flags, components, report-merging, PR/GitHub checks, Slack), Datadog
 (flaky management, policies, notifications), Trunk (quarantine, failure grouping, PR comment,
 status history), **Allure Report** (Overview, Suites, Graphs, Behaviors, Timeline, Categories),
-**SonarQube Cloud** (quality-gate health dashboard), **ReportPortal** (configurable widget
-dashboard, launches/defect view, login), and **Coveralls** (repo coverage report) — captured from
-live demos / public projects. Only Allure TestOps and the SonarQube token page remain to grab
-(behind a login).
+**SonarQube** (quality-gate health dashboard + token-management screen), **ReportPortal**
+(configurable widget dashboard, launches/defect view, login), **Allure TestOps** (configurable
+widget dashboard, project navigation), and **Coveralls** (repo coverage report) — from live demos,
+public projects, and vendor docs. Essentially the whole field is now illustrated; only
+ReportPortal's profile/API-keys screen is left to grab.
 
 ---
 
