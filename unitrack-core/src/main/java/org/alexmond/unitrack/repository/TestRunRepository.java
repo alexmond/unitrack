@@ -28,6 +28,14 @@ public interface TestRunRepository extends JpaRepository<TestRun, Long> {
 	@Query("select distinct t.flag from TestRun t where t.project.id = :projectId order by t.flag")
 	List<String> findDistinctFlags(@Param("projectId") Long projectId);
 
+	/** Pull/merge-request numbers seen for a project (newest number first). */
+	@Query("select distinct t.prNumber from TestRun t "
+			+ "where t.project.id = :projectId and t.prNumber is not null order by t.prNumber desc")
+	List<Integer> findDistinctPrNumbers(@Param("projectId") Long projectId);
+
+	/** All runs belonging to one pull/merge request, newest first (the PR timeline). */
+	List<TestRun> findByProjectIdAndPrNumberOrderByCreatedAtDesc(Long projectId, Integer prNumber);
+
 	Optional<TestRun> findFirstByProjectIdAndFlagOrderByCreatedAtDesc(Long projectId, String flag);
 
 	/** Existing run for a merge key, so sharded uploads accumulate into one run. */
