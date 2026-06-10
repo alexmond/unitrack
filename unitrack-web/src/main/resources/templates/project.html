@@ -70,7 +70,7 @@
         </tr>
         </thead>
         <tbody>
-        <tr th:each="r : ${runs}">
+        <tr th:each="r : ${runs}" th:classappend="${r.status != 'PASSED'} ? 'row-fail'">
             <td><a th:href="@{/runs/{id}(id=${r.id})}"
                    th:text="${#temporals.format(r.createdAt, 'MMM dd HH:mm')}">date</a></td>
             <td th:text="${r.branch} ?: '—'">main</td>

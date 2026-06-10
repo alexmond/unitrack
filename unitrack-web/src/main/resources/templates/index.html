@@ -13,22 +13,26 @@
     </div>
 
     <div class="cards" th:unless="${projects.isEmpty()}">
-        <a class="card text-reset text-decoration-none" th:each="p : ${projects}"
+        <a class="card health-card text-reset text-decoration-none" th:each="p : ${projects}"
+           th:with="run=${latest.get(p.id)}"
+           th:classappend="${run == null} ? '' : (${run.status == 'PASSED'} ? 'ok' : 'bad')"
            th:href="@{/projects/{id}(id=${p.id})}">
             <div class="card-body">
-                <h3 th:text="${p.name}">project</h3>
-                <div class="meta">
-                    <span th:text="${runCounts.get(p.id)} + ' runs'">0 runs</span>
-                </div>
-                <div class="stat-row" th:with="run=${latest.get(p.id)}" th:if="${run != null}">
-                    <span class="badge"
+                <div class="health-head">
+                    <h3 th:text="${p.name}">project</h3>
+                    <span th:if="${run != null}" class="badge"
                           th:classappend="${run.status == 'PASSED'} ? 'pass' : 'fail'"
                           th:text="${run.status}">PASSED</span>
-                    <span class="muted" th:text="${run.passed} + '/' + ${run.totalTests} + ' passed'">0/0</span>
-                    <span class="muted pct" th:if="${run.lineCoveragePct != null}"
-                          th:text="'cov ' + ${#numbers.formatDecimal(run.lineCoveragePct,1,1)} + '%'">cov</span>
                 </div>
-                <div class="meta" th:unless="${latest.get(p.id) != null}">No runs yet</div>
+                <div class="health-stats" th:if="${run != null}">
+                    <span><span class="num" th:text="${#numbers.formatDecimal(run.passRate(),1,0)} + '%'">100%</span> pass</span>
+                    <span th:if="${run.lineCoveragePct != null}">
+                        <span class="num" th:text="${#numbers.formatDecimal(run.lineCoveragePct,1,0)} + '%'">80%</span> cov</span>
+                    <span class="muted" th:text="${runCounts.get(p.id)} + ' runs'">0 runs</span>
+                </div>
+                <div class="health-foot muted" th:if="${run != null}"
+                     th:text="(${run.branch} ?: '—') + ' · ' + ${#temporals.format(run.createdAt, 'MMM dd HH:mm')}">main · date</div>
+                <div class="meta muted" th:if="${run == null}">No runs yet</div>
             </div>
         </a>
     </div>
