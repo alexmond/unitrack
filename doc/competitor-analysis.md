@@ -176,8 +176,7 @@ status history), **Allure Report** (Overview, Suites, Graphs, Behaviors, Timelin
 **SonarQube** (quality-gate health dashboard + token-management screen), **ReportPortal**
 (configurable widget dashboard, launches/defect view, login), **Allure TestOps** (configurable
 widget dashboard, project navigation), and **Coveralls** (repo coverage report) — from live demos,
-public projects, and vendor docs. Essentially the whole field is now illustrated; only
-ReportPortal's profile/API-keys screen is left to grab.
+public projects, and vendor docs. Every competitor screen referenced here is now captured.
 
 ---
 
