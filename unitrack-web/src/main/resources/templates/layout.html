@@ -13,11 +13,33 @@
     <script th:inline="none">
         (function () {
             var root = document.documentElement;
+            window.__charts = window.__charts || [];
+            // Pages create charts via window.__chart(el, cfg) so they're registered for re-tinting.
+            window.__chart = function (el, cfg) { var c = new Chart(el, cfg); window.__charts.push(c); return c; };
             function icon(t) {
                 var b = document.getElementById('theme-toggle');
                 if (b) { b.textContent = (t === 'light' ? '☾' : '☀'); }
             }
-            function apply(t) { root.setAttribute('data-theme', t); root.setAttribute('data-bs-theme', t); icon(t); }
+            // Charts bake CSS-variable colours at construct time; re-read + update them on theme change.
+            function retint() {
+                if (!window.__charts.length) { return; }
+                var css = getComputedStyle(root);
+                var muted = css.getPropertyValue('--muted').trim();
+                var text = css.getPropertyValue('--text').trim();
+                var grid = css.getPropertyValue('--border').trim();
+                window.__charts.forEach(function (c) {
+                    if (!c || !c.options) { return; }
+                    var s = c.options.scales || {};
+                    ['x', 'y'].forEach(function (ax) {
+                        if (s[ax] && s[ax].ticks) { s[ax].ticks.color = muted; }
+                        if (s[ax] && s[ax].grid) { s[ax].grid.color = grid; }
+                    });
+                    var lg = c.options.plugins && c.options.plugins.legend && c.options.plugins.legend.labels;
+                    if (lg) { lg.color = text; }
+                    c.update('none');
+                });
+            }
+            function apply(t) { root.setAttribute('data-theme', t); root.setAttribute('data-bs-theme', t); icon(t); retint(); }
             var saved = localStorage.getItem('theme');
             apply(saved || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'));
             window.__toggleTheme = function () {
