@@ -152,19 +152,19 @@
         const muted = css.getPropertyValue('--muted').trim() || '#8b98a5';
         const text = css.getPropertyValue('--text').trim() || '#e6edf3';
         const grid = css.getPropertyValue('--border').trim() || '#2c343d';
-        new Chart(document.getElementById('trendChart'), {
+        window.__chart(document.getElementById('trendChart'), {
             type: 'line',
             data: {
                 labels: labels,
                 datasets: [
                     { label: 'Pass rate %', data: passRate, borderColor: '#2ea043',
-                      backgroundColor: 'rgba(46,160,67,.15)', tension: .25, spanGaps: true },
+                      backgroundColor: 'rgba(46,160,67,.15)', tension: .25, spanGaps: true, fill: true },
                     { label: 'Line coverage %', data: coverage, borderColor: '#4493f8',
-                      backgroundColor: 'rgba(68,147,248,.12)', tension: .25, spanGaps: true }
+                      backgroundColor: 'rgba(68,147,248,.12)', tension: .25, spanGaps: true, fill: true }
                 ]
             },
             options: {
-                scales: { y: { min: 0, max: 100, ticks: { color: muted }, grid: { color: grid } },
+                scales: { y: { suggestedMin: 50, max: 100, ticks: { color: muted }, grid: { color: grid } },
                           x: { ticks: { color: muted }, grid: { color: grid } } },
                 plugins: { legend: { labels: { color: text } } }
             }

@@ -52,7 +52,7 @@
         const muted = css.getPropertyValue('--muted').trim() || '#8b98a5';
         const text = css.getPropertyValue('--text').trim() || '#e6edf3';
         const grid = css.getPropertyValue('--border').trim() || '#2c343d';
-        new Chart(document.getElementById('suiteChart'), {
+        window.__chart(document.getElementById('suiteChart'), {
             type: 'line',
             data: {
                 labels: labels,

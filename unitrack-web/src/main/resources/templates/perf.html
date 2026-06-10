@@ -67,7 +67,7 @@
         const axes = { y: { beginAtZero: true, ticks: { color: muted }, grid: { color: grid } },
                        x: { ticks: { color: muted }, grid: { color: grid } } };
         const legend = { plugins: { legend: { labels: { color: text } } } };
-        new Chart(document.getElementById('latencyChart'), {
+        window.__chart(document.getElementById('latencyChart'), {
             type: 'line',
             data: { labels: labels, datasets: [
                 { label: 'p50', data: p50, borderColor: '#2ea043', tension: .25, spanGaps: true },
@@ -75,14 +75,14 @@
                 { label: 'p99', data: p99, borderColor: '#f85149', tension: .25, spanGaps: true } ] },
             options: { scales: axes, ...legend }
         });
-        new Chart(document.getElementById('throughputChart'), {
+        window.__chart(document.getElementById('throughputChart'), {
             type: 'line',
             data: { labels: labels, datasets: [
                 { label: 'req/s', data: throughput, borderColor: '#4493f8',
                   backgroundColor: 'rgba(68,147,248,.12)', tension: .25, spanGaps: true } ] },
             options: { scales: axes, ...legend }
         });
-        new Chart(document.getElementById('errorChart'), {
+        window.__chart(document.getElementById('errorChart'), {
             type: 'line',
             data: { labels: labels, datasets: [
                 { label: 'error %', data: errorPct, borderColor: '#f85149',
