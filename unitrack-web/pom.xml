@@ -61,6 +61,13 @@
             <version>${bootstrap.version}</version>
         </dependency>
 
+        <!-- Chart.js served in-jar via WebJars (no CDN dependency for the self-hosted app). -->
+        <dependency>
+            <groupId>org.webjars.npm</groupId>
+            <artifactId>chart.js</artifactId>
+            <version>${chartjs.version}</version>
+        </dependency>
+
         <!-- Thymeleaf layout decorator: one base layout (head/topbar/footer) for every page. -->
         <dependency>
             <groupId>nz.net.ultraq.thymeleaf</groupId>
