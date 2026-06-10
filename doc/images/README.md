@@ -7,8 +7,8 @@ feature comparison.
 > Codecov/Datadog/Trunk captured 2026-06-07 (vendor marketing/docs images). Allure Report
 > (2026-06-09), SonarQube Cloud / ReportPortal / Coveralls (2026-06-10, live demos / public
 > projects via headless Chrome), and Allure TestOps + the SonarQube token page (2026-06-10,
-> vendor docs — both live screens are login-gated). Essentially the whole analysis is now
-> illustrated; see "Still to capture" for the one remaining screen.
+> vendor docs — both live screens are login-gated). Every screen referenced in the analysis
+> is now captured.
 
 ## Allure Report
 
@@ -47,6 +47,7 @@ headless Chrome over the DevTools Protocol). The closest analogue to UniTrack's 
 | `reportportal-dashboard-widgets.png` | **Configurable widget dashboard** — Add/Edit/Lock widgets, launch-stats bar/area, growth + failed-cases trend charts | **#21 configurable widgets + real-time** | demo.reportportal.io |
 | `reportportal-launches.png` | All Launches — per-launch pass/fail + Product Bug / Auto Bug / System Issue defect donuts | Recent runs + triage/clusters | demo.reportportal.io |
 | `reportportal-login.png` | Login screen (GitHub OAuth + local account) | _gap — auth/login_ | demo.reportportal.io |
+| `reportportal-api-keys.png` | Profile → API Keys: profile header (name/email/change-password) + **Generate API Key** | **API tokens** + profile | demo.reportportal.io |
 
 ## Coveralls
 
@@ -102,9 +103,5 @@ OAuth. The commercial, "rich configurable" sibling of Allure Report.
 These screens back the gap analysis (config/profile/auth) but their hosts block automated
 download — grab them manually from the live UI / docs:
 
-| Want | Screen | Source page |
-|---|---|---|
-| ReportPortal | Profile → API keys; Edit personal info | https://demo.reportportal.io (Profile, behind login) |
-
-Everything else in the analysis is now captured. The lone remaining screen (ReportPortal's
-profile/API-keys page) is reachable in the demo but wasn't grabbed in this pass.
+_All screens referenced in the competitor analysis are now captured._ Add new rows here if a
+future analysis section needs a screen this index doesn't yet have.
