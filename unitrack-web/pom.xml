@@ -68,6 +68,13 @@
             <version>${chartjs.version}</version>
         </dependency>
 
+        <!-- Bootstrap Icons (monochrome nav icons) served in-jar via WebJars. -->
+        <dependency>
+            <groupId>org.webjars.npm</groupId>
+            <artifactId>bootstrap-icons</artifactId>
+            <version>${bootstrap-icons.version}</version>
+        </dependency>
+
         <!-- Thymeleaf layout decorator: one base layout (head/topbar/footer) for every page. -->
         <dependency>
             <groupId>nz.net.ultraq.thymeleaf</groupId>
