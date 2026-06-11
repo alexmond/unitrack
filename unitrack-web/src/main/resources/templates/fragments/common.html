@@ -28,7 +28,7 @@
     <a th:href="@{/projects/{id}/coverage(id=${projectId})}"
        th:classappend="${active == 'coverage'} ? 'current'"
        th:attr="aria-current=${active == 'coverage'} ? 'page' : null">
-        <i class="bi bi-umbrella" aria-hidden="true"></i> Coverage</a>
+        <i class="bi bi-shield-check" aria-hidden="true"></i> Coverage</a>
     <a th:href="@{/projects/{id}/flaky(id=${projectId})}"
        th:classappend="${active == 'flaky'} ? 'current'"
        th:attr="aria-current=${active == 'flaky'} ? 'page' : null">

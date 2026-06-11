@@ -16,7 +16,8 @@
         <div class="donut-fig">
             <div class="donut" th:style="'--p:' + ${r.passRate()} + ';--f:' + ${failpct}"></div>
             <div class="donut-center">
-                <span class="donut-pct" th:text="${#numbers.formatDecimal(r.passRate(),1,0)} + '%'">100%</span>
+                <span class="donut-pct" th:classappend="${r.status != 'PASSED'} ? 'lvl-bad'"
+                      th:text="${#numbers.formatDecimal(r.passRate(),1,0)} + '%'">100%</span>
                 <span class="donut-sub">pass</span>
             </div>
         </div>
@@ -38,7 +39,7 @@
     </div>
 
     <details class="howto">
-        <summary>📤 Push results from CI</summary>
+        <summary><i class="bi bi-cloud-upload" aria-hidden="true"></i> Push results from CI</summary>
         <p class="muted">Upload this project's JUnit + coverage from any CI with the UniTrack CLI
             (a runnable JAR, or via the Docker image / GitHub Action):</p>
         <div class="snippet">
@@ -164,7 +165,7 @@
                 ]
             },
             options: {
-                scales: { y: { suggestedMin: 50, max: 100, ticks: { color: muted }, grid: { color: grid } },
+                scales: { y: { min: 0, max: 100, ticks: { color: muted }, grid: { color: grid } },
                           x: { ticks: { color: muted }, grid: { color: grid } } },
                 plugins: { legend: { labels: { color: text } } }
             }
