@@ -32,7 +32,8 @@
              th:with="failpct=${run.totalTests > 0 ? (run.failed + run.errors) * 100.0 / run.totalTests : 0}">
             <div class="donut" th:style="'--p:' + ${run.passRate()} + ';--f:' + ${failpct}"></div>
             <div class="donut-center">
-                <span class="donut-pct" th:text="${#numbers.formatDecimal(run.passRate(),1,0)} + '%'">100%</span>
+                <span class="donut-pct" th:classappend="${run.status != 'PASSED'} ? 'lvl-bad'"
+                      th:text="${#numbers.formatDecimal(run.passRate(),1,0)} + '%'">100%</span>
                 <span class="donut-sub">pass</span>
             </div>
         </div>
