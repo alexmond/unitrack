@@ -5,37 +5,60 @@
 
 <main class="container" layout:fragment="content">
     <h1>Projects</h1>
-    <p class="crumbs">Test &amp; coverage tracking across your repositories.</p>
+    <p class="crumbs">Health across your repositories — failing gates first.</p>
 
-    <div th:if="${projects.isEmpty()}" class="empty">
+    <div th:if="${board.isEmpty()}" class="empty">
         No projects yet. Upload results with
         <code class="mono">POST /api/v1/ingest</code> to get started.
     </div>
 
-    <div class="cards" th:unless="${projects.isEmpty()}">
-        <a class="card health-card text-reset text-decoration-none" th:each="p : ${projects}"
-           th:with="run=${latest.get(p.id)}"
-           th:classappend="${run == null} ? '' : (${run.status == 'PASSED'} ? 'ok' : 'bad')"
-           th:href="@{/projects/{id}(id=${p.id})}">
-            <div class="card-body">
-                <div class="health-head">
-                    <h3 th:text="${p.name}">project</h3>
-                    <span th:if="${run != null}" class="badge"
-                          th:classappend="${run.status == 'PASSED'} ? 'pass' : 'fail'"
-                          th:text="${run.status}">PASSED</span>
-                </div>
-                <div class="health-stats" th:if="${run != null}">
-                    <span><span class="num" th:text="${#numbers.formatDecimal(run.passRate(),1,0)} + '%'">100%</span> pass</span>
-                    <span th:if="${run.lineCoveragePct != null}">
-                        <span class="num" th:text="${#numbers.formatDecimal(run.lineCoveragePct,1,0)} + '%'">80%</span> cov</span>
-                    <span class="muted" th:text="${runCounts.get(p.id)} + ' runs'">0 runs</span>
-                </div>
-                <div class="health-foot muted" th:if="${run != null}"
-                     th:text="(${run.branch} ?: '—') + ' · ' + ${#temporals.format(run.createdAt, 'MMM dd HH:mm')}">main · date</div>
-                <div class="meta muted" th:if="${run == null}">No runs yet</div>
-            </div>
-        </a>
-    </div>
+    <table class="table table-hover align-middle board" th:unless="${board.isEmpty()}">
+        <thead>
+        <tr>
+            <th>Project</th>
+            <th>Gate</th>
+            <th class="num">Pass %</th>
+            <th class="num">Coverage</th>
+            <th class="num">Flaky</th>
+            <th class="num">Trend</th>
+            <th>Last run</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="h : ${board}" th:classappend="${h.hasRuns() and !h.gatePassed()} ? 'row-fail'">
+            <td>
+                <a th:href="@{/projects/{id}(id=${h.projectId()})}" th:text="${h.projectName()}">project</a>
+                <code class="mono muted" th:if="${h.branch() != null}" th:text="${h.branch()}">main</code>
+            </td>
+            <td>
+                <span th:if="${h.hasRuns()}" class="badge" th:classappend="${h.gatePassed()} ? 'pass' : 'fail'"
+                      th:text="${h.gateStatus()}">PASSED</span>
+                <span th:unless="${h.hasRuns()}" class="muted">—</span>
+            </td>
+            <td class="num pct"
+                th:text="${h.passRate() != null} ? ${#numbers.formatDecimal(h.passRate(),1,1)} + '%' : '—'">—</td>
+            <td class="num pct"
+                th:text="${h.coveragePct() != null} ? ${#numbers.formatDecimal(h.coveragePct(),1,1)} + '%' : '—'">—</td>
+            <td class="num">
+                <span th:if="${h.flakyCount() > 0}" class="badge skip"
+                      th:text="${h.flakyCount()}" th:title="${h.flakyCount()} + ' flaky tests'">0</span>
+                <span th:unless="${h.flakyCount() > 0}" class="muted">—</span>
+            </td>
+            <td class="num">
+                <i th:if="${h.trend() > 0}" class="bi bi-arrow-up-short trend-up"
+                   title="Pass rate up vs previous run" aria-label="up"></i>
+                <i th:if="${h.trend() < 0}" class="bi bi-arrow-down-short trend-down"
+                   title="Pass rate down vs previous run" aria-label="down"></i>
+                <span th:if="${h.trend() == 0}" class="muted" aria-label="flat">—</span>
+            </td>
+            <td>
+                <a th:if="${h.hasRuns()}" th:href="@{/runs/{id}(id=${h.lastRunId()})}"
+                   th:text="${#temporals.format(h.lastRunAt(), 'MMM dd HH:mm')}">date</a>
+                <span th:unless="${h.hasRuns()}" class="muted">No runs yet</span>
+            </td>
+        </tr>
+        </tbody>
+    </table>
 </main>
 </body>
 </html>

@@ -290,16 +290,12 @@ details.output pre {
 
 /* --- Tier 1: health-at-a-glance --- */
 
-/* Index project cards: a status-coloured left rail + a stat row, so each project's
-   health is legible without clicking in. */
-.health-card { border-left: 3px solid var(--border); }
-.health-card.ok { border-left-color: var(--green); }
-.health-card.bad { border-left-color: var(--red); }
-.health-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.health-head h3 { margin: 0; font-size: 16px; }
-.health-stats { display: flex; gap: 16px; align-items: baseline; flex-wrap: wrap; margin: 12px 0 8px; color: var(--muted); font-size: 13px; }
-.health-stats .num { font-size: 19px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
-.health-foot { font-size: 12px; }
+/* Global health board (home): one row per project. The branch chip sits muted next to
+   the name; trend arrows colour the pass-rate direction vs the previous run. */
+.board td .mono { margin-left: 8px; font-size: 12px; }
+.trend-up { color: var(--green); }
+.trend-down { color: var(--red); }
+.board .bi { font-size: 18px; line-height: 1; vertical-align: middle; }
 
 /* Failed runs stand out in run tables (was indistinguishable from passing rows). */
 .table tbody tr.row-fail td { background: rgba(229, 83, 75, .07); }

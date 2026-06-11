@@ -14,6 +14,7 @@ import org.alexmond.unitrack.report.PerfRunDetailService;
 import org.alexmond.unitrack.report.PerfTrendPoint;
 import org.alexmond.unitrack.report.PerformanceService;
 import org.alexmond.unitrack.report.PerformanceSummary;
+import org.alexmond.unitrack.report.ProjectHealthService;
 import org.alexmond.unitrack.report.ProjectSettingsService;
 import org.alexmond.unitrack.report.PullRequestService;
 import org.alexmond.unitrack.report.QualityGateService;
@@ -33,7 +34,6 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -81,21 +81,11 @@ public class DashboardController {
 
 	private final BranchService branchService;
 
+	private final ProjectHealthService projectHealth;
+
 	@GetMapping("/")
 	public String index(Model model) {
-		List<Project> projects = new ArrayList<>(reporting.listProjects());
-		Map<Long, Long> runCounts = new HashMap<>();
-		Map<Long, TestRun> latest = new HashMap<>();
-		for (Project p : projects) {
-			runCounts.put(p.getId(), reporting.runCount(p.getId()));
-			reporting.recentRuns(p.getId(), 1).stream().findFirst().ifPresent((run) -> latest.put(p.getId(), run));
-		}
-		// Failing projects first, then no-runs, then by name — so trouble is at the top.
-		projects.sort(Comparator.comparingInt((Project p) -> healthRank(latest.get(p.getId())))
-			.thenComparing(Project::getName));
-		model.addAttribute("projects", projects);
-		model.addAttribute("runCounts", runCounts);
-		model.addAttribute("latest", latest);
+		model.addAttribute("board", projectHealth.board());
 		return "index";
 	}
 
@@ -268,16 +258,6 @@ public class DashboardController {
 		return "java -jar unitrack-cli.jar upload \\\n" + "  --url " + base + " \\\n" + "  --project \"" + projectName
 				+ "\" \\\n" + "  --junit \"target/surefire-reports/*.xml\" \\\n"
 				+ "  --jacoco \"target/site/jacoco/jacoco.xml\"";
-	}
-
-	/**
-	 * 0 = latest run failing, 1 = passing, 2 = no runs — for sorting the project list.
-	 */
-	private static int healthRank(TestRun run) {
-		if (run == null) {
-			return 2;
-		}
-		return "PASSED".equals(run.getStatus()) ? 1 : 0;
 	}
 
 	/** Trend X labels with duplicate SHAs disambiguated (a re-run of the same commit). */
