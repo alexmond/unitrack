@@ -12,6 +12,28 @@
         <code class="mono">POST /api/v1/ingest</code> to get started.
     </div>
 
+    <div class="stat-row" th:unless="${board.isEmpty()}">
+        <div class="stat">
+            <div class="label">Projects</div>
+            <div class="value" th:text="${summary.projectCount()}">0</div>
+        </div>
+        <div class="stat">
+            <div class="label">Failing gates</div>
+            <div class="value" th:classappend="${summary.failingGates() > 0} ? 'lvl-bad'"
+                 th:text="${summary.failingGates()}">0</div>
+        </div>
+        <div class="stat">
+            <div class="label">Flaky tests</div>
+            <div class="value" th:classappend="${summary.flakyTotal() > 0} ? 'lvl-warn'"
+                 th:text="${summary.flakyTotal()}">0</div>
+        </div>
+        <div class="stat">
+            <div class="label">Avg coverage</div>
+            <div class="value"
+                 th:text="${summary.avgCoveragePct() != null} ? ${#numbers.formatDecimal(summary.avgCoveragePct(),1,1)} + '%' : '—'">—</div>
+        </div>
+    </div>
+
     <table class="table table-hover align-middle board" th:unless="${board.isEmpty()}">
         <thead>
         <tr>
