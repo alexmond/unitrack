@@ -10,6 +10,7 @@ import org.alexmond.unitrack.report.BranchSummary;
 import org.alexmond.unitrack.report.CoverageDiffService;
 import org.alexmond.unitrack.report.DurationPoint;
 import org.alexmond.unitrack.report.FailureClusteringService;
+import org.alexmond.unitrack.report.TestTimelinePoint;
 import org.alexmond.unitrack.report.PerfRegressionService;
 import org.alexmond.unitrack.report.PerfRunDetailService;
 import org.alexmond.unitrack.report.PerfTrendPoint;
@@ -21,7 +22,6 @@ import org.alexmond.unitrack.report.ProjectSettingsService;
 import org.alexmond.unitrack.report.PullRequestService;
 import org.alexmond.unitrack.report.QualityGateService;
 import org.alexmond.unitrack.report.ReportingService;
-import org.alexmond.unitrack.report.TestDurationTrend;
 import org.alexmond.unitrack.report.TestRegressionService;
 import org.alexmond.unitrack.report.TriageService;
 import lombok.RequiredArgsConstructor;
@@ -230,14 +230,14 @@ public class DashboardController {
 			@RequestParam String name, Model model) {
 		Project project = reporting.findProject(id)
 			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found"));
-		TestDurationTrend trend = performance.testDurationTrend(id, className, name, TREND_LIMIT);
+		List<TestTimelinePoint> timeline = performance.testStatusTimeline(id, className, name, TREND_LIMIT);
 		model.addAttribute("project", project);
 		model.addAttribute("className", className);
 		model.addAttribute("name", name);
-		model.addAttribute("points", trend.points());
-		model.addAttribute("trendLabels",
-				toJson(labels(trend.points().stream().map(DurationPoint::shortSha).toList())));
-		model.addAttribute("trendMs", toJson(trend.points().stream().map(DurationPoint::durationMs).toList()));
+		model.addAttribute("timeline", timeline);
+		model.addAttribute("blame", blame.firstFailingForTest(id, className, name).orElse(null));
+		model.addAttribute("trendLabels", toJson(labels(timeline.stream().map(TestTimelinePoint::shortSha).toList())));
+		model.addAttribute("trendMs", toJson(timeline.stream().map(TestTimelinePoint::durationMs).toList()));
 		return "test";
 	}
 
