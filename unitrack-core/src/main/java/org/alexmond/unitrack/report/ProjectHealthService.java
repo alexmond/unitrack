@@ -36,14 +36,12 @@ public class ProjectHealthService {
 	private ProjectHealth health(Project project) {
 		Long id = project.getId();
 		List<TestRun> recent = this.reporting.recentRuns(id, 2);
-		long flakyCount = this.flaky.listFlaky(id).size();
+		long flakyCount = this.flaky.flakyCount(id);
 		if (recent.isEmpty()) {
 			return new ProjectHealth(id, project.getName(), null, null, null, null, null, null, flakyCount, 0);
 		}
 		TestRun latest = recent.get(0);
-		String gateStatus = this.qualityGate.evaluate(latest.getId())
-			.map(QualityGateResult::status)
-			.orElse(latest.getStatus());
+		String gateStatus = this.qualityGate.evaluate(latest).status();
 		return new ProjectHealth(id, project.getName(), latest.getId(), latest.getCreatedAt(), latest.getBranch(),
 				gateStatus, latest.passRate(), latest.getLineCoveragePct(), flakyCount, trend(recent));
 	}

@@ -36,6 +36,15 @@ public class FlakyTestService {
 		return flakyTests.findFlakyStats(projectId).stream().map((stat) -> toView(stat, stored)).toList();
 	}
 
+	/**
+	 * Count of live-detected flaky tests for a project — runs only the detection query,
+	 * without loading stored quarantine rows or building views (for the health board).
+	 */
+	@Transactional(readOnly = true)
+	public long flakyCount(Long projectId) {
+		return flakyTests.findFlakyStats(projectId).size();
+	}
+
 	private FlakyTestView toView(FlakyStat stat, Map<String, FlakyTest> stored) {
 		FlakyTest ft = stored.get(key(stat.getClassName(), stat.getName()));
 		FlakyStatus status = (ft != null) ? ft.getStatus() : FlakyStatus.ACTIVE;
