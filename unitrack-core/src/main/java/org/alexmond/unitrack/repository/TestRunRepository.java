@@ -21,6 +21,8 @@ public interface TestRunRepository extends JpaRepository<TestRun, Long> {
 
 	long countByProjectId(Long projectId);
 
+	long countByProjectIdAndBranch(Long projectId, String branch);
+
 	/**
 	 * Most recent prior run on the baseline branch with the same flag — the gate
 	 * baseline.
