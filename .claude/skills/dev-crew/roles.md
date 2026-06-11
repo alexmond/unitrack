@@ -70,6 +70,16 @@ at `<repo>/.claude/agents/dc-<role>.md`).
 - learnings:
   - (seed) never execute apply/push/publish/release/prune/drop without an explicit go, even under skipped permissions
 
+### ui-reviewer
+- subagent: dc-ui-reviewer
+- model: sonnet   effort: high
+- tools: read-only (Read, Grep, Glob, Bash) — runs the app + screenshots; never edits source
+- status: probationary
+- owns: UI craft on the rendered page — design-system fit, theme correctness, accessibility, link wiring — the gap correctness-qa can't see
+- done: UIREVIEW.md with a PASS/CHANGES-REQUESTED verdict, a screenshot of the running page, and a per-criterion UI/link check
+- learnings:
+  - minted 2026-06-11 from a standing steer: "when UI is involved, add at least one more role." Runs after qa PASS on any task touching templates/CSS/rendered pages. Flip to stable after >=3 clean runs.
+
 ## Candidate roles (mint when log.md shows the gap)
 
 These are pre-described so the New-role protocol is one step when the need shows
