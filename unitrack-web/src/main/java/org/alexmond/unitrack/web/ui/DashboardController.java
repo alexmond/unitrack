@@ -13,6 +13,7 @@ import org.alexmond.unitrack.report.PerfRunDetailService;
 import org.alexmond.unitrack.report.PerfTrendPoint;
 import org.alexmond.unitrack.report.PerformanceService;
 import org.alexmond.unitrack.report.PerformanceSummary;
+import org.alexmond.unitrack.report.ProjectSettingsService;
 import org.alexmond.unitrack.report.PullRequestService;
 import org.alexmond.unitrack.report.QualityGateService;
 import org.alexmond.unitrack.report.ReportingService;
@@ -75,6 +76,8 @@ public class DashboardController {
 
 	private final PullRequestService pullRequests;
 
+	private final ProjectSettingsService settings;
+
 	@GetMapping("/")
 	public String index(Model model) {
 		List<Project> projects = new ArrayList<>(reporting.listProjects());
@@ -94,13 +97,17 @@ public class DashboardController {
 	}
 
 	@GetMapping("/projects/{id}")
-	public String project(@PathVariable Long id, Model model) {
+	public String project(@PathVariable Long id, @RequestParam(required = false) String branch, Model model) {
 		Project project = reporting.findProject(id)
 			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found"));
-		List<TestRun> runs = reporting.recentRuns(id, RUN_LIST_LIMIT);
-		List<TestRun> trend = reporting.trendRuns(id, TREND_LIMIT);
+		List<String> branches = reporting.distinctBranches(id);
+		String selectedBranch = resolveBranch(id, branch, branches);
+		List<TestRun> runs = reporting.recentRuns(id, selectedBranch, RUN_LIST_LIMIT);
+		List<TestRun> trend = reporting.trendRuns(id, selectedBranch, TREND_LIMIT);
 
 		model.addAttribute("project", project);
+		model.addAttribute("branches", branches);
+		model.addAttribute("selectedBranch", selectedBranch);
 		model.addAttribute("runs", runs);
 		model.addAttribute("flags", reporting.flagSummaries(id));
 		model.addAttribute("trendLabels", toJson(labels(trend.stream().map(TestRun::getShortSha).toList())));
@@ -233,6 +240,19 @@ public class DashboardController {
 				toJson(labels(trend.points().stream().map(DurationPoint::shortSha).toList())));
 		model.addAttribute("trendMs", toJson(trend.points().stream().map(DurationPoint::durationMs).toList()));
 		return "test";
+	}
+
+	/**
+	 * The branch the Overview is scoped to. An explicit {@code branch} param wins (an
+	 * unknown or blank value means "all branches"); with no param we default to the gate
+	 * base branch when it has runs, otherwise all branches so the page is never empty.
+	 */
+	private String resolveBranch(Long projectId, String branch, List<String> branches) {
+		if (branch != null) {
+			return branches.contains(branch) ? branch : null;
+		}
+		String base = settings.gateConfig(projectId).baseBranch();
+		return branches.contains(base) ? base : null;
 	}
 
 	/**

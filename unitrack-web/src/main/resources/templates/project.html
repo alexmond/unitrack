@@ -11,6 +11,16 @@
     </p>
     <nav th:replace="~{fragments/common :: subnav(${project.id}, 'overview')}"></nav>
 
+    <form th:if="${branches.size() > 1}" method="get" class="branch-bar"
+          th:action="@{/projects/{id}(id=${project.id})}">
+        <label for="branchSel"><i class="bi bi-signpost-split" aria-hidden="true"></i> Branch</label>
+        <select id="branchSel" name="branch" onchange="this.form.submit()">
+            <option value="" th:selected="${selectedBranch == null}">All branches</option>
+            <option th:each="b : ${branches}" th:value="${b}" th:text="${b}"
+                    th:selected="${b == selectedBranch}">main</option>
+        </select>
+    </form>
+
     <div class="hero" th:if="${!runs.isEmpty()}"
          th:with="r=${runs[0]},failpct=${runs[0].totalTests > 0 ? (runs[0].failed + runs[0].errors) * 100.0 / runs[0].totalTests : 0}">
         <div class="donut-fig">
@@ -104,7 +114,9 @@
     </div>
 
     <h2>Recent runs</h2>
-    <div th:if="${runs.isEmpty()}" class="empty">No runs uploaded yet.</div>
+    <div th:if="${runs.isEmpty()}" class="empty"
+         th:text="${selectedBranch != null} ? 'No runs on ' + ${selectedBranch} + ' yet.' : 'No runs uploaded yet.'">
+        No runs uploaded yet.</div>
     <table class="table table-hover align-middle" th:unless="${runs.isEmpty()}">
         <thead>
         <tr>

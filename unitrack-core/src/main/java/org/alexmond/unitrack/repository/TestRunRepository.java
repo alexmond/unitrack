@@ -16,6 +16,9 @@ public interface TestRunRepository extends JpaRepository<TestRun, Long> {
 
 	List<TestRun> findByProjectIdOrderByCreatedAtAsc(Long projectId, Pageable pageable);
 
+	/** Recent runs on a single branch, newest first — for branch-scoped Overview. */
+	List<TestRun> findByProjectIdAndBranchOrderByCreatedAtDesc(Long projectId, String branch, Pageable pageable);
+
 	long countByProjectId(Long projectId);
 
 	/**
@@ -27,6 +30,14 @@ public interface TestRunRepository extends JpaRepository<TestRun, Long> {
 
 	@Query("select distinct t.flag from TestRun t where t.project.id = :projectId order by t.flag")
 	List<String> findDistinctFlags(@Param("projectId") Long projectId);
+
+	/**
+	 * Distinct branches seen for a project (alphabetical) — for the Overview branch
+	 * picker.
+	 */
+	@Query("select distinct t.branch from TestRun t "
+			+ "where t.project.id = :projectId and t.branch is not null order by t.branch")
+	List<String> findDistinctBranches(@Param("projectId") Long projectId);
 
 	/** Pull/merge-request numbers seen for a project (newest number first). */
 	@Query("select distinct t.prNumber from TestRun t "

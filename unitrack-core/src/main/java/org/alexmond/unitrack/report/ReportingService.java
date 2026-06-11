@@ -61,10 +61,34 @@ public class ReportingService {
 		return runs.findByProjectIdOrderByCreatedAtDesc(projectId, PageRequest.ofSize(limit));
 	}
 
+	/**
+	 * Most recent runs first, optionally scoped to one branch (null/blank = all
+	 * branches).
+	 */
+	public List<TestRun> recentRuns(Long projectId, String branch, int limit) {
+		if (branch == null || branch.isBlank()) {
+			return recentRuns(projectId, limit);
+		}
+		return runs.findByProjectIdAndBranchOrderByCreatedAtDesc(projectId, branch, PageRequest.ofSize(limit));
+	}
+
 	/** Oldest first — for trend charts. */
 	public List<TestRun> trendRuns(Long projectId, int limit) {
 		List<TestRun> recent = runs.findByProjectIdOrderByCreatedAtDesc(projectId, PageRequest.ofSize(limit));
 		return recent.reversed();
+	}
+
+	/** Oldest first, optionally scoped to one branch (null/blank = all branches). */
+	public List<TestRun> trendRuns(Long projectId, String branch, int limit) {
+		return recentRuns(projectId, branch, limit).reversed();
+	}
+
+	/**
+	 * Distinct branches seen for a project (alphabetical) — for the Overview branch
+	 * picker.
+	 */
+	public List<String> distinctBranches(Long projectId) {
+		return runs.findDistinctBranches(projectId);
 	}
 
 	public Optional<TestRun> findRun(Long id) {
