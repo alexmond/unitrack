@@ -232,6 +232,13 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 
 .chart-wrap { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
 
+/* Overview branch picker — native select inherits the theme via color-scheme (incl. its caret). */
+.branch-bar { display: flex; align-items: center; gap: 8px; margin: 2px 0 14px; font-size: 13px; color: var(--muted); }
+.branch-bar select {
+    background: var(--panel); color: var(--text);
+    border: 1px solid var(--border); border-radius: 8px; padding: 4px 9px; font-size: 13px;
+}
+
 details.howto { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; margin: 4px 0 8px; }
 details.howto > summary { cursor: pointer; font-weight: 600; }
 .snippet { position: relative; }
