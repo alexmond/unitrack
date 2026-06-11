@@ -9,3 +9,6 @@ data/
 
 # Claude Code personal per-project settings
 .claude/settings.local.json
+
+# dev-crew transient run handoffs
+.claude/dev-crew/runs/
