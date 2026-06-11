@@ -220,6 +220,7 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .badge.fail { background: rgba(229,83,75,.15); color: var(--red); }
 .badge.skip { background: rgba(210,153,34,.15); color: var(--amber); }
 .badge.error { background: rgba(229,83,75,.22); color: var(--red); }
+.badge.tag { background: var(--panel-2); color: var(--muted); box-shadow: inset 0 0 0 1px var(--border); }
 
 .bar { height: 8px; border-radius: 999px; background: var(--panel-2); box-shadow: inset 0 0 0 1px var(--border); overflow: hidden; min-width: 90px; }
 .bar > span { display: block; height: 100%; background: var(--green); }

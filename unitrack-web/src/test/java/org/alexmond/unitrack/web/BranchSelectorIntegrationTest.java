@@ -74,4 +74,19 @@ class BranchSelectorIntegrationTest {
 			.andExpect(content().string(containsString("bbbbbbb")));
 	}
 
+	@Test
+	void branchesSectionListsEachBranchAndMarksTheDefault() throws Exception {
+		MockMvc mvc = mockMvc();
+		long projectId = ingest(mvc, "branch-list", "main", "cccccccc1111");
+		ingest(mvc, "branch-list", "release/1.0", "dddddddd2222");
+
+		mvc.perform(get("/projects/{id}", projectId))
+			.andExpect(status().isOk())
+			.andExpect(content().string(containsString("Branches")))
+			.andExpect(content().string(containsString("release/1.0")))
+			// The gate base branch (main) carries the default-branch marker (not the flag
+			// cell).
+			.andExpect(content().string(containsString("tag\">default</span>")));
+	}
+
 }
