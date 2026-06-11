@@ -2,6 +2,8 @@ package org.alexmond.unitrack.report;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
+import java.util.OptionalDouble;
 
 import lombok.RequiredArgsConstructor;
 import org.alexmond.unitrack.domain.Project;
@@ -31,6 +33,18 @@ public class ProjectHealthService {
 			.map(this::health)
 			.sorted(Comparator.comparingInt(ProjectHealthService::rank).thenComparing(ProjectHealth::projectName))
 			.toList();
+	}
+
+	/** Aggregate KPIs across the board rows, derived in memory — no extra queries. */
+	public static BoardSummary summarize(List<ProjectHealth> board) {
+		long failingGates = board.stream().filter(ProjectHealth::hasRuns).filter((h) -> !h.gatePassed()).count();
+		long flakyTotal = board.stream().mapToLong(ProjectHealth::flakyCount).sum();
+		OptionalDouble avg = board.stream()
+			.map(ProjectHealth::coveragePct)
+			.filter(Objects::nonNull)
+			.mapToDouble(Double::doubleValue)
+			.average();
+		return new BoardSummary(board.size(), failingGates, flakyTotal, avg.isPresent() ? avg.getAsDouble() : null);
 	}
 
 	private ProjectHealth health(Project project) {

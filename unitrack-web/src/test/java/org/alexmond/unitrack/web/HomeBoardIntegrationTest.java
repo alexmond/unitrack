@@ -56,7 +56,10 @@ class HomeBoardIntegrationTest {
 			.andExpect(content().string(containsString("board-green")))
 			.andExpect(content().string(containsString("board-red")))
 			// The failing project surfaces a FAILED gate badge.
-			.andExpect(content().string(containsString("FAILED")));
+			.andExpect(content().string(containsString("FAILED")))
+			// The KPI summary strip renders its tiles.
+			.andExpect(content().string(containsString("Failing gates")))
+			.andExpect(content().string(containsString("Avg coverage")));
 	}
 
 }

@@ -151,6 +151,12 @@ class CoreReportingTest {
 		assertThat(demo.projectName()).isEqualTo("core-demo");
 		assertThat(demo.flakyCount()).isGreaterThanOrEqualTo(1);
 
+		// Board summary KPIs derive from the board list (no extra queries).
+		BoardSummary summary = ProjectHealthService.summarize(board);
+		assertThat(summary.projectCount()).isEqualTo(board.size());
+		assertThat(summary.flakyTotal()).isGreaterThanOrEqualTo(demo.flakyCount());
+		assertThat(summary.avgCoveragePct()).isNotNull();
+
 		// Regression diff: 'a' is a new failure vs the baseline.
 		assertThat(regression.diff(currentId)).hasValueSatisfying((r) -> {
 			assertThat(r.baselineFound()).isTrue();

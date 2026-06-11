@@ -15,6 +15,7 @@ import org.alexmond.unitrack.report.PerfRunDetailService;
 import org.alexmond.unitrack.report.PerfTrendPoint;
 import org.alexmond.unitrack.report.PerformanceService;
 import org.alexmond.unitrack.report.PerformanceSummary;
+import org.alexmond.unitrack.report.ProjectHealth;
 import org.alexmond.unitrack.report.ProjectHealthService;
 import org.alexmond.unitrack.report.ProjectSettingsService;
 import org.alexmond.unitrack.report.PullRequestService;
@@ -86,7 +87,9 @@ public class DashboardController {
 
 	@GetMapping("/")
 	public String index(Model model) {
-		model.addAttribute("board", projectHealth.board());
+		List<ProjectHealth> board = projectHealth.board();
+		model.addAttribute("board", board);
+		model.addAttribute("summary", ProjectHealthService.summarize(board));
 		return "index";
 	}
 
