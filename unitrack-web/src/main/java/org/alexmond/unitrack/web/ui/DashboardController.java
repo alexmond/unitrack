@@ -5,6 +5,7 @@ import org.alexmond.unitrack.domain.Project;
 import org.alexmond.unitrack.domain.TestCaseResult;
 import org.alexmond.unitrack.domain.TestRun;
 import org.alexmond.unitrack.report.BlameService;
+import org.alexmond.unitrack.report.BranchService;
 import org.alexmond.unitrack.report.CoverageDiffService;
 import org.alexmond.unitrack.report.DurationPoint;
 import org.alexmond.unitrack.report.FailureClusteringService;
@@ -78,6 +79,8 @@ public class DashboardController {
 
 	private final ProjectSettingsService settings;
 
+	private final BranchService branchService;
+
 	@GetMapping("/")
 	public String index(Model model) {
 		List<Project> projects = new ArrayList<>(reporting.listProjects());
@@ -108,6 +111,7 @@ public class DashboardController {
 		model.addAttribute("project", project);
 		model.addAttribute("branches", branches);
 		model.addAttribute("selectedBranch", selectedBranch);
+		model.addAttribute("branchSummaries", branchService.list(id));
 		model.addAttribute("runs", runs);
 		model.addAttribute("flags", reporting.flagSummaries(id));
 		model.addAttribute("trendLabels", toJson(labels(trend.stream().map(TestRun::getShortSha).toList())));

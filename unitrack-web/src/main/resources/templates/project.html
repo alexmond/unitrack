@@ -88,6 +88,31 @@
         </table>
     </div>
 
+    <div th:if="${branchSummaries.size() > 1}">
+        <h2>Branches</h2>
+        <table class="table table-hover align-middle">
+            <thead>
+            <tr><th>Branch</th><th>Status</th><th class="num">Pass %</th>
+                <th class="num">Coverage</th><th class="num">Runs</th><th>Last seen</th></tr>
+            </thead>
+            <tbody>
+            <tr th:each="b : ${branchSummaries}" th:classappend="${b.lastStatus() != 'PASSED'} ? 'row-fail'">
+                <td><a th:href="@{/projects/{id}(id=${project.id},branch=${b.branch()})}"
+                       th:text="${b.branch()}">main</a>
+                    <span class="badge tag" th:if="${b.defaultBranch()}">default</span></td>
+                <td><span class="badge" th:classappend="${b.lastStatus() == 'PASSED'} ? 'pass' : 'fail'"
+                          th:text="${b.lastStatus()}">PASSED</span></td>
+                <td class="num pct" th:text="${#numbers.formatDecimal(b.passRate(),1,1)} + '%'">100%</td>
+                <td class="num pct"
+                    th:text="${b.lineCoveragePct() != null} ? ${#numbers.formatDecimal(b.lineCoveragePct(),1,1)} + '%' : '—'">—</td>
+                <td class="num" th:text="${b.runCount()}">0</td>
+                <td><a th:href="@{/runs/{id}(id=${b.lastRunId()})}"
+                       th:text="${#temporals.format(b.lastRunAt(), 'MMM dd HH:mm')}">date</a></td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
     <div th:if="${!pullRequests.isEmpty()}">
         <h2>Pull requests</h2>
         <table class="table table-hover align-middle">
