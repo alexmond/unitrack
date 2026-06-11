@@ -58,6 +58,9 @@ class CoreReportingTest {
 	private TriageService triage;
 
 	@Autowired
+	private ProjectHealthService projectHealth;
+
+	@Autowired
 	private ProjectSettingsService settings;
 
 	@Autowired
@@ -137,6 +140,16 @@ class CoreReportingTest {
 		// Quality gate: a new failure and a coverage drop -> fails.
 		assertThat(gate.evaluate(currentId)).hasValueSatisfying((r) -> assertThat(r.passed()).isFalse());
 		assertThat(gate.coverageDelta(currentId)).isPresent();
+
+		// Global health board: core-demo appears with its latest gate status + flaky
+		// count.
+		List<ProjectHealth> board = projectHealth.board();
+		ProjectHealth demo = board.stream().filter((h) -> projectId.equals(h.projectId())).findFirst().orElseThrow();
+		assertThat(demo.hasRuns()).isTrue();
+		assertThat(demo.gateStatus()).isIn("PASSED", "FAILED");
+		assertThat(demo.passRate()).isNotNull();
+		assertThat(demo.projectName()).isEqualTo("core-demo");
+		assertThat(demo.flakyCount()).isGreaterThanOrEqualTo(1);
 
 		// Regression diff: 'a' is a new failure vs the baseline.
 		assertThat(regression.diff(currentId)).hasValueSatisfying((r) -> {

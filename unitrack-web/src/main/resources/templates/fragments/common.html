@@ -8,7 +8,7 @@
     <div class="spacer"></div>
     <nav>
         <a th:href="@{/}">Projects</a>
-        <a th:href="@{/actuator/health}">Health</a>
+        <a th:href="@{/actuator/health}">Status</a>
         <a th:if="${currentUser != null}" th:href="@{/profile}" th:text="${currentUser}">user</a>
         <a th:if="${currentUser == null}" th:href="@{/login}">Sign in</a>
     </nav>
@@ -64,7 +64,7 @@
     <span class="brand">Uni<span>Track</span></span>
     <span class="muted">— self-hosted test &amp; coverage tracking</span>
     <span class="spacer"></span>
-    <a th:href="@{/actuator/health}">Health</a>
+    <a th:href="@{/actuator/health}">Status</a>
     <a href="https://github.com/alexmond/unitrack" rel="noopener">GitHub</a>
 </footer>
 </body>
