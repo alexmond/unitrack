@@ -6,6 +6,7 @@ import org.alexmond.unitrack.domain.TestCaseResult;
 import org.alexmond.unitrack.domain.TestRun;
 import org.alexmond.unitrack.report.BlameService;
 import org.alexmond.unitrack.report.BranchService;
+import org.alexmond.unitrack.report.BranchSummary;
 import org.alexmond.unitrack.report.CoverageDiffService;
 import org.alexmond.unitrack.report.DurationPoint;
 import org.alexmond.unitrack.report.FailureClusteringService;
@@ -93,7 +94,8 @@ public class DashboardController {
 	public String project(@PathVariable Long id, @RequestParam(required = false) String branch, Model model) {
 		Project project = reporting.findProject(id)
 			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found"));
-		List<String> branches = reporting.distinctBranches(id);
+		List<BranchSummary> branchSummaries = branchService.list(id);
+		List<String> branches = branchSummaries.stream().map(BranchSummary::branch).toList();
 		String selectedBranch = resolveBranch(id, branch, branches);
 		List<TestRun> runs = reporting.recentRuns(id, selectedBranch, RUN_LIST_LIMIT);
 		List<TestRun> trend = reporting.trendRuns(id, selectedBranch, TREND_LIMIT);
@@ -101,7 +103,7 @@ public class DashboardController {
 		model.addAttribute("project", project);
 		model.addAttribute("branches", branches);
 		model.addAttribute("selectedBranch", selectedBranch);
-		model.addAttribute("branchSummaries", branchService.list(id));
+		model.addAttribute("branchSummaries", branchSummaries);
 		model.addAttribute("runs", runs);
 		model.addAttribute("flags", reporting.flagSummaries(id));
 		model.addAttribute("trendLabels", toJson(labels(trend.stream().map(TestRun::getShortSha).toList())));

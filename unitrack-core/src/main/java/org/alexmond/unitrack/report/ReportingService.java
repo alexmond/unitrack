@@ -83,14 +83,6 @@ public class ReportingService {
 		return recentRuns(projectId, branch, limit).reversed();
 	}
 
-	/**
-	 * Distinct branches seen for a project (alphabetical) — for the Overview branch
-	 * picker.
-	 */
-	public List<String> distinctBranches(Long projectId) {
-		return runs.findDistinctBranches(projectId);
-	}
-
 	public Optional<TestRun> findRun(Long id) {
 		return runs.findById(id);
 	}

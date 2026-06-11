@@ -60,7 +60,8 @@ public class QualityGateService {
 				run.getProject().getId(), cfg.baseBranch(), run.getFlag(), run.getId(), run.getCreatedAt());
 	}
 
-	private QualityGateResult evaluate(TestRun run) {
+	/** Evaluates the gate for an already-loaded run (avoids a re-fetch by id). */
+	public QualityGateResult evaluate(TestRun run) {
 		Long projectId = run.getProject().getId();
 		GateConfig cfg = settings.gateConfig(projectId);
 		TestRun baseline = baselineFor(run).orElse(null);
