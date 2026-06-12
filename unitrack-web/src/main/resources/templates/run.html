@@ -130,7 +130,8 @@
             <summary>
                 <span class="badge" th:classappend="${c.status.name() == 'ERROR'} ? 'error' : 'fail'"
                       th:text="${c.status}">FAILED</span>
-                <code class="mono" th:text="${c.className} + '#' + ${c.name}">Test#method</code>
+                <a th:href="@{/projects/{pid}/test(pid=${run.project.id},className=${c.className},name=${c.name})}">
+                    <code class="mono" th:text="${c.className} + '#' + ${c.name}">Test#method</code></a>
                 <span class="badge"
                       th:if="${categories.get(c.id) != null and categories.get(c.id) != 'untriaged'}"
                       style="background:rgba(68,147,248,.15);color:var(--blue)"

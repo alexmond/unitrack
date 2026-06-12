@@ -29,7 +29,8 @@
         </thead>
         <tbody>
         <tr th:each="f : ${flaky}">
-            <td><code class="mono" th:text="${f.displayName()}">Test#method</code></td>
+            <td><a th:href="@{/projects/{id}/test(id=${project.id},className=${f.className()},name=${f.name()})}">
+                <code class="mono" th:text="${f.displayName()}">Test#method</code></a></td>
             <td>
                 <span class="badge"
                       th:classappend="${f.status().name() == 'QUARANTINED'} ? 'skip'

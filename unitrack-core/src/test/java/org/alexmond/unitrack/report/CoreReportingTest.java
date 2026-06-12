@@ -9,6 +9,7 @@ import java.util.function.Supplier;
 import org.alexmond.unitrack.domain.FlakyStatus;
 import org.alexmond.unitrack.domain.TestCaseResult;
 import org.alexmond.unitrack.domain.TestRun;
+import org.alexmond.unitrack.domain.TestStatus;
 import org.alexmond.unitrack.ingest.IngestRequest;
 import org.alexmond.unitrack.ingest.IngestService;
 import org.junit.jupiter.api.Test;
@@ -176,6 +177,17 @@ class CoreReportingTest {
 		assertThat(performance.suiteTimeTrend(projectId, 30)).isNotEmpty();
 		assertThat(performance.summary(projectId, 25, 30).slowestInLatestRun()).isNotNull();
 		assertThat(performance.testDurationTrend(projectId, "com.x.G", "a", 30).points()).isNotEmpty();
+
+		// Per-test timeline: mixed statuses (pass c1, fail c2, fail c1-repeat).
+		var timeline = performance.testStatusTimeline(projectId, "com.x.G", "a", 30);
+		assertThat(timeline).isNotEmpty();
+		assertThat(timeline).anyMatch((p) -> p.status() == TestStatus.PASSED);
+		assertThat(timeline).anyMatch((p) -> p.status() == TestStatus.FAILED || p.status() == TestStatus.ERROR);
+
+		// Per-test blame: 'a' is currently failing -> present; 'b' always passes ->
+		// empty.
+		assertThat(blame.firstFailingForTest(projectId, "com.x.G", "a")).isPresent();
+		assertThat(blame.firstFailingForTest(projectId, "com.x.G", "b")).isEmpty();
 
 		// Flaky management.
 		flaky.setStatus(projectId, "com.x.G", "a", FlakyStatus.QUARANTINED, "investigating");

@@ -1,6 +1,43 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout}">
-<head><title th:text="'UniTrack — ' + ${name}">UniTrack</title></head>
+<head><title th:text="'UniTrack — ' + ${name}">UniTrack</title>
+<style>
+.test-timeline {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin: 10px 0 6px;
+}
+.test-timeline a {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    border-radius: 3px;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    text-decoration: none;
+    flex: 0 0 auto;
+}
+.test-timeline a.pass { background: rgba(46,160,67,.25); border-color: var(--green); }
+.test-timeline a.fail { background: rgba(229,83,75,.25); border-color: var(--red); }
+.test-timeline a.skip { background: rgba(210,153,34,.2); border-color: var(--amber); }
+.test-blame {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--red);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    margin: 12px 0;
+    font-size: 14px;
+}
+.test-blame.passing {
+    border-left-color: var(--green);
+}
+h1 code.mono {
+    font-size: 22px;
+}
+</style>
+</head>
 <body>
 
 <main class="container" layout:fragment="content">
@@ -13,23 +50,52 @@
     <h1><code class="mono" th:text="${name}">testMethod</code></h1>
     <p class="muted"><code class="mono" th:text="${className}">com.x.Class</code></p>
 
+    <!-- First-failing / blame line -->
+    <div th:if="${blame != null}" class="test-blame" id="test-blame">
+        First failing:
+        <code class="mono" th:text="${blame.firstFailingShortSha()}">abc1234</code>
+        in <a th:href="@{/runs/{id}(id=${blame.firstFailingRunId()})}"
+              th:text="'run #' + ${blame.firstFailingRunId()}">run #0</a>
+    </div>
+    <div th:if="${blame == null}" class="test-blame passing" id="test-blame">
+        Not currently failing.
+    </div>
+
+    <!-- Status timeline strip -->
+    <h2>Status timeline <span class="muted">(oldest left)</span></h2>
+    <div th:if="${timeline.isEmpty()}" class="empty" id="test-timeline">No history for this test.</div>
+    <div th:unless="${timeline.isEmpty()}" class="test-timeline" id="test-timeline">
+        <a th:each="pt : ${timeline}"
+           th:href="@{/runs/{id}(id=${pt.runId()})}"
+           th:classappend="${pt.status().name() == 'PASSED'} ? 'pass' : (${pt.status().name() == 'SKIPPED'} ? 'skip' : 'fail')"
+           th:title="${pt.shortSha()} + ' · ' + ${pt.status()}"
+           th:attr="aria-label=${pt.shortSha()} + ' — ' + ${pt.status()}"></a>
+    </div>
+
+    <!-- Duration sparkline -->
     <h2>Duration trend <span class="muted">(ms per run)</span></h2>
     <div class="chart-wrap">
         <canvas id="durChart" height="90"></canvas>
-        <p class="muted" th:if="${points.isEmpty()}">No history for this test.</p>
+        <p class="muted" th:if="${timeline.isEmpty()}">No history for this test.</p>
     </div>
 
+    <!-- History table -->
     <h2>History</h2>
-    <div th:if="${points.isEmpty()}" class="empty">No runs recorded this test.</div>
-    <table class="table table-hover align-middle" th:unless="${points.isEmpty()}">
+    <div th:if="${timeline.isEmpty()}" class="empty">No runs recorded this test.</div>
+    <table class="table table-hover align-middle" th:unless="${timeline.isEmpty()}">
         <thead>
-        <tr><th>Run</th><th>Commit</th><th class="num">Duration</th></tr>
+        <tr><th>Run</th><th>Commit</th><th>Status</th><th class="num">Duration</th></tr>
         </thead>
         <tbody>
-        <tr th:each="p : ${points}">
-            <td><a th:href="@{/runs/{id}(id=${p.runId()})}" th:text="'#' + ${p.runId()}">#0</a></td>
-            <td><code class="mono" th:text="${p.shortSha()}">abc1234</code></td>
-            <td class="num" th:text="${#numbers.formatInteger(p.durationMs(), 1, 'COMMA')} + ' ms'">0 ms</td>
+        <tr th:each="pt : ${timeline}">
+            <td><a th:href="@{/runs/{id}(id=${pt.runId()})}" th:text="'#' + ${pt.runId()}">#0</a></td>
+            <td><code class="mono" th:text="${pt.shortSha()}">abc1234</code></td>
+            <td>
+                <span class="badge"
+                      th:classappend="${pt.status().name() == 'PASSED'} ? 'pass' : (${pt.status().name() == 'SKIPPED'} ? 'skip' : 'fail')"
+                      th:text="${pt.status()}">PASSED</span>
+            </td>
+            <td class="num" th:text="${#numbers.formatInteger(pt.durationMs(), 1, 'COMMA')} + ' ms'">0 ms</td>
         </tr>
         </tbody>
     </table>

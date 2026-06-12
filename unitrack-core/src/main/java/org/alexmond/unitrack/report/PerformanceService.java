@@ -61,4 +61,17 @@ public class PerformanceService {
 		return new TestDurationTrend(className, name, points);
 	}
 
+	/**
+	 * One test's status+duration timeline across a project's recent runs, oldest first.
+	 * Reuses the existing {@code findTestHistory} query — no new repository method or
+	 * schema change.
+	 */
+	public List<TestTimelinePoint> testStatusTimeline(Long projectId, String className, String name, int limit) {
+		return this.cases.findTestHistory(projectId, className, name, PageRequest.ofSize(limit))
+			.reversed()
+			.stream()
+			.map(TestTimelinePoint::ofCase)
+			.toList();
+	}
+
 }
