@@ -36,7 +36,8 @@ app:
 postgresql:
   enabled: true
   persistence:
-    # The default 'nfs' StorageClass uses all_squash (uid 65534), which trips Postgres
-    # initdb permission checks. Use the node-local class for the DB volume instead.
-    storageClass: local-path
+    # The default 'nfs' StorageClass (QNAP, no_root_squash since 2026-06-13) handles
+    # Postgres initdb fine and lands the DB on the backed-up QNAP path. Leave unset to
+    # inherit the cluster default; pin to 'local-path' only if you want node-local storage.
+    storageClass: nfs
     size: 8Gi

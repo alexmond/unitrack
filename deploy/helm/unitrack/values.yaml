@@ -137,8 +137,9 @@ postgresql:
   persistence:
     enabled: true
     size: 8Gi
-    # Empty = cluster default StorageClass. NOTE: on NFS with all_squash, Postgres initdb
-    # can fail on permissions — set this to a node-local class (e.g. local-path) there.
+    # Empty = cluster default StorageClass. NOTE: NFS exported with all_squash can fail
+    # Postgres initdb (chown denied); use a no_root_squash export or a node-local class
+    # (e.g. local-path) in that case.
     storageClass: ""
   resources:
     requests:
