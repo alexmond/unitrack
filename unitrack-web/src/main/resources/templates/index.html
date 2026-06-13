@@ -4,12 +4,18 @@
 <body>
 
 <main class="container" layout:fragment="content">
-    <h1>Projects</h1>
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <h1 style="margin:0">Projects</h1>
+        <span class="spacer"></span>
+        <a class="btn btn-primary btn-sm" th:href="@{/import}">
+            <i class="bi bi-github" aria-hidden="true"></i> Import from GitHub</a>
+    </div>
     <p class="crumbs">Health across your repositories — failing gates first.</p>
 
     <div th:if="${board.isEmpty()}" class="empty">
         No projects yet. Upload results with
-        <code class="mono">POST /api/v1/ingest</code> to get started.
+        <code class="mono">POST /api/v1/ingest</code>, or
+        <a th:href="@{/import}">import them from GitHub</a> to get started.
     </div>
 
     <div class="stat-row" th:unless="${board.isEmpty()}">
