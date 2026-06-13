@@ -45,6 +45,9 @@ public class SecurityConfig {
 			.authorizeHttpRequests((auth) -> {
 				auth.requestMatchers("/login", "/signup", "/status", "/css/**", "/actuator/**", "/error").permitAll();
 				auth.requestMatchers("/profile/**", "/api/v1/me/**").authenticated();
+				// Provisioning projects from GitHub is a management action: always
+				// require login.
+				auth.requestMatchers("/import", "/import/**").authenticated();
 				auth.requestMatchers("/projects/*/settings", "/projects/*/members", "/projects/*/members/**")
 					.authenticated();
 				if (props.isRequireIngestToken()) {
