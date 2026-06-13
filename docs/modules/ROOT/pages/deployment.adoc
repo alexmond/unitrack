@@ -73,6 +73,72 @@ scripts/deploy-remote.sh --host root@192.168.100.132 --stack h2 --port 8081
 | `--no-build` | Reuse the already-built local image.
 |===
 
+== Kubernetes (Helm)
+
+`deploy/helm/unitrack` is a self-contained Helm chart -- the app plus an optional bundled
+PostgreSQL (`postgresql.enabled`, on by default; turn it off to use an external database). It
+needs no external chart dependencies. See `deploy/helm/unitrack/README.md` for the full value
+reference.
+
+=== Publish the image
+
+The cluster pulls the app from a registry, so publish there instead of building locally:
+
+[source,bash]
+----
+docker login nas1.home.int:5000
+./mvnw -Pdocker -pl unitrack-web -am package \
+  -Ddocker.image.name=nas1.home.int:5000/unitrack:0.1.0-SNAPSHOT \
+  -Ddocker.publish=true
+----
+
+For GHCR, use `-Ddocker.image.name=ghcr.io/<owner>/unitrack:<tag>` and `docker login ghcr.io`.
+
+=== Install with bundled PostgreSQL
+
+[source,bash]
+----
+helm upgrade --install unitrack deploy/helm/unitrack \
+  -n unitrack --create-namespace \
+  --set image.repository=nas1.home.int:5000/unitrack \
+  --set image.tag=0.1.0-SNAPSHOT
+----
+
+The database password is auto-generated on first install and persisted in the chart Secret
+across upgrades. The chart force-sets `SPRING_DOCKER_COMPOSE_ENABLED=false` (the app enables
+Compose lifecycle for local dev), wires liveness/readiness to the actuator probe endpoints, and
+adds a generous startup probe so Flyway migrations don't trip liveness on first boot.
+
+NOTE: When the cluster's default StorageClass uses NFS with `all_squash`, PostgreSQL `initdb`
+can fail its permission checks. Point the DB volume at a node-local class instead, e.g.
+`--set postgresql.persistence.storageClass=local-path`.
+
+=== Install against an external database
+
+[source,bash]
+----
+helm upgrade --install unitrack deploy/helm/unitrack \
+  -n unitrack --create-namespace \
+  --set postgresql.enabled=false \
+  --set externalDatabase.url='jdbc:postgresql://db:5432/unitrack' \
+  --set externalDatabase.user=unitrack \
+  --set externalDatabase.existingSecret=unitrack-db
+----
+
+=== One-shot helper
+
+`scripts/deploy-k8s.sh` builds + publishes the image, runs `helm upgrade --install`, waits for
+the rollout and runs `helm test` -- the Kubernetes counterpart to `scripts/deploy-remote.sh`:
+
+[source,bash]
+----
+scripts/deploy-k8s.sh --registry nas1.home.int:5000 --namespace unitrack
+----
+
+For the home k3s cluster (Zot registry, Traefik ingress at `unitrack.k8s.home.int`, node-local
+DB volume), `deploy/helm/unitrack/values-homelab.yaml` captures those overrides and is picked up
+by the helper automatically.
+
 == Health & metrics
 
 Actuator is exposed with `health`, `info` and `metrics`, and liveness/readiness probes are

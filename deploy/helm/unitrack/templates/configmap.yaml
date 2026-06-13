@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "unitrack.fullname" . }}
+  labels:
+    {{- include "unitrack.labels" . | nindent 4 }}
+data:
+  # Spring's dev-time Docker Compose lifecycle must be OFF inside the cluster.
+  SPRING_DOCKER_COMPOSE_ENABLED: "false"
+  UNITRACK_DB_URL: {{ include "unitrack.jdbcUrl" . | quote }}
+  UNITRACK_DB_USER: {{ include "unitrack.dbUser" . | quote }}
+  UNITRACK_NOTIFICATIONS_ENABLED: {{ .Values.app.notifications.enabled | quote }}
+  UNITRACK_MAIL_FROM: {{ .Values.app.notifications.mailFrom | quote }}
+  {{- if .Values.app.notifications.baseUrl }}
+  UNITRACK_BASE_URL: {{ .Values.app.notifications.baseUrl | quote }}
+  {{- end }}
+  {{- if .Values.app.github.enabled }}
+  UNITRACK_GITHUB_ENABLED: "true"
+  {{- if .Values.app.github.serverBaseUrl }}
+  UNITRACK_GITHUB_SERVERBASEURL: {{ .Values.app.github.serverBaseUrl | quote }}
+  {{- end }}
+  {{- end }}

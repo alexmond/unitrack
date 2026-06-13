@@ -2,6 +2,10 @@ spring:
   application:
     name: unitrack
 
+  # Grace window for in-flight requests on shutdown (pairs with server.shutdown: graceful).
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+
   datasource:
     url: ${UNITRACK_DB_URL:jdbc:postgresql://localhost:5432/unitrack}
     username: ${UNITRACK_DB_USER:unitrack}
@@ -41,6 +45,9 @@ spring:
 
 server:
   port: ${PORT:8080}
+  # Let in-flight ingests finish when the process is told to stop (e.g. a Kubernetes
+  # rolling update sends SIGTERM); Spring stops accepting new requests, then drains.
+  shutdown: graceful
 
 management:
   endpoints:
