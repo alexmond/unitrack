@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head><title th:text="'UniTrack — Import from GitHub'">UniTrack</title></head>
+<body>
+
+<main class="container" layout:fragment="content">
+    <h1>Import from GitHub</h1>
+    <p class="crumbs">Provision projects from your GitHub repositories.</p>
+
+    <div th:if="${msg}" class="muted" th:text="${msg}">ok</div>
+    <div th:if="${error}" class="empty" style="color:var(--red)" th:text="${error}">err</div>
+
+    <div th:unless="${configured}" class="empty">
+        GitHub is not configured. Set <code class="mono">unitrack.github.enabled=true</code> and
+        <code class="mono">unitrack.github.token</code> (a token with <code class="mono">repo</code> scope), then reload.
+    </div>
+
+    <div th:if="${configured and repos.isEmpty() and error == null}" class="empty">
+        No repositories visible to the configured token.
+    </div>
+
+    <form th:if="${configured and !repos.isEmpty()}" method="post" th:action="@{/import}">
+        <table class="table">
+            <thead>
+            <tr>
+                <th style="width:32px"></th>
+                <th>Repository</th>
+                <th>Branch</th>
+                <th>Description</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="r : ${repos}" th:with="imported=${existing.contains(r.name)}">
+                <td>
+                    <input class="form-check-input" type="checkbox" name="repo" th:value="${r.fullName}"
+                           th:disabled="${imported}" th:id="'r-' + ${r.fullName}"/>
+                </td>
+                <td>
+                    <label th:for="'r-' + ${r.fullName}">
+                        <a th:href="${r.htmlUrl}" rel="noopener" th:text="${r.fullName}">owner/repo</a>
+                    </label>
+                    <span th:if="${r.isPrivate}" class="badge tag">private</span>
+                    <span th:if="${imported}" class="badge pass">imported</span>
+                </td>
+                <td class="muted"><code class="mono" th:text="${r.defaultBranch}">main</code></td>
+                <td class="muted" th:text="${r.description}">—</td>
+            </tr>
+            </tbody>
+        </table>
+        <button class="btn btn-primary" type="submit">Import selected</button>
+    </form>
+</main>
+</body>
+</html>
