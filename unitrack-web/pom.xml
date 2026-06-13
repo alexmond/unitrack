@@ -153,6 +153,15 @@
                 <configuration>
                     <mainClass>org.alexmond.unitrack.UnitrackApplication</mainClass>
                 </configuration>
+                <executions>
+                    <!-- Generate build-info.properties so the /status page can show the version. -->
+                    <execution>
+                        <id>build-info</id>
+                        <goals>
+                            <goal>build-info</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>org.jacoco</groupId>
