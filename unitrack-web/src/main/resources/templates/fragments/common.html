@@ -8,9 +8,10 @@
     <div class="spacer"></div>
     <nav>
         <a th:href="@{/}">Projects</a>
-        <a th:href="@{/actuator/health}">Status</a>
+        <a th:href="@{/status}">Status</a>
         <a th:if="${currentUser != null}" th:href="@{/profile}" th:text="${currentUser}">user</a>
         <a th:if="${currentUser == null}" th:href="@{/login}">Sign in</a>
+        <a th:if="${currentUser == null and signupEnabled}" th:href="@{/signup}">Sign up</a>
     </nav>
     <form th:if="${currentUser != null}" method="post" th:action="@{/logout}" style="display:inline;margin-left:16px">
         <button class="theme-toggle" type="submit">Logout</button>
@@ -64,7 +65,7 @@
     <span class="brand">Uni<span>Track</span></span>
     <span class="muted">— self-hosted test &amp; coverage tracking</span>
     <span class="spacer"></span>
-    <a th:href="@{/actuator/health}">Status</a>
+    <a th:href="@{/status}">Status</a>
     <a href="https://github.com/alexmond/unitrack" rel="noopener">GitHub</a>
 </footer>
 </body>
