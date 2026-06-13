@@ -1,0 +1,32 @@
+UniTrack {{ .Chart.AppVersion }} is deploying as release "{{ .Release.Name }}" in namespace "{{ .Release.Namespace }}".
+
+1. Watch the rollout:
+     kubectl -n {{ .Release.Namespace }} rollout status deploy/{{ include "unitrack.fullname" . }}
+
+{{- if .Values.postgresql.enabled }}
+
+   Database: bundled PostgreSQL StatefulSet "{{ include "unitrack.postgresql.fullname" . }}".
+{{- else }}
+
+   Database: external -> {{ .Values.externalDatabase.url }}
+{{- end }}
+
+2. Reach the app:
+{{- if .Values.ingress.enabled }}
+     http{{ if .Values.ingress.tls }}s{{ end }}://{{ .Values.ingress.host }}{{ .Values.ingress.path }}
+{{- else }}
+     kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "unitrack.fullname" . }} 8080:{{ .Values.service.port }}
+     # then open http://localhost:8080
+{{- end }}
+
+3. Health: GET /actuator/health (liveness/readiness probes are wired automatically).
+
+{{- if and (eq (include "unitrack.createSecret" .) "true") (not .Values.postgresql.auth.password) (not .Values.externalDatabase.password) }}
+
+NOTE: the database password was auto-generated and stored in Secret
+"{{ include "unitrack.secretName" . }}" (key "{{ .Values.secret.keys.dbPassword }}"). Read it with:
+     kubectl -n {{ .Release.Namespace }} get secret {{ include "unitrack.secretName" . }} -o jsonpath='{.data.{{ .Values.secret.keys.dbPassword }}}' | base64 -d
+{{- end }}
+
+Run the smoke test any time with:
+     helm test {{ .Release.Name }} -n {{ .Release.Namespace }}

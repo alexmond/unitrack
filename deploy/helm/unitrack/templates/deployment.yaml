@@ -1,0 +1,132 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "unitrack.fullname" . }}
+  labels:
+    {{- include "unitrack.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  strategy:
+    {{- toYaml .Values.updateStrategy | nindent 4 }}
+  selector:
+    matchLabels:
+      {{- include "unitrack.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        # Roll the pods when config/secret content changes.
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- if eq (include "unitrack.createSecret" .) "true" }}
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+        {{- end }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "unitrack.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "unitrack.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if .Values.waitForDatabase.enabled }}
+      initContainers:
+        - name: wait-for-db
+          image: {{ .Values.waitForDatabase.image | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          # postgres runs as uid 999; set it explicitly to satisfy runAsNonRoot.
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 999
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          env:
+            # Reuse the app's JDBC URL; pg_isready accepts the URI once "jdbc:" is stripped.
+            - name: UNITRACK_DB_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "unitrack.fullname" . }}
+                  key: UNITRACK_DB_URL
+          command:
+            - sh
+            - -c
+            - >-
+              until pg_isready -d "${UNITRACK_DB_URL#jdbc:}" -t 3; do
+              echo "waiting for database..."; sleep {{ .Values.waitForDatabase.intervalSeconds }}; done
+      {{- end }}
+      containers:
+        - name: unitrack
+          image: {{ include "unitrack.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: {{ include "unitrack.fullname" . }}
+          env:
+            - name: UNITRACK_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "unitrack.secretName" . }}
+                  key: {{ include "unitrack.dbPasswordKey" . }}
+            {{- if .Values.app.github.enabled }}
+            - name: UNITRACK_GITHUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "unitrack.secretName" . }}
+                  key: {{ .Values.secret.keys.githubToken }}
+                  optional: true
+            {{- end }}
+            - name: SPRING_MAIL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "unitrack.secretName" . }}
+                  key: {{ .Values.secret.keys.mailPassword }}
+                  optional: true
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          startupProbe:
+            httpGet:
+              path: {{ .Values.probes.startup.path }}
+              port: http
+            periodSeconds: {{ .Values.probes.startup.periodSeconds }}
+            failureThreshold: {{ .Values.probes.startup.failureThreshold }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.probes.liveness.path }}
+              port: http
+            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+            failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.probes.readiness.path }}
+              port: http
+            periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+            failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

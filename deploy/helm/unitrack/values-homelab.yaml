@@ -1,0 +1,42 @@
+# Example overrides for the home k3s cluster (see ~/IdeaProjects/infra/k3s.md).
+#
+#   helm upgrade --install unitrack deploy/helm/unitrack \
+#     -n unitrack --create-namespace \
+#     -f deploy/helm/unitrack/values-homelab.yaml
+#
+# Prerequisites on the cluster:
+#   - Image pushed to the Zot registry (nas1.home.int:5000) — see README.md.
+#   - Pull secret created in the target namespace:
+#       kubectl -n unitrack create secret docker-registry zot-regcred \
+#         --docker-server=nas1.home.int:5000 \
+#         --docker-username=alexm --docker-password="$ZOT_PASSWORD"
+
+image:
+  repository: nas1.home.int:5000/unitrack
+  tag: "0.1.0-SNAPSHOT"
+  pullPolicy: Always
+
+imagePullSecrets:
+  - name: zot-regcred
+
+ingress:
+  enabled: true
+  className: traefik
+  host: unitrack.k8s.home.int
+  # Traefik on this cluster serves the *.home.int wildcard cert as its default certificate,
+  # so we enable TLS without naming a per-host Secret.
+  tls: true
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+
+app:
+  notifications:
+    baseUrl: https://unitrack.k8s.home.int
+
+postgresql:
+  enabled: true
+  persistence:
+    # The default 'nfs' StorageClass uses all_squash (uid 65534), which trips Postgres
+    # initdb permission checks. Use the node-local class for the DB volume instead.
+    storageClass: local-path
+    size: 8Gi

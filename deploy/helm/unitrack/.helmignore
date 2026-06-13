@@ -1,0 +1,9 @@
+# Patterns to ignore when packaging Helm charts.
+.DS_Store
+.git/
+.gitignore
+*.tmpl.bak
+*.orig
+*~
+# Local example overrides are documentation, not part of the packaged chart.
+values-*.yaml
