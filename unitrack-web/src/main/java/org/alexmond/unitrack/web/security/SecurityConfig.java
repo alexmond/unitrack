@@ -43,7 +43,7 @@ public class SecurityConfig {
 		http.csrf(AbstractHttpConfigurer::disable)
 			.addFilterBefore(apiTokenAuthFilter, UsernamePasswordAuthenticationFilter.class)
 			.authorizeHttpRequests((auth) -> {
-				auth.requestMatchers("/login", "/css/**", "/actuator/**", "/error").permitAll();
+				auth.requestMatchers("/login", "/signup", "/status", "/css/**", "/actuator/**", "/error").permitAll();
 				auth.requestMatchers("/profile/**", "/api/v1/me/**").authenticated();
 				auth.requestMatchers("/projects/*/settings", "/projects/*/members", "/projects/*/members/**")
 					.authenticated();

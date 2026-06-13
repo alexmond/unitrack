@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head><title th:text="'UniTrack — Status'">UniTrack</title></head>
+<body>
+
+<main class="container" layout:fragment="content">
+    <!-- Map a health Status code onto the shared badge palette (UP=green, UNKNOWN=amber, else red). -->
+    <th:block>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+            <h1 style="margin:0">System status</h1>
+            <span class="badge"
+                  th:classappend="${overall == 'UP' ? 'pass' : (overall == 'UNKNOWN' ? 'skip' : 'fail')}"
+                  th:text="${overall}">UP</span>
+        </div>
+        <p class="muted" style="margin-top:6px">
+            Uptime <span th:text="${uptime}">0m</span> ·
+            started <span th:text="${#temporals.format(started, 'yyyy-MM-dd HH:mm')} + ' UTC'">—</span>
+        </p>
+
+        <h2>Components</h2>
+        <div th:if="${components.isEmpty()}" class="empty muted">No health components reported.</div>
+        <table th:unless="${components.isEmpty()}" class="table">
+            <thead>
+            <tr>
+                <th>Component</th>
+                <th>Status</th>
+                <th>Details</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="c : ${components}">
+                <td><code class="mono" th:text="${c.name}">db</code></td>
+                <td>
+                    <span class="badge"
+                          th:classappend="${c.status == 'UP' ? 'pass' : (c.status == 'UNKNOWN' ? 'skip' : 'fail')}"
+                          th:text="${c.status}">UP</span>
+                </td>
+                <td class="muted">
+                    <span th:each="d,it : ${c.details}">
+                        <span th:text="${d.key}">k</span>=<span th:text="${d.value}">v</span><th:block
+                            th:if="${!it.last}">, </th:block>
+                    </span>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </th:block>
+
+    <h2>Build</h2>
+    <p class="muted">
+        Version <code class="mono" th:text="${version} ?: '—'">0.1.0</code>
+        <th:block th:if="${commit}"> · commit <code class="mono" th:text="${commit}">abc1234</code></th:block>
+        <th:block th:if="${branch}"> (<span th:text="${branch}">main</span>)</th:block>
+        <th:block th:if="${buildTime}"> · built
+            <span th:text="${#temporals.format(buildTime, 'yyyy-MM-dd HH:mm')}">—</span> UTC</th:block>
+    </p>
+    <p class="muted">
+        Java <span th:text="${javaVersion}">21</span>
+        <th:block th:if="${profiles.length > 0}"> · profiles
+            <code class="mono" th:text="${#strings.arrayJoin(profiles, ', ')}">prod</code></th:block>
+    </p>
+
+    <p class="muted" style="margin-top:14px">
+        Raw: <a th:href="@{/actuator/health}">/actuator/health</a> ·
+        <a th:href="@{/actuator/metrics}">/actuator/metrics</a>
+    </p>
+</main>
+</body>
+</html>
