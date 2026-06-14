@@ -1,6 +1,7 @@
 package org.alexmond.unitrack.web.ui;
 
 import java.util.List;
+import java.util.Locale;
 
 import lombok.RequiredArgsConstructor;
 import org.alexmond.unitrack.web.github.GitHubRepo;
@@ -27,13 +28,16 @@ public class GitHubImportController {
 	private final ProjectImportService importer;
 
 	@GetMapping("/import")
-	public String list(Model model) {
+	public String list(@RequestParam(name = "q", required = false) String query, Model model) {
 		boolean configured = repos.isConfigured();
 		model.addAttribute("configured", configured);
+		model.addAttribute("query", query);
 		List<GitHubRepo> available = List.of();
 		if (configured) {
 			try {
-				available = repos.listRepos();
+				GitHubRepoService.RepoList page = repos.listRepos();
+				available = filter(page.repos(), query);
+				model.addAttribute("truncated", page.truncated());
 			}
 			catch (RuntimeException ex) {
 				model.addAttribute("error", "Could not list GitHub repositories: " + ex.getMessage());
@@ -53,13 +57,22 @@ public class GitHubImportController {
 			ra.addFlashAttribute("error", "Select at least one repository to import.");
 			return "redirect:/import";
 		}
-		ProjectImportService.Result result = importer.importRepos(repos.listRepos(), selected);
+		ProjectImportService.Result result = importer.importRepos(repos.listRepos().repos(), selected);
 		StringBuilder msg = new StringBuilder("Imported ").append(result.imported().size()).append(" project(s)");
 		if (!result.skipped().isEmpty()) {
 			msg.append(" — skipped ").append(result.skipped().size()).append(" already present");
 		}
 		ra.addFlashAttribute("msg", msg.append('.').toString());
 		return "redirect:/";
+	}
+
+	/** Case-insensitive substring filter on the repo full name (the search box). */
+	private static List<GitHubRepo> filter(List<GitHubRepo> repos, String query) {
+		if (query == null || query.isBlank()) {
+			return repos;
+		}
+		String needle = query.trim().toLowerCase(Locale.ROOT);
+		return repos.stream().filter((r) -> r.fullName().toLowerCase(Locale.ROOT).contains(needle)).toList();
 	}
 
 }

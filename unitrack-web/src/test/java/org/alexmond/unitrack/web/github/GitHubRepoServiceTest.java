@@ -1,8 +1,7 @@
 package org.alexmond.unitrack.web.github;
 
-import java.util.List;
-
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
@@ -44,15 +43,43 @@ class GitHubRepoServiceTest {
 			.andExpect(header("Authorization", "Bearer secret"))
 			.andRespond(withSuccess(json, MediaType.APPLICATION_JSON));
 
-		List<GitHubRepo> repos = service.listRepos();
+		GitHubRepoService.RepoList result = service.listRepos();
 		server.verify();
 
-		assertThat(repos).hasSize(2);
-		assertThat(repos.get(0).fullName()).isEqualTo("octo/repo-a");
-		assertThat(repos.get(0).htmlUrl()).isEqualTo("https://github.com/octo/repo-a");
-		assertThat(repos.get(0).isPrivate()).isFalse();
-		assertThat(repos.get(1).defaultBranch()).isEqualTo("develop");
-		assertThat(repos.get(1).isPrivate()).isTrue();
+		assertThat(result.truncated()).isFalse();
+		assertThat(result.repos()).hasSize(2);
+		assertThat(result.repos().get(0).fullName()).isEqualTo("octo/repo-a");
+		assertThat(result.repos().get(0).htmlUrl()).isEqualTo("https://github.com/octo/repo-a");
+		assertThat(result.repos().get(0).isPrivate()).isFalse();
+		assertThat(result.repos().get(1).defaultBranch()).isEqualTo("develop");
+		assertThat(result.repos().get(1).isPrivate()).isTrue();
+	}
+
+	@Test
+	void followsLinkHeaderPaginationAcrossPages() {
+		GitHubProperties props = props();
+		RestClient.Builder builder = RestClient.builder();
+		MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+		GitHubRepoService service = new GitHubRepoService(props, builder);
+
+		String page1 = "[{\"name\":\"a\",\"full_name\":\"octo/a\",\"html_url\":\"https://github.com/octo/a\","
+				+ "\"default_branch\":\"main\",\"private\":false,\"description\":null}]";
+		String page2 = "[{\"name\":\"b\",\"full_name\":\"octo/b\",\"html_url\":\"https://github.com/octo/b\","
+				+ "\"default_branch\":\"main\",\"private\":false,\"description\":null}]";
+
+		HttpHeaders linkToNext = new HttpHeaders();
+		linkToNext.add(HttpHeaders.LINK, "<https://api.github.com/user/repos?page=2>; rel=\"next\"");
+
+		server.expect(requestTo("https://api.github.com/user/repos?per_page=100&sort=updated"))
+			.andRespond(withSuccess(page1, MediaType.APPLICATION_JSON).headers(linkToNext));
+		server.expect(requestTo("https://api.github.com/user/repos?page=2"))
+			.andRespond(withSuccess(page2, MediaType.APPLICATION_JSON));
+
+		GitHubRepoService.RepoList result = service.listRepos();
+		server.verify();
+
+		assertThat(result.truncated()).isFalse();
+		assertThat(result.repos()).extracting(GitHubRepo::fullName).containsExactly("octo/a", "octo/b");
 	}
 
 	@Test

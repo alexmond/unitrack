@@ -16,8 +16,21 @@
         <code class="mono">unitrack.github.token</code> (a token with <code class="mono">repo</code> scope), then reload.
     </div>
 
+    <form th:if="${configured}" method="get" th:action="@{/import}" class="mb-3"
+          style="display:flex;gap:8px;max-width:480px">
+        <input type="text" name="q" class="form-control" placeholder="Filter by owner/repo…"
+               th:value="${query}"/>
+        <button class="btn btn-secondary" type="submit">Filter</button>
+    </form>
+
+    <div th:if="${truncated}" class="muted" style="color:var(--amber)">
+        Showing the first results only — this account has more repositories than fit one fetch.
+        Use the filter to narrow down.
+    </div>
+
     <div th:if="${configured and repos.isEmpty() and error == null}" class="empty">
-        No repositories visible to the configured token.
+        <span th:if="${query}">No repositories match “<span th:text="${query}">x</span>”.</span>
+        <span th:unless="${query}">No repositories visible to the configured token.</span>
     </div>
 
     <form th:if="${configured and !repos.isEmpty()}" method="post" th:action="@{/import}">
