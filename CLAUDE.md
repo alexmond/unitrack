@@ -1,0 +1,78 @@
+# CLAUDE.md
+
+Guidance for Claude Code when working in this repository.
+
+## Project Overview
+
+UniTrack is a self-hosted server for tracking **JUnit test execution** and **code coverage**
+over time (Allure-meets-Codecov for the JVM). CI uploads Surefire/JUnit XML + coverage
+(JaCoCo/Cobertura/LCOV/OpenCover) per project/branch/commit; UniTrack stores every run and
+renders trends, failures, flaky tests, quality gates, and per-file coverage. Built with
+**Spring Boot 4.0.6 / Java 21**, a multi-module Maven build (`org.alexmond:unitrack-parent`,
+version `0.1.0-SNAPSHOT`). Data in **PostgreSQL** via Spring Data JPA, schema by **Flyway**.
+
+## Build, Test & Verify
+
+```bash
+scripts/dev-verify.sh                 # format + whole-reactor verify — green here = green PR
+scripts/dev-test.sh <selector>        # targeted -Dtest run (last arg = selector); e.g.
+scripts/dev-test.sh 'AuthIntegrationTest,Status*'
+./mvnw spring-javaformat:apply        # auto-format (run before committing)
+```
+
+- `dev-verify.sh` / `dev-test.sh` are allowlisted in `.claude/settings.json` (run without prompts).
+- CI (`.github/workflows/ci.yml`) runs `./mvnw -B verify` on JDK 21 — same gates as `dev-verify`.
+- Tests are **hermetic**: in-memory H2 (`MODE=PostgreSQL`), seeded admin (`unitrack.security.admin-password=testadmin`).
+
+## Architecture (modules)
+
+- **`unitrack-core`** — domain (`domain/`), ingest + parsers (`ingest/`), reporting & quality gate
+  (`report/`), JPA repositories (`repository/`). No web concerns.
+- **`unitrack-web`** — the runnable Spring Boot app: REST API (`web/api/`), Thymeleaf dashboard
+  (`web/ui/` + `templates/`), accounts/API tokens (`web/account/`, `web/security/`), GitHub
+  commit-status + repo import (`web/github/`), MCP server (`web/mcp/`), demo seeder (`web/demo/`).
+- **`unitrack-cli`** — dependency-light CLI uploader + quality-gate checker.
+
+Config is env-var driven (`unitrack-web/src/main/resources/application.yml`): `UNITRACK_DB_*`,
+`PORT`, `UNITRACK_GITHUB_*`, `UNITRACK_SECURITY_*`, `UNITRACK_NOTIFICATIONS_*`. Settings classes:
+`SecurityProperties` (`unitrack.security.*`), `GitHubProperties` (`unitrack.github.*`).
+
+## Code Style & Quality (all fail the build at `validate`)
+
+- **spring-javaformat** 0.0.47 — tabs, Spring conventions. Run `:apply` before committing.
+- **Checkstyle** 3.6.0 (+ Spring checks) — config `checkstyle.xml` / `checkstyle-suppressions.xml`.
+- **PMD** 3.28.0 — config `pmd-ruleset.xml`.
+- **JaCoCo** 0.8.14 — 80% line gate on `unitrack-web` (excludes `web/demo/**`, `UnitrackApplication`).
+- **Lombok** `@RequiredArgsConstructor` for constructor injection; `@ConfigurationProperties` for config.
+
+Recurring lint rules that bite: **SpringTernary** wants `(a != b) ? x : y` (parenthesized, prefer
+`!=`); **InnerTypeLast** (nested types after methods); **UseUnderscoresInNumericLiterals**
+(`86_400`); **AppendCharacterWithChar** (`sb.append('m')` not `"m"`).
+
+## Gotchas (load-bearing)
+
+- **Spring Boot 4 moved packages.** Actuator health is `org.springframework.boot.health.*`
+  (e.g. `…health.actuate.endpoint.HealthEndpoint`, `…health.contributor.*`); autoconfigure is split
+  per-module (Flyway, etc.). Verify imports against the jars, not Boot 3 memory.
+- **Disable Compose lifecycle in containers**: the app sets `spring.docker.compose.enabled=true`
+  for local dev, so deployments must set `SPRING_DOCKER_COMPOSE_ENABLED=false`.
+- **Flyway migrations are immutable + versioned** in `unitrack-web/src/main/resources/db/migration/`.
+  Latest is `V14__run_pr_context.sql`; **next is V15**. Never edit a shipped migration.
+- **Open mode by default** (`unitrack.security.open-mode=true`): all endpoints public so CI/uploader
+  keep working. `/profile`, `/api/v1/me`, `/import`, and project settings/members always need auth.
+- **Image build fails under rootless Podman** (buildpacks lifecycle bind-mounts the docker socket) —
+  see issue #211; the K8s deploy currently uses a hand-built JRE image as a workaround.
+
+## Deployment
+
+- **Docker Compose**: `deploy/compose.postgres.yaml` (prod-like) / `compose.h2.yaml` (demo);
+  `scripts/deploy-remote.sh` builds on a remote Docker host over SSH.
+- **Kubernetes**: Helm chart `deploy/helm/unitrack` (toggleable bundled Postgres; `values-homelab.yaml`
+  targets the k3s cluster); `scripts/deploy-k8s.sh` builds + `helm upgrade --install` + verifies.
+- **Image**: built by buildpacks via the `docker` Maven profile
+  (`./mvnw -Pdocker -pl unitrack-web -am package -Ddocker.image.name=… -Ddocker.publish=true`).
+
+## Docs
+
+Antora component under `docs/` (AsciiDoc); per-feature pages in `docs/modules/ROOT/pages/`.
+Update the relevant page when changing a user-facing feature.
