@@ -9,6 +9,7 @@ Helper scripts for developing, deploying, and feeding UniTrack. All are POSIX `b
 | `dev-verify.sh` | Local pre-commit build that mirrors CI (format + full `verify`). |
 | `dev-test.sh` | Run one test / a pattern without a full reactor verify. |
 | `deploy-remote.sh` | Build the image **on a remote Docker host over SSH** and deploy the compose stack. |
+| `deploy-k8s.sh` | Build + publish the image, then `helm upgrade --install` the chart on a Kubernetes cluster. |
 | `unitrack-upload.sh` | Dependency-free CI uploader (JUnit + JaCoCo → a UniTrack server). |
 | `unitrack-gate.sh` | Dependency-free CI quality-gate check (exit 1 when the gate fails). |
 
@@ -56,6 +57,21 @@ scripts/deploy-remote.sh --no-build                        # reuse the image alr
 Requires: SSH access to the host and a Docker daemon running there. Compose files live in
 [`../deploy/`](../deploy). The h2 stack is a throwaway demo (stable creds, pre-seeded
 sample projects when `UNITRACK_DEMO_ENABLED=true`); use the postgres stack for anything real.
+
+### `deploy-k8s.sh`
+The Kubernetes counterpart to `deploy-remote.sh`: builds + publishes the image to a registry
+(Cloud Native Buildpacks via `-Pdocker`, no Dockerfile), runs `helm upgrade --install` of the
+chart in [`../deploy/helm/unitrack`](../deploy/helm/unitrack), waits for the rollout, and runs
+`helm test`. Requires `kubectl` + `helm` pointed at the cluster and a Docker daemon for the build.
+
+```bash
+scripts/deploy-k8s.sh                                      # nas1.home.int:5000 → ns unitrack
+scripts/deploy-k8s.sh --registry ghcr.io/alexmond --tag 0.1.0
+scripts/deploy-k8s.sh --no-build                           # reuse the image already in the registry
+```
+
+Tag defaults to the Maven project version; `deploy/helm/unitrack/values-homelab.yaml` is applied
+automatically when present.
 
 ## CI helpers (dependency-free)
 

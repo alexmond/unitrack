@@ -1,0 +1,173 @@
+# Default values for the unitrack chart.
+# These are sane, portable defaults. For the home k3s cluster (Zot registry, Traefik
+# ingress, local-path DB volume) use the example overrides in values-homelab.yaml.
+
+replicaCount: 1
+
+image:
+  # Image is built by the `docker` Maven profile and pushed to a registry the cluster
+  # can pull from. See deploy/helm/unitrack/README.md for the publish command.
+  repository: ghcr.io/alexmond/unitrack
+  # Defaults to .Chart.appVersion when left empty.
+  tag: ""
+  pullPolicy: IfNotPresent
+
+# Pull secrets for a private registry, e.g. [{ name: zot-regcred }].
+imagePullSecrets: []
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+
+# Extra annotations/labels for the app pod (e.g. to force a rollout).
+podAnnotations: {}
+podLabels: {}
+
+# Buildpack image already runs as a non-root user; keep the pod locked down.
+podSecurityContext:
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  capabilities:
+    drop:
+      - ALL
+
+service:
+  type: ClusterIP
+  port: 8080
+
+ingress:
+  enabled: false
+  className: ""
+  # Annotations the app needs behind a proxy: large upload bodies (multipart limit is
+  # 100MB) and long-lived MCP SSE streams. Keys shown are for Traefik; adapt for nginx.
+  annotations: {}
+  #   traefik.ingress.kubernetes.io/router.entrypoints: websecure
+  host: unitrack.local
+  path: /
+  pathType: Prefix
+  tls: false
+  # Only needed when terminating TLS with a per-host Secret. On the home cluster Traefik
+  # serves the wildcard *.home.int cert by default, so leave this empty there.
+  tlsSecretName: ""
+
+# JVM heap is sized from the container memory limit by the buildpack, so set a real limit.
+resources:
+  requests:
+    cpu: 250m
+    memory: 768Mi
+  limits:
+    memory: 1Gi
+
+# Block app startup until the database accepts connections (pg_isready against the JDBC
+# host). Avoids a crash-restart cycle on first boot when the DB isn't up yet. Works for both
+# the bundled StatefulSet and an external database.
+waitForDatabase:
+  enabled: true
+  image: postgres:17
+  # Seconds between probe attempts.
+  intervalSeconds: 2
+
+# Flyway runs migrations on first boot; the startup probe gives it room before liveness
+# kicks in. Liveness/readiness use the actuator probe endpoints (already enabled in the app).
+probes:
+  startup:
+    path: /actuator/health
+    periodSeconds: 5
+    failureThreshold: 60
+  liveness:
+    path: /actuator/health/liveness
+    periodSeconds: 10
+    failureThreshold: 3
+  readiness:
+    path: /actuator/health/readiness
+    periodSeconds: 10
+    failureThreshold: 3
+
+# Single-writer DB: never run two app pods against an un-migrated schema mid-rollout.
+updateStrategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 0
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# Extra free-form env passed straight to the app container (e.g. SPRING_MAIL_HOST).
+extraEnv: []
+#  - name: SPRING_MAIL_HOST
+#    value: smtp.example.com
+
+# ---------------------------------------------------------------------------------------
+# Application configuration (maps to UniTrack's UNITRACK_* env contract).
+# ---------------------------------------------------------------------------------------
+app:
+  notifications:
+    enabled: false
+    mailFrom: unitrack@localhost
+    # Public base URL used in notification links; usually your ingress URL.
+    baseUrl: ""
+  github:
+    # GitHub commit-status integration. Token is supplied via a Secret (see below).
+    enabled: false
+    serverBaseUrl: ""
+
+# ---------------------------------------------------------------------------------------
+# Database.
+#   postgresql.enabled=true  -> chart deploys a bundled PostgreSQL StatefulSet (postgres:17)
+#   postgresql.enabled=false -> app connects to externalDatabase.* instead
+# ---------------------------------------------------------------------------------------
+postgresql:
+  enabled: true
+  image: postgres:17
+  auth:
+    database: unitrack
+    username: unitrack
+    # Leave empty to auto-generate on first install (persisted in the chart Secret).
+    password: ""
+  persistence:
+    enabled: true
+    size: 8Gi
+    # Empty = cluster default StorageClass. NOTE: NFS exported with all_squash can fail
+    # Postgres initdb (chown denied); use a no_root_squash export or a node-local class
+    # (e.g. local-path) in that case.
+    storageClass: ""
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+
+externalDatabase:
+  # Used only when postgresql.enabled=false.
+  url: ""        # e.g. jdbc:postgresql://db.example.com:5432/unitrack
+  user: unitrack
+  # Supply the password inline (goes into the chart Secret) OR reference an existing Secret.
+  password: ""
+  existingSecret: ""
+  existingSecretPasswordKey: password
+
+# ---------------------------------------------------------------------------------------
+# Secrets the app reads (DB password, optional GitHub token / SMTP password).
+# When existingSecret is set, the chart does NOT create its own Secret and reads keys
+# from yours instead.
+# ---------------------------------------------------------------------------------------
+secret:
+  existingSecret: ""
+  keys:
+    dbPassword: db-password
+    githubToken: github-token
+    mailPassword: mail-password
+  # Optional sensitive values folded into the chart-managed Secret.
+  githubToken: ""
+  mailPassword: ""

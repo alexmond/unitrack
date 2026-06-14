@@ -1,0 +1,22 @@
+apiVersion: v2
+name: unitrack
+description: |
+  Self-hosted server for tracking JUnit test execution and code coverage over time.
+  Ships the app plus an optional bundled PostgreSQL (toggleable; point at an external
+  database for production).
+type: application
+# Chart version — bump on chart changes independent of the app.
+version: 0.1.0
+# Tracks the UniTrack release the chart defaults to (image tag falls back to this).
+appVersion: "0.1.0-SNAPSHOT"
+keywords:
+  - junit
+  - coverage
+  - jacoco
+  - testing
+  - spring-boot
+home: https://github.com/alexmond/unitrack
+sources:
+  - https://github.com/alexmond/unitrack
+maintainers:
+  - name: alexmond
