@@ -34,6 +34,18 @@ public class UserService {
 		return users.save(user);
 	}
 
+	/**
+	 * Self-service registration: creates a regular {@link Role#USER} account. The display
+	 * name defaults to the username. Throws if the username is already taken.
+	 */
+	@Transactional
+	public User register(String username, String email, String rawPassword) {
+		if (users.findByUsername(username).isPresent()) {
+			throw new IllegalArgumentException("That username is already taken.");
+		}
+		return create(username, username, email, rawPassword, Role.USER);
+	}
+
 	/** Sets a user's password directly (admin/seed use). */
 	@Transactional
 	public void resetPassword(String username, String rawPassword) {

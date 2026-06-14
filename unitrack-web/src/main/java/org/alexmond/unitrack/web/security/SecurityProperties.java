@@ -25,6 +25,14 @@ public class SecurityProperties {
 	 */
 	private boolean requireIngestToken;
 
+	/**
+	 * When true, self-service signup is available: the UI shows a "Sign up" link and
+	 * {@code /signup} accepts new local accounts. Default false — turn it on to let users
+	 * register themselves. Other auth methods (e.g. GitHub OAuth) will plug in alongside
+	 * this as separate, independently-toggled options.
+	 */
+	private boolean signupEnabled;
+
 	/** Username of the default admin seeded on first start (when there are no users). */
 	private String adminUsername = "admin";
 

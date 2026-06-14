@@ -58,6 +58,10 @@ management:
     health:
       probes:
         enabled: true
+      # The /status UI page renders the aggregated health, so surface components and
+      # their details to the health endpoint (this is an internal self-hosted dashboard).
+      show-components: always
+      show-details: always
 
 unitrack:
   notifications:
