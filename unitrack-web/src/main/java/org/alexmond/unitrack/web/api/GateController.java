@@ -8,6 +8,7 @@ import org.alexmond.unitrack.domain.TestRun;
 import org.alexmond.unitrack.report.QualityGateResult;
 import org.alexmond.unitrack.report.QualityGateService;
 import org.alexmond.unitrack.report.ReportingService;
+import org.alexmond.unitrack.web.account.ProjectAccessService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -28,8 +29,11 @@ public class GateController {
 
 	private final ReportingService reporting;
 
+	private final ProjectAccessService access;
+
 	@GetMapping("/runs/{id}/quality-gate")
 	public ResponseEntity<QualityGateResult> qualityGate(@PathVariable Long id) {
+		this.access.requireReadRun(id);
 		return this.gate.evaluate(id).map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
 	}
 
@@ -50,6 +54,7 @@ public class GateController {
 		if (found.isEmpty()) {
 			return ResponseEntity.notFound().build();
 		}
+		this.access.requireRead(found.get());
 		Long projectId = found.get().getId();
 		Optional<TestRun> run = (commit != null) ? this.reporting.latestRunByCommit(projectId, commit, flag)
 				: this.reporting.latestRunByBranch(projectId, branch, flag);

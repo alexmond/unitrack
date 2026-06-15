@@ -6,6 +6,7 @@ import org.alexmond.unitrack.domain.Project;
 import org.alexmond.unitrack.domain.TestCaseResult;
 import org.alexmond.unitrack.domain.TestRun;
 import org.alexmond.unitrack.domain.TestSuiteResult;
+import org.alexmond.unitrack.domain.Visibility;
 import org.alexmond.unitrack.repository.CoverageFileEntryRepository;
 import org.alexmond.unitrack.repository.CoverageReportRepository;
 import org.alexmond.unitrack.repository.ProjectRepository;
@@ -14,6 +15,7 @@ import org.alexmond.unitrack.repository.TestRunRepository;
 import org.alexmond.unitrack.repository.TestSuiteResultRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,6 +46,12 @@ public class IngestService {
 	private final JUnitXmlParser junitParser;
 
 	private final CoverageParsers coverageParsers;
+
+	/**
+	 * Visibility assigned to auto-created projects on first ingest. Defaults to PRIVATE.
+	 */
+	@Value("${unitrack.security.default-visibility:PRIVATE}")
+	private Visibility defaultVisibility = Visibility.PRIVATE;
 
 	/**
 	 * Parses and stores a run. {@code junitStreams} and {@code jacocoStreams} are
@@ -101,7 +109,11 @@ public class IngestService {
 				existing.setRepoUrl(repoUrl);
 			}
 			return existing;
-		}).orElseGet(() -> projects.save(new Project(name, blankToNull(repoUrl))));
+		}).orElseGet(() -> {
+			Project created = new Project(name, blankToNull(repoUrl));
+			created.setVisibility(defaultVisibility);
+			return projects.save(created);
+		});
 	}
 
 	private JUnitResults parseJUnit(List<Supplier<InputStream>> streams) {

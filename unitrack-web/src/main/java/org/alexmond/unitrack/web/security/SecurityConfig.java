@@ -48,7 +48,8 @@ public class SecurityConfig {
 				// Provisioning projects from GitHub is a management action: always
 				// require login.
 				auth.requestMatchers("/import", "/import/**").authenticated();
-				auth.requestMatchers("/projects/*/settings", "/projects/*/members", "/projects/*/members/**")
+				auth.requestMatchers("/projects/*/settings", "/projects/*/visibility", "/projects/*/members",
+						"/projects/*/members/**")
 					.authenticated();
 				if (props.isRequireIngestToken()) {
 					auth.requestMatchers(HttpMethod.POST, "/api/v1/ingest").authenticated();

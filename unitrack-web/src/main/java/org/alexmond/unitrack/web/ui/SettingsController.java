@@ -2,8 +2,10 @@ package org.alexmond.unitrack.web.ui;
 
 import lombok.RequiredArgsConstructor;
 import org.alexmond.unitrack.domain.Project;
+import org.alexmond.unitrack.domain.Visibility;
 import org.alexmond.unitrack.report.ProjectSettingsService;
 import org.alexmond.unitrack.report.ReportingService;
+import org.alexmond.unitrack.repository.ProjectRepository;
 import org.alexmond.unitrack.web.account.MembershipService;
 import org.alexmond.unitrack.web.github.GitHubProperties;
 import org.springframework.http.HttpStatus;
@@ -31,6 +33,8 @@ public class SettingsController {
 
 	private final MembershipService membership;
 
+	private final ProjectRepository projects;
+
 	@GetMapping("/projects/{id}/settings")
 	public String settings(@PathVariable Long id, Model model) {
 		Project project = reporting.findProject(id)
@@ -57,6 +61,20 @@ public class SettingsController {
 		}
 		settings.save(id, baseBranch, parseDouble(minLineCoverage), parseDouble(maxCoverageDropPct),
 				parseBoolean(failOnNewFailures), parseBoolean(ghEnabled), ghContext, parseBoolean(ghPrComment));
+		return "redirect:/projects/" + id + "/settings";
+	}
+
+	/** Change project visibility (PUBLIC/PRIVATE). Owner-only. */
+	@PostMapping("/projects/{id}/visibility")
+	@Transactional
+	public String visibility(@PathVariable Long id, @RequestParam Visibility visibility, Authentication auth) {
+		Project project = reporting.findProject(id)
+			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found"));
+		if (auth == null || !membership.canManage(auth.getName(), id)) {
+			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Project owner access required");
+		}
+		project.setVisibility(visibility);
+		projects.save(project);
 		return "redirect:/projects/" + id + "/settings";
 	}
 

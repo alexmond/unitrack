@@ -3,10 +3,10 @@ package org.alexmond.unitrack.web.api;
 import java.util.List;
 
 import lombok.RequiredArgsConstructor;
-import org.alexmond.unitrack.report.ReportingService;
 import org.alexmond.unitrack.report.TriageResult;
 import org.alexmond.unitrack.report.TriageRuleView;
 import org.alexmond.unitrack.report.TriageService;
+import org.alexmond.unitrack.web.account.ProjectAccessService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -25,21 +25,17 @@ public class TriageController {
 
 	private final TriageService triage;
 
-	private final ReportingService reporting;
+	private final ProjectAccessService access;
 
 	@GetMapping("/projects/{id}/triage-rules")
 	public ResponseEntity<List<TriageRuleView>> rules(@PathVariable Long id) {
-		if (reporting.findProject(id).isEmpty()) {
-			return ResponseEntity.notFound().build();
-		}
+		access.requireReadProject(id);
 		return ResponseEntity.ok(triage.listRules(id));
 	}
 
 	@PostMapping("/projects/{id}/triage-rules")
 	public ResponseEntity<TriageRuleView> addRule(@PathVariable Long id, @RequestBody RuleRequest req) {
-		if (reporting.findProject(id).isEmpty()) {
-			return ResponseEntity.notFound().build();
-		}
+		access.requireWriteProject(id);
 		int priority = (req.priority() != null) ? req.priority() : 100;
 		TriageRuleView view = triage.addRule(id, req.name(), req.category(), req.pattern(), priority);
 		return ResponseEntity.status(HttpStatus.CREATED).body(view);
@@ -47,15 +43,16 @@ public class TriageController {
 
 	@DeleteMapping("/triage-rules/{ruleId}")
 	public ResponseEntity<Void> deleteRule(@PathVariable Long ruleId) {
-		triage.deleteRule(ruleId);
-		return ResponseEntity.noContent().build();
+		return triage.projectIdOfRule(ruleId).map((projectId) -> {
+			access.requireWriteProject(projectId);
+			triage.deleteRule(ruleId);
+			return ResponseEntity.noContent().<Void>build();
+		}).orElseGet(() -> ResponseEntity.noContent().build());
 	}
 
 	@GetMapping("/runs/{id}/triage")
 	public ResponseEntity<TriageResult> triage(@PathVariable Long id) {
-		if (reporting.findRun(id).isEmpty()) {
-			return ResponseEntity.notFound().build();
-		}
+		access.requireReadRun(id);
 		return ResponseEntity.ok(triage.triageRun(id));
 	}
 

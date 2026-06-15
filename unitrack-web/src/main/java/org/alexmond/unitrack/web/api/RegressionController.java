@@ -3,6 +3,7 @@ package org.alexmond.unitrack.web.api;
 import lombok.RequiredArgsConstructor;
 import org.alexmond.unitrack.report.TestRegressionResult;
 import org.alexmond.unitrack.report.TestRegressionService;
+import org.alexmond.unitrack.web.account.ProjectAccessService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -17,8 +18,11 @@ public class RegressionController {
 
 	private final TestRegressionService regression;
 
+	private final ProjectAccessService access;
+
 	@GetMapping("/runs/{id}/regression")
 	public ResponseEntity<TestRegressionResult> regression(@PathVariable Long id) {
+		this.access.requireReadRun(id);
 		return this.regression.diff(id).map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
 	}
 

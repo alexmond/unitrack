@@ -12,6 +12,24 @@
     <h1 th:text="${project.name} + ' — settings'">project — settings</h1>
     <nav th:replace="~{fragments/common :: subnav(${project.id}, 'settings')}"></nav>
 
+    <h2>Visibility</h2>
+    <p class="muted">
+        <span th:if="${project.visibility.name() == 'PRIVATE'}">
+            <i class="bi bi-lock-fill" aria-hidden="true"></i> Private — only members and admins can view this project.</span>
+        <span th:unless="${project.visibility.name() == 'PRIVATE'}">
+            <i class="bi bi-globe" aria-hidden="true"></i> Public — anyone can view this project.</span>
+    </p>
+    <form method="post" th:action="@{/projects/{id}/visibility(id=${project.id})}" style="max-width:520px">
+        <div class="mb-3">
+            <select name="visibility" class="form-select" style="max-width:220px;display:inline-block">
+                <option value="PRIVATE" th:selected="${project.visibility.name() == 'PRIVATE'}">Private</option>
+                <option value="PUBLIC" th:selected="${project.visibility.name() == 'PUBLIC'}">Public</option>
+            </select>
+            <button class="btn btn-primary" type="submit">Update visibility</button>
+        </div>
+        <p class="muted" style="font-size:13px">Only a project owner can change visibility.</p>
+    </form>
+
     <h2>Quality gate</h2>
     <p class="muted">Per-project overrides. Leave a field blank to inherit the global default
         (shown in the placeholder).</p>

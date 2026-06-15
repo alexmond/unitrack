@@ -3,6 +3,7 @@ package org.alexmond.unitrack.web.api;
 import lombok.RequiredArgsConstructor;
 import org.alexmond.unitrack.report.PerfRunRegression;
 import org.alexmond.unitrack.report.PerfRunRegressionService;
+import org.alexmond.unitrack.web.account.ProjectAccessService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,8 +23,11 @@ public class PerfRunRegressionController {
 
 	private final PerfRunRegressionService perfRunRegression;
 
+	private final ProjectAccessService access;
+
 	@GetMapping("/perf-runs/{id}/regression")
 	public ResponseEntity<PerfRunRegression> regression(@PathVariable Long id) {
+		this.access.requireReadPerfRun(id);
 		return this.perfRunRegression.evaluate(id)
 			.map((r) -> ResponseEntity.status(r.passed() ? HttpStatus.OK : HttpStatus.UNPROCESSABLE_ENTITY).body(r))
 			.orElseGet(() -> ResponseEntity.notFound().build());

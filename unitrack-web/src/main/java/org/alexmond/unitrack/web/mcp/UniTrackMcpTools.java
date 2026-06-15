@@ -10,6 +10,8 @@ import org.alexmond.unitrack.report.FailureClusteringService;
 import org.alexmond.unitrack.report.FlakyTestService;
 import org.alexmond.unitrack.report.QualityGateService;
 import org.alexmond.unitrack.report.ReportingService;
+import org.alexmond.unitrack.web.account.MembershipService;
+import org.alexmond.unitrack.web.account.ProjectAccessService;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Service;
@@ -36,9 +38,13 @@ public class UniTrackMcpTools {
 
 	private final FailureClusteringService clustering;
 
+	private final ProjectAccessService access;
+
+	private final MembershipService membership;
+
 	@Tool(description = "List all projects tracked by UniTrack, with their id, name, repo URL and total run count.")
 	public List<ProjectInfo> listProjects() {
-		return this.reporting.listProjects()
+		return this.membership.readable(this.access.currentUsername(), this.reporting.listProjects())
 			.stream()
 			.map((p) -> new ProjectInfo(p.getId(), p.getName(), p.getRepoUrl(), this.reporting.runCount(p.getId())))
 			.toList();
@@ -56,8 +62,7 @@ public class UniTrackMcpTools {
 	@Tool(description = "Get full detail for one test run: summary metrics, the quality-gate verdict, coverage, "
 			+ "and the list of failing test cases.")
 	public RunDetail getRunDetail(@ToolParam(description = "Test run id") long runId) {
-		TestRun run = this.reporting.findRun(runId)
-			.orElseThrow(() -> new IllegalArgumentException("No run with id " + runId));
+		TestRun run = readableRun(runId);
 		List<FailingTest> failing = this.reporting.failedCasesFor(runId)
 			.stream()
 			.map(UniTrackMcpTools::toFailingTest)
@@ -67,6 +72,7 @@ public class UniTrackMcpTools {
 
 	@Tool(description = "Get the quality-gate verdict for a run (passed/failed plus each rule's detail).")
 	public GateInfo getQualityGate(@ToolParam(description = "Test run id") long runId) {
+		readableRun(runId);
 		GateInfo gate = gateInfo(runId);
 		if (gate == null) {
 			throw new IllegalArgumentException("No quality gate for run " + runId + " (run not found or no gate)");
@@ -76,6 +82,7 @@ public class UniTrackMcpTools {
 
 	@Tool(description = "Get code-coverage for a run: line/branch percentages and covered/missed counts.")
 	public CoverageInfo getCoverage(@ToolParam(description = "Test run id") long runId) {
+		readableRun(runId);
 		return coverageInfo(runId);
 	}
 
@@ -101,12 +108,24 @@ public class UniTrackMcpTools {
 	}
 
 	private Project resolveProject(String project) {
+		Project resolved;
 		if (project != null && project.chars().allMatch(Character::isDigit) && !project.isBlank()) {
-			return this.reporting.findProject(Long.parseLong(project))
+			resolved = this.reporting.findProject(Long.parseLong(project))
 				.orElseThrow(() -> new IllegalArgumentException("No project with id " + project));
 		}
-		return this.reporting.findProjectByName(project)
-			.orElseThrow(() -> new IllegalArgumentException("No project named '" + project + "'"));
+		else {
+			resolved = this.reporting.findProjectByName(project)
+				.orElseThrow(() -> new IllegalArgumentException("No project named '" + project + "'"));
+		}
+		return this.access.requireRead(resolved);
+	}
+
+	/** Resolves a run (clear error if unknown) and enforces visibility on its project. */
+	private TestRun readableRun(long runId) {
+		TestRun run = this.reporting.findRun(runId)
+			.orElseThrow(() -> new IllegalArgumentException("No run with id " + runId));
+		this.access.requireRead(run.getProject());
+		return run;
 	}
 
 	private GateInfo gateInfo(long runId) {

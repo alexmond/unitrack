@@ -19,3 +19,6 @@ spring:
 unitrack:
   security:
     admin-password: testadmin
+    # Most integration tests ingest then read anonymously; keep auto-created projects public
+    # so those keep working. The visibility feature itself is tested with explicit PRIVATE projects.
+    default-visibility: PUBLIC
