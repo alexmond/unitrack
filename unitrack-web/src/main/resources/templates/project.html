@@ -181,6 +181,23 @@
         </tr>
         </tbody>
     </table>
+
+    <form th:if="${runs.size() >= 2}" method="get" th:action="@{/compare}" class="compare-form">
+        <h2>Compare runs</h2>
+        <label>base
+            <select name="base" class="form-select form-select-sm">
+                <option th:each="r : ${runs}" th:value="${r.id}"
+                        th:text="(${r.shortSha} ?: ${r.id}) + ' · ' + ${#temporals.format(r.createdAt, 'MMM dd HH:mm')}">run</option>
+            </select>
+        </label>
+        <label>head
+            <select name="head" class="form-select form-select-sm">
+                <option th:each="r : ${runs}" th:value="${r.id}"
+                        th:text="(${r.shortSha} ?: ${r.id}) + ' · ' + ${#temporals.format(r.createdAt, 'MMM dd HH:mm')}">run</option>
+            </select>
+        </label>
+        <button class="btn btn-primary" type="submit">Compare</button>
+    </form>
 </main>
 <th:block layout:fragment="scripts">
 

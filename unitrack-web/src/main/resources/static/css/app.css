@@ -240,6 +240,12 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
     border: 1px solid var(--border); border-radius: 8px; padding: 4px 9px; font-size: 13px;
 }
 
+/* Run comparison picker — two run selects + submit, themed like the branch picker. */
+.compare-form { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 12px; margin: 6px 0 14px; }
+.compare-form h2 { width: 100%; margin: 0 0 2px; }
+.compare-form label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
+.compare-form .form-select { width: auto; }
+
 details.howto { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; margin: 4px 0 8px; }
 details.howto > summary { cursor: pointer; font-weight: 600; }
 .snippet { position: relative; }
