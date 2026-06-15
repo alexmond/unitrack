@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head><title>UniTrack — Audit log</title></head>
+<body>
+
+<main class="container" layout:fragment="content">
+    <p class="crumbs"><a th:href="@{/}">Projects</a> / Audit log</p>
+    <h1>Audit log</h1>
+    <p class="muted">
+        Append-only record of state-changing actions (AI/MCP write tools). Newest first.
+        <span th:if="${filterProject != null}">
+            Filtered to project <code class="mono" th:text="${projectNames.get(filterProject)} ?: ('#' + filterProject)">name</code> —
+            <a th:href="@{/audit}">clear</a>.
+        </span>
+    </p>
+
+    <div th:if="${entries.isEmpty()}" class="empty">No audited actions yet.</div>
+    <table class="table table-hover align-middle" th:unless="${entries.isEmpty()}">
+        <thead>
+        <tr>
+            <th>When</th>
+            <th>Actor</th>
+            <th>Action</th>
+            <th>Source</th>
+            <th>Project</th>
+            <th>Detail</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="e : ${entries}">
+            <td th:text="${#temporals.format(e.createdAt, 'yyyy-MM-dd HH:mm')}">date</td>
+            <td th:text="${e.actor} ?: '—'">alice</td>
+            <td><span class="badge tag" th:text="${e.action}">ACTION</span></td>
+            <td><code class="mono" th:text="${e.source}">MCP</code></td>
+            <td>
+                <a th:if="${e.projectId != null}" th:href="@{/audit(project=${e.projectId})}"
+                   th:text="${projectNames.get(e.projectId)} ?: ('#' + e.projectId)">project</a>
+                <span th:if="${e.projectId == null}" class="muted">—</span>
+            </td>
+            <td class="muted" th:text="${e.detail}">detail</td>
+        </tr>
+        </tbody>
+    </table>
+</main>
+</body>
+</html>

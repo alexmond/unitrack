@@ -54,6 +54,10 @@ public class SecurityConfig {
 				// /runs/** and still requires write access.
 				auth.requestMatchers(HttpMethod.GET, "/share/**").permitAll();
 				auth.requestMatchers("/profile/**", "/api/v1/me/**").authenticated();
+				// The audit log can name private projects/users — admin-only, even in
+				// open
+				// mode.
+				auth.requestMatchers("/audit/**").hasRole("ADMIN");
 				// Provisioning projects from GitHub is a management action: always
 				// require login.
 				auth.requestMatchers("/import", "/import/**").authenticated();

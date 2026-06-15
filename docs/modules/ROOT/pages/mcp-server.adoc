@@ -60,6 +60,10 @@ which channel.
 | `ackFailureCluster`    | Acknowledge a failure cluster by routing its signature to a triage category.
 |===
 
+Every action is recorded in an append-only audit trail. Admins can review it at **`/audit`**
+(linked as *Audit* in the top nav) — who did what, on which project, through which channel — with
+an optional per-project filter.
+
 For AI clients, mint a dedicated **`ACTION`-scoped** token (Profile → API tokens): it
 authenticates only on the MCP transport (`/sse`, `/mcp/**`) and is rejected everywhere else, so a
 leaked copilot token can't browse the UI or REST API — it can only drive these tools, within the
