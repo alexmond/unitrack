@@ -2,11 +2,14 @@ package org.alexmond.unitrack.web.demo;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.alexmond.unitrack.domain.ProjectRole;
 import org.alexmond.unitrack.domain.Role;
+import org.alexmond.unitrack.domain.Visibility;
 import org.alexmond.unitrack.ingest.IngestRequest;
 import org.alexmond.unitrack.ingest.IngestService;
 import org.alexmond.unitrack.ingest.PerfIngestService;
 import org.alexmond.unitrack.repository.ProjectRepository;
+import org.alexmond.unitrack.web.account.MembershipService;
 import org.alexmond.unitrack.web.account.UserService;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
@@ -39,6 +42,8 @@ public class DemoDataSeeder implements ApplicationRunner {
 	private final IngestService ingest;
 
 	private final PerfIngestService perfIngest;
+
+	private final MembershipService membership;
 
 	@Override
 	public void run(ApplicationArguments args) {
@@ -86,6 +91,8 @@ public class DemoDataSeeder implements ApplicationRunner {
 		ingestPerf(name, repo, "a3c0de3", 1.03, 0.005);
 		ingestPerf(name, repo, "a4c0de4", 1.45, 0.030);
 		ingestPerf(name, repo, "a5c0de5", 1.10, 0.000);
+		// PUBLIC: visible to everyone, even signed-out — the open sample project.
+		configure(name, Visibility.PUBLIC, null);
 	}
 
 	private void seedBilling() {
@@ -112,6 +119,9 @@ public class DemoDataSeeder implements ApplicationRunner {
 				withExtra(ok, new Case("com.billing.InvoiceTest", "generate", false, null, null),
 						new Case("com.billing.RefundTest", "process", false, null, null)),
 				710, 290, 63, 17);
+		// PRIVATE, owned by the test user: visible to them (and admins), hidden from
+		// anonymous.
+		configure(name, Visibility.PRIVATE, ProjectRole.OWNER);
 	}
 
 	private void seedFrontend() {
@@ -131,6 +141,23 @@ public class DemoDataSeeder implements ApplicationRunner {
 				870, 130, 78, 4);
 		ingest(name, repo, "main", "frontend", "f3c0de3",
 				withExtra(cases, new Case("com.web.SearchTest", "suggest", false, null, null)), 900, 100, 81, 3);
+		// PRIVATE, test user has READ only: they can view but not write (shows the role
+		// split).
+		configure(name, Visibility.PRIVATE, ProjectRole.READ);
+	}
+
+	/**
+	 * Sets a seeded project's visibility and (optionally) grants the test user a role on
+	 * it.
+	 */
+	private void configure(String name, Visibility visibility, ProjectRole testUserRole) {
+		projects.findByName(name).ifPresent((project) -> {
+			project.setVisibility(visibility);
+			projects.save(project);
+			if (testUserRole != null) {
+				membership.addOrUpdate(project.getId(), props.getTestUsername(), testUserRole);
+			}
+		});
 	}
 
 	private List<Case> withExtra(List<Case> base, Case... extra) {

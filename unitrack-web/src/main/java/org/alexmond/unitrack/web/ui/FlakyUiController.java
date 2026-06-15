@@ -4,15 +4,13 @@ import lombok.RequiredArgsConstructor;
 import org.alexmond.unitrack.domain.FlakyStatus;
 import org.alexmond.unitrack.domain.Project;
 import org.alexmond.unitrack.report.FlakyTestService;
-import org.alexmond.unitrack.report.ReportingService;
-import org.springframework.http.HttpStatus;
+import org.alexmond.unitrack.web.account.ProjectAccessService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.server.ResponseStatusException;
 
 /** Server-rendered flaky-test dashboard and quarantine actions. */
 @Controller
@@ -21,12 +19,11 @@ public class FlakyUiController {
 
 	private final FlakyTestService flaky;
 
-	private final ReportingService reporting;
+	private final ProjectAccessService access;
 
 	@GetMapping("/projects/{id}/flaky")
 	public String flaky(@PathVariable Long id, Model model) {
-		Project project = reporting.findProject(id)
-			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found"));
+		Project project = access.requireReadProject(id);
 		model.addAttribute("project", project);
 		model.addAttribute("flaky", flaky.listFlaky(id));
 		return "flaky";
@@ -36,6 +33,7 @@ public class FlakyUiController {
 	public String setStatus(@PathVariable Long id, @RequestParam String name,
 			@RequestParam(required = false) String className, @RequestParam FlakyStatus status,
 			@RequestParam(required = false) String note) {
+		access.requireWriteProject(id);
 		flaky.setStatus(id, className, name, status, note);
 		return "redirect:/projects/" + id + "/flaky";
 	}

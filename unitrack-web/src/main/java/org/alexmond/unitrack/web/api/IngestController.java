@@ -1,11 +1,14 @@
 package org.alexmond.unitrack.web.api;
 
 import org.alexmond.unitrack.domain.PerfRun;
+import org.alexmond.unitrack.domain.Project;
+import org.alexmond.unitrack.domain.ProjectRole;
 import org.alexmond.unitrack.domain.TestRun;
 import org.alexmond.unitrack.ingest.IngestException;
 import org.alexmond.unitrack.ingest.IngestRequest;
 import org.alexmond.unitrack.ingest.IngestService;
 import org.alexmond.unitrack.ingest.PerfIngestService;
+import org.alexmond.unitrack.report.ReportingService;
 import org.alexmond.unitrack.report.PerfRegressionResult;
 import org.alexmond.unitrack.report.PerfRegressionService;
 import org.alexmond.unitrack.report.PerfRunRegression;
@@ -14,12 +17,15 @@ import org.alexmond.unitrack.report.QualityGateResult;
 import org.alexmond.unitrack.report.QualityGateService;
 import org.alexmond.unitrack.report.TestRegressionResult;
 import org.alexmond.unitrack.report.TestRegressionService;
+import org.alexmond.unitrack.web.account.MembershipService;
+import org.alexmond.unitrack.web.account.ProjectAccessService;
 import org.alexmond.unitrack.web.github.GitHubPrCommentService;
 import org.alexmond.unitrack.web.github.GitHubStatusService;
 import org.alexmond.unitrack.web.notify.GateFailureNotifier;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -65,6 +71,12 @@ public class IngestController {
 
 	private final GateFailureNotifier gateFailureNotifier;
 
+	private final ReportingService reporting;
+
+	private final MembershipService membership;
+
+	private final ProjectAccessService access;
+
 	@PostMapping(path = "/ingest", consumes = "multipart/form-data")
 	public ResponseEntity<ApiResponses.IngestResultJson> ingest(@RequestParam String project,
 			@RequestParam(required = false) String repoUrl, @RequestParam(required = false) String branch,
@@ -82,6 +94,14 @@ public class IngestController {
 			throw new IngestException("Provide at least one 'junit' or 'perf' file");
 		}
 
+		// Authorize against the existing project; a brand-new project will be created by
+		// ingest.
+		String uploader = access.currentUsername();
+		Project existing = reporting.findProjectByName(project).orElse(null);
+		if (existing != null && uploader != null && !membership.canWrite(uploader, existing.getId())) {
+			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Write access to project required");
+		}
+
 		IngestRequest meta = new IngestRequest(project, repoUrl, branch, flag, commit, buildUrl, ciProvider, runKey,
 				baseBranch, prNumber);
 		TestRun run = null;
@@ -92,6 +112,12 @@ public class IngestController {
 		PerfRun perfRun = perfStreams.isEmpty() ? null : perfIngest.ingest(meta, perfStreams);
 		if (perfRun != null) {
 			publishPerfComment(perfRun);
+		}
+		// A newly-created (PRIVATE by default) project gets its uploader as OWNER, so an
+		// authenticated CI/user keeps access to what it just created.
+		if (existing == null && uploader != null) {
+			Long newProjectId = (run != null) ? run.getProject().getId() : perfRun.getProject().getId();
+			membership.grantIfUserExists(newProjectId, uploader, ProjectRole.OWNER);
 		}
 		return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponses.IngestResultJson.of(run, perfRun));
 	}

@@ -11,9 +11,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.alexmond.unitrack.domain.PerfRun;
 import org.alexmond.unitrack.domain.PerfTransaction;
 import org.alexmond.unitrack.domain.Project;
+import org.alexmond.unitrack.domain.Visibility;
 import org.alexmond.unitrack.repository.PerfRunRepository;
 import org.alexmond.unitrack.repository.PerfTransactionRepository;
 import org.alexmond.unitrack.repository.ProjectRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,6 +35,12 @@ public class PerfIngestService {
 	private final PerfTransactionRepository perfTransactions;
 
 	private final PerfParsers perfParsers;
+
+	/**
+	 * Visibility assigned to auto-created projects on first ingest. Defaults to PRIVATE.
+	 */
+	@Value("${unitrack.security.default-visibility:PRIVATE}")
+	private Visibility defaultVisibility = Visibility.PRIVATE;
 
 	@Transactional
 	public PerfRun ingest(IngestRequest meta, List<Supplier<InputStream>> perfStreams) {
@@ -94,7 +102,11 @@ public class PerfIngestService {
 	}
 
 	private Project findOrCreateProject(String name, String repoUrl) {
-		return projects.findByName(name).orElseGet(() -> projects.save(new Project(name, blankToNull(repoUrl))));
+		return projects.findByName(name).orElseGet(() -> {
+			Project created = new Project(name, blankToNull(repoUrl));
+			created.setVisibility(defaultVisibility);
+			return projects.save(created);
+		});
 	}
 
 	private static String blankToNull(String value) {

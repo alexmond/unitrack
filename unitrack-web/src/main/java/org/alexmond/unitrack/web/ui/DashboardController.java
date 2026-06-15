@@ -24,6 +24,8 @@ import org.alexmond.unitrack.report.QualityGateService;
 import org.alexmond.unitrack.report.ReportingService;
 import org.alexmond.unitrack.report.TestRegressionService;
 import org.alexmond.unitrack.report.TriageService;
+import org.alexmond.unitrack.web.account.MembershipService;
+import org.alexmond.unitrack.web.account.ProjectAccessService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
@@ -85,9 +87,14 @@ public class DashboardController {
 
 	private final ProjectHealthService projectHealth;
 
+	private final ProjectAccessService access;
+
+	private final MembershipService membership;
+
 	@GetMapping("/")
 	public String index(Model model) {
-		List<ProjectHealth> board = projectHealth.board();
+		String user = access.currentUsername();
+		List<ProjectHealth> board = projectHealth.board((p) -> membership.canRead(user, p));
 		model.addAttribute("board", board);
 		model.addAttribute("summary", ProjectHealthService.summarize(board));
 		return "index";
@@ -95,8 +102,7 @@ public class DashboardController {
 
 	@GetMapping("/projects/{id}")
 	public String project(@PathVariable Long id, @RequestParam(required = false) String branch, Model model) {
-		Project project = reporting.findProject(id)
-			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found"));
+		Project project = access.requireReadProject(id);
 		List<BranchSummary> branchSummaries = branchService.list(id);
 		List<String> branches = branchSummaries.stream().map(BranchSummary::branch).toList();
 		String selectedBranch = resolveBranch(id, branch, branches);
@@ -119,8 +125,7 @@ public class DashboardController {
 
 	@GetMapping("/projects/{id}/coverage")
 	public String coverage(@PathVariable Long id, Model model) {
-		Project project = reporting.findProject(id)
-			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found"));
+		Project project = access.requireReadProject(id);
 		model.addAttribute("project", project);
 		Optional<CoverageReport> report = reporting.latestCoverage(id);
 		model.addAttribute("coverage", report.orElse(null));
@@ -137,8 +142,7 @@ public class DashboardController {
 
 	@GetMapping("/projects/{id}/pr/{pr}")
 	public String pullRequest(@PathVariable Long id, @PathVariable Integer pr, Model model) {
-		Project project = reporting.findProject(id)
-			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found"));
+		Project project = access.requireReadProject(id);
 		List<TestRun> prRuns = pullRequests.runsFor(id, pr);
 		if (prRuns.isEmpty()) {
 			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Pull request not found");
@@ -156,8 +160,7 @@ public class DashboardController {
 
 	@GetMapping("/projects/{id}/clusters")
 	public String clusters(@PathVariable Long id, Model model) {
-		Project project = reporting.findProject(id)
-			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found"));
+		Project project = access.requireReadProject(id);
 		model.addAttribute("project", project);
 		model.addAttribute("clusters", clustering.cluster(id));
 		return "clusters";
@@ -165,8 +168,7 @@ public class DashboardController {
 
 	@GetMapping("/runs/{id}")
 	public String run(@PathVariable Long id, Model model) {
-		TestRun run = reporting.findRun(id)
-			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Run not found"));
+		TestRun run = access.requireReadRun(id);
 		model.addAttribute("run", run);
 		model.addAttribute("gate", qualityGate.evaluate(id).orElse(null));
 		model.addAttribute("regression", regression.diff(id).orElse(null));
@@ -188,8 +190,7 @@ public class DashboardController {
 
 	@GetMapping("/projects/{id}/performance")
 	public String performance(@PathVariable Long id, Model model) {
-		Project project = reporting.findProject(id)
-			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found"));
+		Project project = access.requireReadProject(id);
 		PerformanceSummary summary = performance.summary(id, PERF_SLOW_LIMIT, TREND_LIMIT);
 		model.addAttribute("project", project);
 		model.addAttribute("slowest", summary.slowestInLatestRun());
@@ -203,8 +204,7 @@ public class DashboardController {
 
 	@GetMapping("/projects/{id}/perf")
 	public String perf(@PathVariable Long id, Model model) {
-		Project project = reporting.findProject(id)
-			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found"));
+		Project project = access.requireReadProject(id);
 		List<PerfTrendPoint> trend = reporting.perfTrend(id, TREND_LIMIT);
 		model.addAttribute("project", project);
 		model.addAttribute("perfRuns", reporting.recentPerfRuns(id, RUN_LIST_LIMIT));
@@ -220,6 +220,7 @@ public class DashboardController {
 
 	@GetMapping("/perf-runs/{id}")
 	public String perfRun(@PathVariable Long id, Model model) {
+		access.requireReadPerfRun(id);
 		model.addAttribute("detail", perfRunDetail.detail(id)
 			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Perf run not found")));
 		return "perf-run";
@@ -228,8 +229,7 @@ public class DashboardController {
 	@GetMapping("/projects/{id}/test")
 	public String test(@PathVariable Long id, @RequestParam(defaultValue = "") String className,
 			@RequestParam String name, Model model) {
-		Project project = reporting.findProject(id)
-			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found"));
+		Project project = access.requireReadProject(id);
 		List<TestTimelinePoint> timeline = performance.testStatusTimeline(id, className, name, TREND_LIMIT);
 		model.addAttribute("project", project);
 		model.addAttribute("className", className);

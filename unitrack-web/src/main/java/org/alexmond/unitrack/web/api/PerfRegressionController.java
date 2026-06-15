@@ -3,6 +3,7 @@ package org.alexmond.unitrack.web.api;
 import lombok.RequiredArgsConstructor;
 import org.alexmond.unitrack.report.PerfRegressionResult;
 import org.alexmond.unitrack.report.PerfRegressionService;
+import org.alexmond.unitrack.web.account.ProjectAccessService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -17,8 +18,11 @@ public class PerfRegressionController {
 
 	private final PerfRegressionService perfRegression;
 
+	private final ProjectAccessService access;
+
 	@GetMapping("/runs/{id}/perf-regression")
 	public ResponseEntity<PerfRegressionResult> perfRegression(@PathVariable Long id) {
+		this.access.requireReadRun(id);
 		return this.perfRegression.diff(id).map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
 	}
 

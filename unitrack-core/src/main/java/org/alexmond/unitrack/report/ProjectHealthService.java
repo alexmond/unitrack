@@ -4,6 +4,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.OptionalDouble;
+import java.util.function.Predicate;
 
 import lombok.RequiredArgsConstructor;
 import org.alexmond.unitrack.domain.Project;
@@ -28,8 +29,17 @@ public class ProjectHealthService {
 	private final FlakyTestService flaky;
 
 	public List<ProjectHealth> board() {
+		return board((project) -> true);
+	}
+
+	/**
+	 * The board, restricted to projects the caller may read (visibility/membership
+	 * filter).
+	 */
+	public List<ProjectHealth> board(Predicate<Project> include) {
 		return this.reporting.listProjects()
 			.stream()
+			.filter(include)
 			.map(this::health)
 			.sorted(Comparator.comparingInt(ProjectHealthService::rank).thenComparing(ProjectHealth::projectName))
 			.toList();
@@ -52,12 +62,14 @@ public class ProjectHealthService {
 		List<TestRun> recent = this.reporting.recentRuns(id, 2);
 		long flakyCount = this.flaky.flakyCount(id);
 		if (recent.isEmpty()) {
-			return new ProjectHealth(id, project.getName(), null, null, null, null, null, null, flakyCount, 0);
+			return new ProjectHealth(id, project.getName(), null, null, null, null, null, null, flakyCount, 0,
+					project.getVisibility());
 		}
 		TestRun latest = recent.get(0);
 		String gateStatus = this.qualityGate.evaluate(latest).status();
 		return new ProjectHealth(id, project.getName(), latest.getId(), latest.getCreatedAt(), latest.getBranch(),
-				gateStatus, latest.passRate(), latest.getLineCoveragePct(), flakyCount, trend(recent));
+				gateStatus, latest.passRate(), latest.getLineCoveragePct(), flakyCount, trend(recent),
+				project.getVisibility());
 	}
 
 	/** Pass-rate direction of the latest run vs the prior one: +1 up, -1 down, 0 flat. */

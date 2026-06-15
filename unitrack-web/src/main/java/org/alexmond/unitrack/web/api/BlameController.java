@@ -5,7 +5,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.alexmond.unitrack.report.BlameEntry;
 import org.alexmond.unitrack.report.BlameService;
-import org.alexmond.unitrack.report.ReportingService;
+import org.alexmond.unitrack.web.account.ProjectAccessService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -20,13 +20,11 @@ public class BlameController {
 
 	private final BlameService blame;
 
-	private final ReportingService reporting;
+	private final ProjectAccessService access;
 
 	@GetMapping("/runs/{id}/blame")
 	public ResponseEntity<List<BlameEntry>> blame(@PathVariable Long id) {
-		if (this.reporting.findRun(id).isEmpty()) {
-			return ResponseEntity.notFound().build();
-		}
+		this.access.requireReadRun(id);
 		return ResponseEntity.ok(this.blame.blame(id));
 	}
 

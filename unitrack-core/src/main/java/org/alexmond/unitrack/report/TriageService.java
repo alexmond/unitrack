@@ -42,6 +42,13 @@ public class TriageService {
 		return rules.findByProjectIdOrderByPriorityAscIdAsc(projectId).stream().map(TriageRuleView::of).toList();
 	}
 
+	/**
+	 * The id of the project a rule belongs to (for authorization), or empty if it's gone.
+	 */
+	public java.util.Optional<Long> projectIdOfRule(Long ruleId) {
+		return rules.findById(ruleId).map((r) -> r.getProject().getId());
+	}
+
 	@Transactional
 	public TriageRuleView addRule(Long projectId, String name, String category, String pattern, int priority) {
 		Project project = projects.findById(projectId)

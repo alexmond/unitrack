@@ -9,6 +9,8 @@ import org.alexmond.unitrack.report.FlagSummary;
 import org.alexmond.unitrack.report.PullRequestService;
 import org.alexmond.unitrack.report.PullRequestSummary;
 import org.alexmond.unitrack.report.ReportingService;
+import org.alexmond.unitrack.web.account.MembershipService;
+import org.alexmond.unitrack.web.account.ProjectAccessService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,9 +20,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.Optional;
 
-/** Read-only JSON endpoints for projects and runs. */
+/** Read-only JSON endpoints for projects and runs. Honors project visibility. */
 @RestController
 @RequestMapping("/api/v1")
 @RequiredArgsConstructor
@@ -32,9 +33,13 @@ public class QueryController {
 
 	private final PullRequestService pullRequests;
 
+	private final ProjectAccessService access;
+
+	private final MembershipService membership;
+
 	@GetMapping("/projects")
 	public List<ApiResponses.ProjectJson> projects() {
-		return reporting.listProjects()
+		return membership.readable(access.currentUsername(), reporting.listProjects())
 			.stream()
 			.map((p) -> ApiResponses.ProjectJson.of(p, reporting.runCount(p.getId())))
 			.toList();
@@ -42,51 +47,39 @@ public class QueryController {
 
 	@GetMapping("/projects/{id}")
 	public ResponseEntity<ApiResponses.ProjectJson> project(@PathVariable Long id) {
-		return reporting.findProject(id)
-			.map((p) -> ResponseEntity.ok(ApiResponses.ProjectJson.of(p, reporting.runCount(id))))
-			.orElseGet(() -> ResponseEntity.notFound().build());
+		Project p = access.requireReadProject(id);
+		return ResponseEntity.ok(ApiResponses.ProjectJson.of(p, reporting.runCount(id)));
 	}
 
 	@GetMapping("/projects/{id}/flags")
 	public ResponseEntity<List<FlagSummary>> flags(@PathVariable Long id) {
-		if (reporting.findProject(id).isEmpty()) {
-			return ResponseEntity.notFound().build();
-		}
+		access.requireReadProject(id);
 		return ResponseEntity.ok(reporting.flagSummaries(id));
 	}
 
 	@GetMapping("/projects/{id}/pull-requests")
 	public ResponseEntity<List<PullRequestSummary>> pullRequests(@PathVariable Long id) {
-		if (reporting.findProject(id).isEmpty()) {
-			return ResponseEntity.notFound().build();
-		}
+		access.requireReadProject(id);
 		return ResponseEntity.ok(pullRequests.list(id));
 	}
 
 	@GetMapping("/projects/{id}/failure-clusters")
 	public ResponseEntity<List<FailureCluster>> failureClusters(@PathVariable Long id) {
-		if (reporting.findProject(id).isEmpty()) {
-			return ResponseEntity.notFound().build();
-		}
+		access.requireReadProject(id);
 		return ResponseEntity.ok(clustering.cluster(id));
 	}
 
 	@GetMapping("/projects/{id}/perf-trend")
 	public ResponseEntity<List<org.alexmond.unitrack.report.PerfTrendPoint>> perfTrend(@PathVariable Long id,
 			@RequestParam(defaultValue = "30") int limit) {
-		if (reporting.findProject(id).isEmpty()) {
-			return ResponseEntity.notFound().build();
-		}
+		access.requireReadProject(id);
 		return ResponseEntity.ok(reporting.perfTrend(id, clamp(limit)));
 	}
 
 	@GetMapping("/projects/{id}/runs")
 	public ResponseEntity<List<ApiResponses.RunJson>> runs(@PathVariable Long id,
 			@RequestParam(defaultValue = "50") int limit) {
-		Optional<Project> project = reporting.findProject(id);
-		if (project.isEmpty()) {
-			return ResponseEntity.notFound().build();
-		}
+		access.requireReadProject(id);
 		List<ApiResponses.RunJson> runs = reporting.recentRuns(id, clamp(limit))
 			.stream()
 			.map(ApiResponses.RunJson::of)
@@ -96,10 +89,7 @@ public class QueryController {
 
 	@GetMapping("/runs/{id}")
 	public ResponseEntity<ApiResponses.RunDetailJson> run(@PathVariable Long id) {
-		Optional<TestRun> run = reporting.findRun(id);
-		if (run.isEmpty()) {
-			return ResponseEntity.notFound().build();
-		}
+		TestRun run = access.requireReadRun(id);
 		List<ApiResponses.SuiteJson> suites = reporting.suitesFor(id).stream().map(ApiResponses.SuiteJson::of).toList();
 		List<ApiResponses.CaseJson> failures = reporting.failedCasesFor(id)
 			.stream()
@@ -107,7 +97,7 @@ public class QueryController {
 			.toList();
 		ApiResponses.CoverageJson coverage = reporting.coverageFor(id).map(this::toCoverageJson).orElse(null);
 		return ResponseEntity
-			.ok(new ApiResponses.RunDetailJson(ApiResponses.RunJson.of(run.get()), suites, failures, coverage));
+			.ok(new ApiResponses.RunDetailJson(ApiResponses.RunJson.of(run), suites, failures, coverage));
 	}
 
 	private ApiResponses.CoverageJson toCoverageJson(CoverageReport report) {

@@ -3,10 +3,12 @@ package org.alexmond.unitrack.web.account;
 import java.util.List;
 
 import lombok.RequiredArgsConstructor;
+import org.alexmond.unitrack.domain.Project;
 import org.alexmond.unitrack.domain.ProjectMembership;
 import org.alexmond.unitrack.domain.ProjectRole;
 import org.alexmond.unitrack.domain.Role;
 import org.alexmond.unitrack.domain.User;
+import org.alexmond.unitrack.domain.Visibility;
 import org.alexmond.unitrack.repository.ProjectMembershipRepository;
 import org.alexmond.unitrack.repository.UserRepository;
 import org.springframework.stereotype.Service;
@@ -44,6 +46,14 @@ public class MembershipService {
 		this.memberships.save(membership);
 	}
 
+	/** Grants a role only if the username maps to a real user; otherwise a no-op. */
+	@Transactional
+	public void grantIfUserExists(Long projectId, String username, ProjectRole role) {
+		if (username != null && this.users.findByUsername(username).isPresent()) {
+			addOrUpdate(projectId, username, role);
+		}
+	}
+
 	@Transactional
 	public void remove(Long membershipId) {
 		this.memberships.deleteById(membershipId);
@@ -57,6 +67,22 @@ public class MembershipService {
 	/** Whether the user may manage the project's members (owner or admin). */
 	public boolean canManage(String username, Long projectId) {
 		return hasRole(username, projectId, ProjectRole.OWNER);
+	}
+
+	/**
+	 * Whether the user (may be null/anonymous) may read the project. PUBLIC projects are
+	 * readable by everyone; PRIVATE projects only by members (READ+) and admins.
+	 */
+	public boolean canRead(String username, Project project) {
+		if (project.getVisibility() == Visibility.PUBLIC) {
+			return true;
+		}
+		return username != null && hasRole(username, project.getId(), ProjectRole.READ);
+	}
+
+	/** Filters a list of projects down to the ones the user may read. */
+	public List<Project> readable(String username, List<Project> projects) {
+		return projects.stream().filter((p) -> canRead(username, p)).toList();
 	}
 
 	private boolean hasRole(String username, Long projectId, ProjectRole minimum) {

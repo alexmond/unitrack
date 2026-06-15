@@ -92,6 +92,10 @@ public class ReportingService {
 		return perfRuns.findByProjectIdOrderByCreatedAtDesc(projectId, PageRequest.ofSize(limit));
 	}
 
+	public Optional<org.alexmond.unitrack.domain.PerfRun> findPerfRun(Long id) {
+		return perfRuns.findById(id);
+	}
+
 	/** Performance trend for a project, oldest run first (for charting). */
 	public List<PerfTrendPoint> perfTrend(Long projectId, int limit) {
 		return recentPerfRuns(projectId, limit).reversed().stream().map(PerfTrendPoint::of).toList();

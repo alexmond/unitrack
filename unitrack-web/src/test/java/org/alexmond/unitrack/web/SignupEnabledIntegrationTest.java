@@ -43,23 +43,23 @@ class SignupEnabledIntegrationTest {
 	@Test
 	void signupCreatesUserAndLogsThemIn() throws Exception {
 		mvc()
-			.perform(post("/signup").param("username", "alice")
-				.param("email", "alice@example.com")
+			.perform(post("/signup").param("username", "su-alice")
+				.param("email", "su-alice@example.com")
 				.param("password", "password123"))
 			.andExpect(status().is3xxRedirection())
 			.andExpect(redirectedUrl("/profile"));
 
-		User created = users.findByUsername("alice").orElseThrow();
+		User created = users.findByUsername("su-alice").orElseThrow();
 		assertThat(created.getRole()).isEqualTo(Role.USER);
-		assertThat(created.getEmail()).isEqualTo("alice@example.com");
+		assertThat(created.getEmail()).isEqualTo("su-alice@example.com");
 	}
 
 	@Test
 	void shortPasswordIsRejected() throws Exception {
-		mvc().perform(post("/signup").param("username", "bob").param("password", "short"))
+		mvc().perform(post("/signup").param("username", "su-bob").param("password", "short"))
 			.andExpect(status().isOk())
 			.andExpect(content().string(containsString("at least 8 characters")));
-		assertThat(users.findByUsername("bob")).isEmpty();
+		assertThat(users.findByUsername("su-bob")).isEmpty();
 	}
 
 }

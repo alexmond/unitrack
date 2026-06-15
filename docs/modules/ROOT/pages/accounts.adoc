@@ -58,11 +58,32 @@ project's members from its *Members* page (`/projects/{id}/members`): add a user
 with a role, change a role, or remove a member. Reads follow the
 xref:configuration.adoc[`open-mode`] setting (public by default, otherwise any signed-in user).
 
+== Project visibility (public / private)
+
+Each project is *PUBLIC* or *PRIVATE*:
+
+* *PUBLIC* — readable by anyone (including anonymous users in open mode).
+* *PRIVATE* — readable only by its members (READ or higher) and global admins. A project a
+  user can't read returns *404* everywhere — the dashboard board, project/run pages, the REST
+  API, and the MCP tools all hide it (so its existence isn't leaked).
+
+New projects default to *PRIVATE*; change the default with
+`unitrack.security.default-visibility` (`PRIVATE` or `PUBLIC`). The owner flips a project's
+visibility on its *Settings* page. Writes (settings, triage rules, flaky status, member
+management) always require WRITE/OWNER membership regardless of visibility.
+
+*Ingest interaction:* uploading to an existing project requires WRITE membership when the
+request is authenticated (or when `require-ingest-token=true`); a brand-new project is created
+with the default visibility and the authenticated uploader becomes its OWNER. Anonymous
+uploads still work when `require-ingest-token=false` (open-mode CI), but such auto-created
+projects have no owner and are visible only to admins until membership is granted. MCP tools
+run without a per-user principal today, so they expose only PUBLIC projects.
+
 == Demo accounts
 
-When `unitrack.demo.enabled=true`, a `test`/`test` user is seeded alongside sample projects,
-so an evaluation instance has something to log into and explore. Never enable the demo
-seeder on a real deployment.
+When `unitrack.demo.enabled=true`, a `test`/`test` user is seeded alongside sample projects
+(one public, two private with the test user as a member), so an evaluation instance shows the
+public/private split. Never enable the demo seeder on a real deployment.
 
 == Putting it together
 
