@@ -47,7 +47,8 @@
 <body>
 
 <div class="toolbar">
-    Self-contained export — save this page or
+    <span th:if="${shared}">Shared read-only view · </span>
+    <span th:unless="${shared}">Self-contained export — save this page or </span>
     <button type="button" onclick="window.print()">Print / Save as PDF</button>
 </div>
 

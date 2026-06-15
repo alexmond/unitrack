@@ -48,6 +48,11 @@ public class SecurityConfig {
 				// controller
 				// still 404s a private project so it can't be probed.
 				auth.requestMatchers("/badge/**").permitAll();
+				// Public share links: the token in the path is the capability, so the
+				// read-only view is reachable without a session even in closed mode. The
+				// token is unguessable and revocable; creating/revoking lives under
+				// /runs/** and still requires write access.
+				auth.requestMatchers(HttpMethod.GET, "/share/**").permitAll();
 				auth.requestMatchers("/profile/**", "/api/v1/me/**").authenticated();
 				// Provisioning projects from GitHub is a management action: always
 				// require login.

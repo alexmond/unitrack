@@ -42,3 +42,22 @@ Each project exposes status badges for its latest run, for READMEs and PRs:
 
 Badges honor xref:accounts.adoc[visibility]: a *public* project's badge renders for anyone, a
 *private* project's badge returns 404 (so it can't be used to probe it).
+
+== Run export
+
+Every run page has an *Export ↗* link (`/runs/{id}/export`) that renders the run as a single,
+self-contained HTML document: all styles are inlined and there are no external requests, so it
+opens offline and can be attached as a CI artifact (`curl` the URL to a file). It carries an
+`@media print` stylesheet and a *Print / Save as PDF* button for a paper/PDF copy. The export
+covers the run summary, quality-gate verdict, failures (with triage category and stacktrace),
+suite breakdown and per-file coverage. It honors xref:accounts.adoc[visibility] — a private
+run's export is 404 for anyone who can't read the project.
+
+== Public share links
+
+A run can be shared *read-only* with people who don't have an account. From the run page,
+write members create a revocable share link (`/share/{token}`); the unguessable token is the
+capability, so the link renders the read-only report even for a *private* project. The token
+is shown once and only its SHA-256 hash is stored; revoking it (also from the run page)
+immediately 404s the link. This is the one deliberate public route besides badges — creating
+and revoking links still requires write access to the project.

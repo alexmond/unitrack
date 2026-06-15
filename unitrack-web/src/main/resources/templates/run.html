@@ -29,6 +29,29 @@
         <a th:if="${run.buildUrl != null}" th:href="${run.buildUrl}">· build</a>
     </p>
 
+    <details class="share" th:if="${canShare}" th:open="${newShareUrl != null}">
+        <summary>Share <span class="muted" th:if="${!shareLinks.isEmpty()}"
+                              th:text="'(' + ${shareLinks.size()} + ' active)'">(0 active)</span></summary>
+        <div th:if="${newShareUrl != null}" class="share-new">
+            <strong>Link created — copy it now:</strong>
+            <code class="mono" th:text="${newShareUrl}">https://…/share/…</code>
+        </div>
+        <p class="muted">Anyone with a link sees this run read-only, even if the project is private. Revoke to disable.</p>
+        <ul class="share-list" th:unless="${shareLinks.isEmpty()}">
+            <li th:each="s : ${shareLinks}">
+                <code class="mono" th:text="${s.prefix}">sh_ab12cd…</code>
+                <span class="muted" th:text="'created ' + ${#temporals.format(s.createdAt, 'yyyy-MM-dd HH:mm')}">created</span>
+                <form method="post" th:action="@{/runs/{id}/share/{lid}/revoke(id=${run.id},lid=${s.id})}"
+                      style="display:inline">
+                    <button class="btn btn-sm btn-danger" type="submit">Revoke</button>
+                </form>
+            </li>
+        </ul>
+        <form method="post" th:action="@{/runs/{id}/share(id=${run.id})}">
+            <button class="btn btn-sm btn-primary" type="submit">Create share link</button>
+        </form>
+    </details>
+
     <div class="hero">
         <div class="donut-fig"
              th:with="failpct=${run.totalTests > 0 ? (run.failed + run.errors) * 100.0 / run.totalTests : 0}">
