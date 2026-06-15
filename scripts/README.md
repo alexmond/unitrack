@@ -59,14 +59,19 @@ Requires: SSH access to the host and a Docker daemon running there. Compose file
 sample projects when `UNITRACK_DEMO_ENABLED=true`); use the postgres stack for anything real.
 
 ### `deploy-k8s.sh`
-The Kubernetes counterpart to `deploy-remote.sh`: builds + publishes the image to a registry
-(Cloud Native Buildpacks via `-Pdocker`, no Dockerfile), runs `helm upgrade --install` of the
-chart in [`../deploy/helm/unitrack`](../deploy/helm/unitrack), waits for the rollout, and runs
-`helm test`. Requires `kubectl` + `helm` pointed at the cluster and a Docker daemon for the build.
+The Kubernetes counterpart to `deploy-remote.sh`: builds + publishes the image to a registry,
+runs `helm upgrade --install` of the chart in
+[`../deploy/helm/unitrack`](../deploy/helm/unitrack), waits for the rollout, and runs
+`helm test`. Requires `kubectl` + `helm` pointed at the cluster and `podman`/`docker` for the build.
+
+Two builders: `--builder podman` (default — builds [`../deploy/Containerfile`](../deploy/Containerfile),
+works under rootless Podman) or `--builder buildpacks` (Spring Boot `-Pdocker`, needs a real
+Docker daemon).
 
 ```bash
-scripts/deploy-k8s.sh                                      # nas1.home.int:5000 → ns unitrack
+scripts/deploy-k8s.sh                                      # podman build → nas1.home.int:5000 → ns unitrack
 scripts/deploy-k8s.sh --registry ghcr.io/alexmond --tag 0.1.0
+scripts/deploy-k8s.sh --builder buildpacks                 # use the buildpacks image instead
 scripts/deploy-k8s.sh --no-build                           # reuse the image already in the registry
 ```
 
