@@ -1,0 +1,63 @@
+name: UniTrack Upload
+description: Upload JUnit/coverage/perf results to a UniTrack server (and optionally gate the build).
+author: Alex Mondshain
+branding:
+  icon: upload-cloud
+  color: green
+
+inputs:
+  url:
+    description: UniTrack server URL.
+    required: false
+  token:
+    description: API token (Bearer). An ingest-scoped token is recommended.
+    required: false
+  project:
+    description: Project name (auto-detected from CI when omitted).
+    required: false
+  branch:
+    description: Branch name.
+    required: false
+  commit:
+    description: Commit SHA.
+    required: false
+  build:
+    description: CI build URL (deep link to the job).
+    required: false
+  repo:
+    description: Repository URL.
+    required: false
+  flag:
+    description: Coverage flag / component.
+    required: false
+  run-key:
+    description: Run key to merge sharded uploads into one run.
+    required: false
+  ci:
+    description: CI provider id.
+    required: false
+  junit:
+    description: JUnit/Surefire XML glob(s), one per line.
+    required: false
+  jacoco:
+    description: Coverage report glob(s) — JaCoCo/Cobertura/LCOV/OpenCover, one per line.
+    required: false
+  perf:
+    description: Performance result glob(s) — JMeter JTL / k6 JSON, one per line.
+    required: false
+  gate:
+    description: After uploading, run the quality gate and fail the build if it does not pass.
+    required: false
+    default: "false"
+  dry-run:
+    description: Resolve files and print what would be sent, without uploading.
+    required: false
+    default: "false"
+  soft-fail:
+    description: Treat an upload/transport failure as a warning (exit 0).
+    required: false
+    default: "false"
+
+runs:
+  using: docker
+  image: Dockerfile

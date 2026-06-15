@@ -25,6 +25,29 @@ docker run --rm -v "$PWD:/work" \
 The image is built from `deploy/cli.Containerfile` and pushed by the `publish-cli-image`
 workflow (semver + `latest` tags). An ingest-scoped token is the right credential here.
 
+== GitHub Action
+
+A Docker-based action wraps the uploader image, so a GitHub workflow needs one step. URL and
+token come from a repo variable/secret; an xref:accounts.adoc[ingest-scoped token] is the right
+credential.
+
+[source,yaml]
+----
+- uses: alexmond/unitrack/action@v1
+  with:
+    url: ${{ vars.UNITRACK_URL }}
+    token: ${{ secrets.UNITRACK_TOKEN }}
+    project: myapp
+    branch: ${{ github.ref_name }}
+    commit: ${{ github.sha }}
+    junit: 'target/surefire-reports/*.xml'
+    jacoco: 'target/site/jacoco/jacoco.xml'
+    gate: true   # fail the build if the quality gate doesn't pass
+----
+
+`junit`/`jacoco`/`perf` accept one glob per line. The action lives at `action/` in this repo
+(`action/action.yml`); list it on the Marketplace from a dedicated repo when ready.
+
 == Uploading
 
 [source,bash]
