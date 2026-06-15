@@ -136,6 +136,8 @@
                       th:if="${categories.get(c.id) != null and categories.get(c.id) != 'untriaged'}"
                       style="background:rgba(68,147,248,.15);color:var(--blue)"
                       th:text="${categories.get(c.id)}">category</span>
+                <span class="badge tag" th:if="${owners.get(c.id) != null}"
+                      th:title="'Owner'" th:text="'@ ' + ${owners.get(c.id)}">owner</span>
                 <span class="muted" th:if="${c.failureMessage != null}" th:text="' — ' + ${c.failureMessage}"></span>
                 <a th:if="${blame.get(c.id) != null}" class="muted"
                    th:href="@{/runs/{rid}(rid=${blame.get(c.id).firstFailingRunId()})}"

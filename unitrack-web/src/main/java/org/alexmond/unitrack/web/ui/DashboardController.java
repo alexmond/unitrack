@@ -16,6 +16,7 @@ import org.alexmond.unitrack.report.PerfRunDetailService;
 import org.alexmond.unitrack.report.PerfTrendPoint;
 import org.alexmond.unitrack.report.PerformanceService;
 import org.alexmond.unitrack.report.PerformanceSummary;
+import org.alexmond.unitrack.report.OwnershipService;
 import org.alexmond.unitrack.report.ProjectHealth;
 import org.alexmond.unitrack.report.ProjectHealthService;
 import org.alexmond.unitrack.report.ProjectSettingsService;
@@ -86,6 +87,8 @@ public class DashboardController {
 	private final BranchService branchService;
 
 	private final ProjectHealthService projectHealth;
+
+	private final OwnershipService ownership;
 
 	private final ProjectAccessService access;
 
@@ -177,6 +180,7 @@ public class DashboardController {
 		List<TestCaseResult> failures = reporting.failedCasesFor(id);
 		model.addAttribute("failures", failures);
 		model.addAttribute("categories", triage.categoryByCaseId(run.getProject().getId(), failures));
+		model.addAttribute("owners", ownership.ownerByCaseId(run.getProject().getId(), failures));
 		model.addAttribute("blame", blame.blameByCaseId(run, failures));
 
 		Optional<CoverageReport> coverage = reporting.coverageFor(id);
