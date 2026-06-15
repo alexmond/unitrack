@@ -32,7 +32,13 @@ The server speaks MCP over HTTP+SSE, served by the running web app:
 | `getCoverage`         | Line/branch coverage percentages and counts for a run.
 | `getFlakyTests`       | Flaky tests for a project (failure rate + status).
 | `getFailureClusters`  | Recent failures grouped by signature, most frequent first.
+| `summarizeRun`        | Triage a red run: gate verdict, total failing, which failures are *new* vs the baseline (real regressions), and which are already *known-flaky* (likely noise).
+| `compareRuns`         | Diff two runs (head vs base): newly-failing / fixed / still-failing tests + pass-rate, coverage and duration deltas.
 |===
+
+`summarizeRun` and `compareRuns` are *analysis* tools — they synthesize UniTrack's unified
+test/coverage/flaky/regression data so an assistant can explain a build rather than re-derive it
+from raw stack traces. They remain read-only; guarded write/action tools are a planned follow-up.
 
 Project-scoped tools accept either the numeric id or the exact project name; run-scoped tools
 take a run id (discover both with `listProjects` / `getProjectRuns`).

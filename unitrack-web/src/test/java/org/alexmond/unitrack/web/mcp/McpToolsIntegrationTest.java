@@ -91,6 +91,25 @@ class McpToolsIntegrationTest {
 	}
 
 	@Test
+	void summarizeAndCompareSurfaceRegressionsBetweenRuns() {
+		TestRun green = ingestRun("mcp-triage", "green01", false, false);
+		TestRun red = ingestRun("mcp-triage", "red0001", true, false);
+
+		// summarizeRun: the red run regresses against the green baseline.
+		UniTrackMcpTools.RunTriageSummary summary = this.tools.summarizeRun(red.getId());
+		assertThat(summary.summary().status()).isEqualTo("FAILED");
+		assertThat(summary.totalFailing()).isGreaterThanOrEqualTo(1);
+		assertThat(summary.baselineFound()).isTrue();
+		assertThat(summary.baselineRunId()).isEqualTo(green.getId());
+		assertThat(summary.newFailures()).anySatisfy((t) -> assertThat(t.name()).isEqualTo("a"));
+
+		// compareRuns: 'a' newly fails moving green -> red.
+		UniTrackMcpTools.RunDiff diff = this.tools.compareRuns(green.getId(), red.getId());
+		assertThat(diff.newlyFailing()).contains("com.x.G#a");
+		assertThat(diff.fixed()).isEmpty();
+	}
+
+	@Test
 	void coverageReportsAbsentWhenRunHasNoCoverage() {
 		TestRun run = ingestRun("mcp-nocov", "def5678", false, false);
 		assertThat(this.tools.getCoverage(run.getId()).present()).isFalse();
@@ -110,7 +129,7 @@ class McpToolsIntegrationTest {
 		ToolCallback[] callbacks = this.toolCallbackProvider.getToolCallbacks();
 		List<String> names = List.of(callbacks).stream().map((c) -> c.getToolDefinition().name()).toList();
 		assertThat(names).contains("listProjects", "getProjectRuns", "getRunDetail", "getQualityGate", "getCoverage",
-				"getFlakyTests", "getFailureClusters");
+				"getFlakyTests", "getFailureClusters", "summarizeRun", "compareRuns");
 	}
 
 }
