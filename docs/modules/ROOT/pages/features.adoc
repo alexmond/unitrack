@@ -31,3 +31,14 @@ All of the above surface in the Thymeleaf dashboard:
 * dedicated *flaky*, *clusters* and *triage* views.
 
 The UI supports a dark/light theme toggle, persisted in the browser.
+
+== Embeddable badges
+
+Each project exposes status badges for its latest run, for READMEs and PRs:
+
+* SVG: `/badge/{projectId}/coverage.svg`, `/badge/{projectId}/pass.svg`, `/badge/{projectId}/flaky.svg`
+* shields.io endpoint (JSON): `/badge/{projectId}/{metric}` — use as
+  `https://img.shields.io/endpoint?url=<unitrack>/badge/{projectId}/coverage`
+
+Badges honor xref:accounts.adoc[visibility]: a *public* project's badge renders for anyone, a
+*private* project's badge returns 404 (so it can't be used to probe it).

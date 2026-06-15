@@ -44,6 +44,10 @@ public class SecurityConfig {
 			.addFilterBefore(apiTokenAuthFilter, UsernamePasswordAuthenticationFilter.class)
 			.authorizeHttpRequests((auth) -> {
 				auth.requestMatchers("/login", "/signup", "/status", "/css/**", "/actuator/**", "/error").permitAll();
+				// Badges are public assets (READMEs fetch them anonymously); the
+				// controller
+				// still 404s a private project so it can't be probed.
+				auth.requestMatchers("/badge/**").permitAll();
 				auth.requestMatchers("/profile/**", "/api/v1/me/**").authenticated();
 				// Provisioning projects from GitHub is a management action: always
 				// require login.
