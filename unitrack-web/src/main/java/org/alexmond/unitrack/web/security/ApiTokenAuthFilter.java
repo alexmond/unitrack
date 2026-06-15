@@ -5,6 +5,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.alexmond.unitrack.domain.TokenScope;
 import org.alexmond.unitrack.web.account.ApiTokenService;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -17,13 +18,17 @@ import java.util.List;
 
 /**
  * Authenticates requests carrying a personal API token (Bearer or X-UniTrack-Token
- * header).
+ * header). An INGEST-scoped token is a least-privilege credential: it may only be used on
+ * {@code POST /api/v1/ingest}; presenting it anywhere else is rejected with 403, so a
+ * leaked CI secret can't read private data or manage anything.
  */
 @Component
 @RequiredArgsConstructor
 public class ApiTokenAuthFilter extends OncePerRequestFilter {
 
 	private static final String BEARER = "Bearer ";
+
+	private static final String INGEST_PATH = "/api/v1/ingest";
 
 	private final ApiTokenService tokens;
 
@@ -33,14 +38,26 @@ public class ApiTokenAuthFilter extends OncePerRequestFilter {
 		if (SecurityContextHolder.getContext().getAuthentication() == null) {
 			String raw = extractToken(request);
 			if (raw != null) {
-				tokens.authenticate(raw).ifPresent((user) -> {
-					var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()));
-					var auth = new UsernamePasswordAuthenticationToken(user.getUsername(), null, authorities);
+				ApiTokenService.Authenticated authed = tokens.authenticate(raw).orElse(null);
+				if (authed != null) {
+					if (authed.scope() == TokenScope.INGEST && !isIngestRequest(request)) {
+						response.sendError(HttpServletResponse.SC_FORBIDDEN,
+								"This token is scoped to ingest only (POST " + INGEST_PATH + ")");
+						return;
+					}
+					String role = (authed.scope() == TokenScope.INGEST) ? "ROLE_INGEST"
+							: "ROLE_" + authed.user().getRole().name();
+					var authorities = List.of(new SimpleGrantedAuthority(role));
+					var auth = new UsernamePasswordAuthenticationToken(authed.user().getUsername(), null, authorities);
 					SecurityContextHolder.getContext().setAuthentication(auth);
-				});
+				}
 			}
 		}
 		chain.doFilter(request, response);
+	}
+
+	private static boolean isIngestRequest(HttpServletRequest request) {
+		return "POST".equalsIgnoreCase(request.getMethod()) && request.getRequestURI().endsWith(INGEST_PATH);
 	}
 
 	private static String extractToken(HttpServletRequest request) {

@@ -32,7 +32,8 @@ class TokenExpiryReminderTest {
 
 	private static ApiToken token(String name, String email, Instant expiresAt) {
 		User owner = new User("user-" + name, name, email, "hash", Role.USER);
-		return new ApiToken(owner, name, "hash-" + name, "ut_" + name, expiresAt);
+		return new ApiToken(owner, name, "hash-" + name, "ut_" + name, expiresAt,
+				org.alexmond.unitrack.domain.TokenScope.FULL);
 	}
 
 	@Test

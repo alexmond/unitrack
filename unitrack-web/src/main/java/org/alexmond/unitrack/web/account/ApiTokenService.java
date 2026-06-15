@@ -2,6 +2,7 @@ package org.alexmond.unitrack.web.account;
 
 import lombok.RequiredArgsConstructor;
 import org.alexmond.unitrack.domain.ApiToken;
+import org.alexmond.unitrack.domain.TokenScope;
 import org.alexmond.unitrack.domain.User;
 import org.alexmond.unitrack.repository.ApiTokenRepository;
 import org.springframework.stereotype.Service;
@@ -31,19 +32,22 @@ public class ApiTokenService {
 	private final ApiTokenRepository tokens;
 
 	@Transactional
-	public Minted create(User user, String name, Instant expiresAt) {
+	public Minted create(User user, String name, Instant expiresAt, TokenScope scope) {
 		byte[] bytes = new byte[32];
 		RANDOM.nextBytes(bytes);
 		String secret = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
 		String raw = PREFIX + secret;
 		String display = PREFIX + secret.substring(0, 6) + "…";
-		ApiToken token = tokens.save(new ApiToken(user, name, hash(raw), display, expiresAt));
+		ApiToken token = tokens.save(new ApiToken(user, name, hash(raw), display, expiresAt, scope));
 		return new Minted(token, raw);
 	}
 
-	/** Authenticates a raw token, returning its owner if active. Updates last-used. */
+	/**
+	 * Authenticates a raw token, returning its owner + scope if active. Updates
+	 * last-used.
+	 */
 	@Transactional
-	public Optional<User> authenticate(String rawToken) {
+	public Optional<Authenticated> authenticate(String rawToken) {
 		if (rawToken == null || !rawToken.startsWith(PREFIX)) {
 			return Optional.empty();
 		}
@@ -54,7 +58,7 @@ public class ApiTokenService {
 			// there).
 			user.getUsername();
 			user.getRole();
-			return user;
+			return new Authenticated(user, token.getScope());
 		});
 	}
 
@@ -81,6 +85,10 @@ public class ApiTokenService {
 
 	/** Result of minting a token — the raw secret is returned only here, never stored. */
 	public record Minted(ApiToken token, String rawToken) {
+	}
+
+	/** An authenticated token: its owner and what it's scoped to do. */
+	public record Authenticated(User user, TokenScope scope) {
 	}
 
 }

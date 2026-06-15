@@ -38,7 +38,7 @@ class AuthIntegrationTest {
 	void apiTokenAuthenticatesAndRevocationDeniesAccess() throws Exception {
 		MockMvc mvc = mvc();
 		User admin = users.findByUsername("admin").orElseThrow();
-		ApiTokenService.Minted minted = tokens.create(admin, "ci", null);
+		ApiTokenService.Minted minted = tokens.create(admin, "ci", null, org.alexmond.unitrack.domain.TokenScope.FULL);
 		String token = minted.rawToken();
 
 		// No token -> 401 (API entry point), not a login redirect.

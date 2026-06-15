@@ -39,6 +39,11 @@ curl -H "Authorization: Bearer ut_xxx" http://localhost:8080/api/v1/me
 
 Tokens are accepted as `Authorization: Bearer <token>` or as the `X-UniTrack-Token` header.
 
+*Token scope (least privilege).* A token is either *Full* (acts as you — read, manage, upload)
+or *Ingest only*. An ingest-only token may call `POST /api/v1/ingest` and nothing else —
+presenting it on any other endpoint returns *403*. Use ingest-only tokens as CI secrets: if one
+leaks it can't read private projects or change anything, only upload results.
+
 == Profile management
 
 The Profile page lets a signed-in user edit their display name and email, change their
