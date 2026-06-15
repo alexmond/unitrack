@@ -27,6 +27,14 @@ Typical uses:
 As new runs arrive, their failures are matched against the rules and categorised on the way
 in, so the Clusters and run views stay organised without manual sorting.
 
+== Test ownership
+
+Per-project *owner rules* (managed on the *Owners* page, `/projects/{id}/owners`) map a test
+class-name pattern (regex) to an owner -- a team or handle. Lower priority wins; the first match
+assigns the owner. Each failing test on a run page shows its owner, so "whose failure is this?"
+is answered at a glance. (Routing owner-scoped notifications to chat is a separate, planned
+piece.)
+
 == Working the queue
 
 . Open *Clusters* after a red build to see the distinct root causes.
