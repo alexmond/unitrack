@@ -79,6 +79,20 @@ uploads still work when `require-ingest-token=false` (open-mode CI), but such au
 projects have no owner and are visible only to admins until membership is granted. MCP tools
 run without a per-user principal today, so they expose only PUBLIC projects.
 
+== Self-service signup
+
+Disabled by default. Set `unitrack.security.signup-enabled=true` to show a *Sign up* link and
+accept new local accounts at `/signup`; a new account is a regular user and is auto-logged-in.
+Usernames and emails must be unique (email verification is not yet implemented). Abuse guards:
+
+[cols="2,3"]
+|===
+| Property | Meaning
+
+| `unitrack.security.signup-min-password-length` | Minimum password length (default 8).
+| `unitrack.security.signup-rate-limit-per-hour`  | Max signups per client IP per hour (default 10; 0 disables). In-memory, single-instance.
+|===
+
 == Demo accounts
 
 When `unitrack.demo.enabled=true`, a `test`/`test` user is seeded alongside sample projects

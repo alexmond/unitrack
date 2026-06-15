@@ -3,8 +3,10 @@ package org.alexmond.unitrack.web.ui;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.alexmond.unitrack.web.account.SignupRateLimiter;
 import org.alexmond.unitrack.web.account.UserService;
 import org.alexmond.unitrack.web.security.SecurityProperties;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -29,13 +31,13 @@ import org.springframework.web.bind.annotation.RequestParam;
 @RequiredArgsConstructor
 public class SignupController {
 
-	private static final int MIN_PASSWORD_LENGTH = 8;
-
 	private final SecurityProperties security;
 
 	private final UserService users;
 
 	private final UserDetailsService userDetailsService;
+
+	private final SignupRateLimiter rateLimiter;
 
 	private final SecurityContextHolderStrategy holderStrategy = SecurityContextHolder.getContextHolderStrategy();
 
@@ -53,9 +55,14 @@ public class SignupController {
 			return "redirect:/login";
 		}
 		String trimmed = (username != null) ? username.trim() : "";
-		if (trimmed.isEmpty() || password == null || password.length() < MIN_PASSWORD_LENGTH) {
+		if (!rateLimiter.tryAcquire(request.getRemoteAddr())) {
+			response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
+			return reject(model, trimmed, email, "Too many signup attempts — please try again later.");
+		}
+		int minLength = security.getSignupMinPasswordLength();
+		if (trimmed.isEmpty() || password == null || password.length() < minLength) {
 			return reject(model, trimmed, email,
-					"Username is required and the password must be at least " + MIN_PASSWORD_LENGTH + " characters.");
+					"Username is required and the password must be at least " + minLength + " characters.");
 		}
 		try {
 			users.register(trimmed, email, password);

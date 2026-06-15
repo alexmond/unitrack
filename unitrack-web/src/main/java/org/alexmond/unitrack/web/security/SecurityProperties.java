@@ -33,6 +33,12 @@ public class SecurityProperties {
 	 */
 	private boolean signupEnabled;
 
+	/** Minimum password length enforced on self-service signup. */
+	private int signupMinPasswordLength = 8;
+
+	/** Max self-service signups allowed per client IP per hour (abuse guard). */
+	private int signupRateLimitPerHour = 10;
+
 	/** Username of the default admin seeded on first start (when there are no users). */
 	private String adminUsername = "admin";
 
