@@ -82,7 +82,22 @@ reference.
 
 === Publish the image
 
-The cluster pulls the app from a registry, so publish there instead of building locally:
+The cluster pulls the app from a registry, so publish there instead of building locally.
+Two ways to build:
+
+*Podman / Docker (recommended; works under rootless Podman):* build the jar, then build
+`deploy/Containerfile` (a JRE + fat-jar image) and push:
+
+[source,bash]
+----
+podman login nas1.home.int:5000
+./mvnw -pl unitrack-web -am package -DskipTests
+podman build -t nas1.home.int:5000/unitrack:0.1.0-SNAPSHOT -f deploy/Containerfile unitrack-web/target
+podman push --tls-verify=false nas1.home.int:5000/unitrack:0.1.0-SNAPSHOT
+----
+
+*Cloud Native Buildpacks:* the `docker` Maven profile builds a layered image without a
+Dockerfile, but needs a real Docker daemon (it fails under rootless Podman):
 
 [source,bash]
 ----
@@ -92,7 +107,9 @@ docker login nas1.home.int:5000
   -Ddocker.publish=true
 ----
 
-For GHCR, use `-Ddocker.image.name=ghcr.io/<owner>/unitrack:<tag>` and `docker login ghcr.io`.
+For GHCR, use `…/unitrack:<tag>` under `ghcr.io/<owner>` and log in to `ghcr.io`.
+`scripts/deploy-k8s.sh` automates either path via `--builder podman` (default) or
+`--builder buildpacks`.
 
 === Install with bundled PostgreSQL
 

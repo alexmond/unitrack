@@ -1,0 +1,21 @@
+# Minimal runtime image for the UniTrack web app — a reproducible alternative to the
+# Cloud Native Buildpacks build (`-Pdocker`), which fails under rootless Podman (see #211).
+#
+# Build the jar first, then build + tag this image (context = the module's target dir):
+#   ./mvnw -pl unitrack-web -am package -DskipTests
+#   podman build -t <registry>/unitrack:<tag> -f deploy/Containerfile unitrack-web/target
+#
+# scripts/deploy-k8s.sh --builder podman does exactly this.
+FROM docker.io/library/eclipse-temurin:21-jre
+
+WORKDIR /app
+COPY unitrack.jar /app/unitrack.jar
+
+# Run as a non-root user (the Helm chart sets runAsNonRoot).
+RUN useradd --uid 1001 --system --create-home --shell /usr/sbin/nologin app
+USER 1001
+
+EXPOSE 8080
+ENV JAVA_OPTS=""
+# SPRING_DOCKER_COMPOSE_ENABLED is forced off by the chart; exec so the JVM is PID 1.
+ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar /app/unitrack.jar"]

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
-# Build & publish the UniTrack image to a registry, then install/upgrade the Helm chart on a
-# Kubernetes cluster and health-check the rollout. Mirrors scripts/deploy-remote.sh, but for k8s.
+# Build & publish the UniTrack image, then install/upgrade the Helm chart on a Kubernetes
+# cluster and health-check the rollout. The k8s counterpart to scripts/deploy-remote.sh.
 #
 # Usage:
 #   scripts/deploy-k8s.sh [options]
@@ -10,11 +10,18 @@
 #     --release NAME          Helm release name           (default: unitrack)
 #     --namespace NS          target namespace            (default: unitrack)
 #     --values FILE           extra Helm values file      (default: deploy/helm/unitrack/values-homelab.yaml if present)
-#     --no-build              skip the buildpacks build/publish (reuse the image already in the registry)
-#     --no-push               build the image but don't publish (for a local/in-cluster daemon)
+#     --builder podman|buildpacks  how to build the image (default: podman)
+#     --no-build              skip the build (reuse the image already in the registry)
+#     --no-push              build the image but don't publish (for a local/in-cluster daemon)
 #
-# Requires: kubectl + helm pointed at the target cluster, a Docker daemon for the build, and
-# (for publish) `docker login <registry>` already done.
+# Builders:
+#   podman      - build deploy/Containerfile (a fat-jar JRE image) with podman/docker.
+#                 Works under rootless Podman; reproducible from the repo. (default)
+#   buildpacks  - Spring Boot's Cloud Native Buildpacks via -Pdocker. Needs a real Docker
+#                 daemon (fails under rootless Podman, see #211).
+#
+# Requires: kubectl + helm pointed at the target cluster, podman or docker for the build, and
+# (for publish) a prior `podman login <registry>` / `docker login <registry>`.
 
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -24,6 +31,7 @@ TAG=""
 RELEASE=unitrack
 NAMESPACE=unitrack
 VALUES=""
+BUILDER=podman
 BUILD=1
 PUBLISH=1
 
@@ -34,9 +42,10 @@ while [[ $# -gt 0 ]]; do
     --release)   RELEASE="$2"; shift 2 ;;
     --namespace) NAMESPACE="$2"; shift 2 ;;
     --values)    VALUES="$2"; shift 2 ;;
+    --builder)   BUILDER="$2"; shift 2 ;;
     --no-build)  BUILD=0; shift ;;
     --no-push)   PUBLISH=0; shift ;;
-    -h|--help)   sed -n '2,22p' "$0"; exit 0 ;;
+    -h|--help)   sed -n '2,28p' "$0"; exit 0 ;;
     *) echo "Unknown argument: $1" >&2; exit 2 ;;
   esac
 done
@@ -50,11 +59,32 @@ if [[ -z "$VALUES" && -f deploy/helm/unitrack/values-homelab.yaml ]]; then
   VALUES=deploy/helm/unitrack/values-homelab.yaml
 fi
 
+# Pick the container CLI for the podman builder (podman preferred, docker fallback).
+CONTAINER_CLI="$(command -v podman || command -v docker || true)"
+TLS_FLAG=""
+[[ "$CONTAINER_CLI" == *podman ]] && TLS_FLAG="--tls-verify=false"
+
 if [[ "$BUILD" -eq 1 ]]; then
-  echo "==> Building image $IMAGE via buildpacks (publish=$PUBLISH)..."
-  ./mvnw -q -pl unitrack-web -am -Pdocker -DskipTests package \
-    -Ddocker.image.name="$IMAGE" \
-    -Ddocker.publish="$([[ $PUBLISH -eq 1 ]] && echo true || echo false)"
+  case "$BUILDER" in
+    podman)
+      [[ -n "$CONTAINER_CLI" ]] || { echo "!! need podman or docker for --builder podman" >&2; exit 1; }
+      echo "==> Building jar..."
+      ./mvnw -q -pl unitrack-web -am -DskipTests package
+      echo "==> Building image $IMAGE via $CONTAINER_CLI + deploy/Containerfile..."
+      "$CONTAINER_CLI" build -t "$IMAGE" -f deploy/Containerfile unitrack-web/target
+      if [[ "$PUBLISH" -eq 1 ]]; then
+        echo "==> Pushing $IMAGE..."
+        "$CONTAINER_CLI" push $TLS_FLAG "$IMAGE"
+      fi
+      ;;
+    buildpacks)
+      echo "==> Building image $IMAGE via buildpacks (publish=$PUBLISH)..."
+      ./mvnw -q -pl unitrack-web -am -Pdocker -DskipTests package \
+        -Ddocker.image.name="$IMAGE" \
+        -Ddocker.publish="$([[ $PUBLISH -eq 1 ]] && echo true || echo false)"
+      ;;
+    *) echo "Unknown --builder: $BUILDER (use podman or buildpacks)" >&2; exit 2 ;;
+  esac
 fi
 
 echo "==> helm upgrade --install $RELEASE (ns: $NAMESPACE)..."
