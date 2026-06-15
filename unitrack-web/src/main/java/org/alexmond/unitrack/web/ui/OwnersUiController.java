@@ -25,6 +25,7 @@ public class OwnersUiController {
 		Project project = access.requireReadProject(id);
 		model.addAttribute("project", project);
 		model.addAttribute("rules", ownership.listRules(id));
+		model.addAttribute("scorecard", ownership.scorecard(id));
 		return "owners";
 	}
 

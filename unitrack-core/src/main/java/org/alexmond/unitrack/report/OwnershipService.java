@@ -1,5 +1,7 @@
 package org.alexmond.unitrack.report;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -12,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.alexmond.unitrack.domain.Project;
 import org.alexmond.unitrack.domain.TestCaseResult;
 import org.alexmond.unitrack.domain.TestOwnerRule;
+import org.alexmond.unitrack.domain.TestRun;
 import org.alexmond.unitrack.repository.ProjectRepository;
 import org.alexmond.unitrack.repository.TestOwnerRuleRepository;
 import org.springframework.stereotype.Service;
@@ -28,6 +31,10 @@ public class OwnershipService {
 	private final TestOwnerRuleRepository rules;
 
 	private final ProjectRepository projects;
+
+	private final ReportingService reporting;
+
+	private final FlakyTestService flaky;
 
 	public List<TestOwnerRuleView> listRules(Long projectId) {
 		return rules.findByProjectIdOrderByPriorityAscIdAsc(projectId).stream().map(TestOwnerRuleView::of).toList();
@@ -65,6 +72,29 @@ public class OwnershipService {
 		return result;
 	}
 
+	/**
+	 * Per-owner accountability for a project: failing tests in the latest run + flaky
+	 * tests, counted by owner (an "unassigned" bucket captures tests no rule matched).
+	 * Sorted by failing then flaky, descending.
+	 */
+	public List<OwnerScore> scorecard(Long projectId) {
+		List<TestOwnerRule> ruleList = rules.findByProjectIdOrderByPriorityAscIdAsc(projectId);
+		Map<String, long[]> agg = new LinkedHashMap<>();
+		List<TestRun> recent = reporting.recentRuns(projectId, 1);
+		if (!recent.isEmpty()) {
+			for (TestCaseResult c : reporting.failedCasesFor(recent.get(0).getId())) {
+				agg.computeIfAbsent(ownerFor(c.getClassName(), ruleList), (k) -> new long[2])[0]++;
+			}
+		}
+		for (FlakyTestView f : flaky.listFlaky(projectId)) {
+			agg.computeIfAbsent(ownerFor(f.className(), ruleList), (k) -> new long[2])[1]++;
+		}
+		List<OwnerScore> scores = new ArrayList<>();
+		agg.forEach((owner, counts) -> scores.add(new OwnerScore(owner, counts[0], counts[1])));
+		scores.sort(Comparator.comparingLong(OwnerScore::failing).thenComparingLong(OwnerScore::flaky).reversed());
+		return scores;
+	}
+
 	private static String ownerFor(String className, List<TestOwnerRule> ruleList) {
 		if (className == null) {
 			return null;
@@ -84,6 +114,12 @@ public class OwnershipService {
 		catch (PatternSyntaxException ex) {
 			return text.toLowerCase(Locale.ROOT).contains(pattern.toLowerCase(Locale.ROOT));
 		}
+	}
+
+	/**
+	 * One owner's accountability counts; {@code owner} is null for the unassigned bucket.
+	 */
+	public record OwnerScore(String owner, long failing, long flaky) {
 	}
 
 }

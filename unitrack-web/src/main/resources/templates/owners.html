@@ -15,6 +15,30 @@
         (regex). Lowest priority wins; the first match assigns the owner. Owners show on failing tests in
         each run.</p>
 
+    <h2>Scorecard</h2>
+    <p class="muted">Failing tests in the latest run and flaky tests, attributed by owner.</p>
+    <div th:if="${scorecard.isEmpty()}" class="empty muted">No failing or flaky tests to attribute.</div>
+    <table class="table align-middle" th:unless="${scorecard.isEmpty()}" style="max-width:480px">
+        <thead><tr><th>Owner</th><th class="num">Failing (latest)</th><th class="num">Flaky</th></tr></thead>
+        <tbody>
+        <tr th:each="s : ${scorecard}">
+            <td>
+                <span th:if="${s.owner() != null}" class="badge tag" th:text="${s.owner()}">owner</span>
+                <span th:if="${s.owner() == null}" class="muted">unassigned</span>
+            </td>
+            <td class="num">
+                <span th:if="${s.failing() > 0}" class="badge fail" th:text="${s.failing()}">0</span>
+                <span th:unless="${s.failing() > 0}" class="muted">—</span>
+            </td>
+            <td class="num">
+                <span th:if="${s.flaky() > 0}" class="badge skip" th:text="${s.flaky()}">0</span>
+                <span th:unless="${s.flaky() > 0}" class="muted">—</span>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+
+    <h2>Rules</h2>
     <div th:if="${rules.isEmpty()}" class="empty">No owner rules yet — add one below.</div>
     <table class="table table-hover align-middle" th:unless="${rules.isEmpty()}">
         <thead>
