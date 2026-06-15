@@ -43,7 +43,10 @@ public class UserService {
 		if (users.findByUsername(username).isPresent()) {
 			throw new IllegalArgumentException("That username is already taken.");
 		}
-		return create(username, username, email, rawPassword, Role.USER);
+		if (email != null && !email.isBlank() && users.existsByEmailIgnoreCase(email.trim())) {
+			throw new IllegalArgumentException("That email is already registered.");
+		}
+		return create(username, username, (email != null) ? email.trim() : null, rawPassword, Role.USER);
 	}
 
 	/** Sets a user's password directly (admin/seed use). */
