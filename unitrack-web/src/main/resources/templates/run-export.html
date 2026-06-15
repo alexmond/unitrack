@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="'UniTrack run #' + ${run.id} + ' — ' + ${run.project.name}">UniTrack run export</title>
+    <!-- Self-contained: all styles inlined, no external requests, prints cleanly to PDF. -->
+    <style>
+        :root { --green:#1a7f37; --red:#cf222e; --amber:#9a6700; --blue:#0969da; --ink:#1f2328; --muted:#656d76; --line:#d0d7de; --bg:#fff; }
+        * { box-sizing: border-box; }
+        body { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: var(--ink); background: var(--bg); margin: 0; line-height: 1.5; }
+        .doc { max-width: 920px; margin: 0 auto; padding: 28px 24px 64px; }
+        h1 { font-size: 22px; margin: 0 0 4px; }
+        h2 { font-size: 16px; margin: 28px 0 10px; padding-bottom: 5px; border-bottom: 1px solid var(--line); }
+        .sub { color: var(--muted); font-size: 13px; margin: 0 0 18px; }
+        .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12.5px; }
+        .badge { display: inline-block; padding: 1px 8px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+        .pass { background: rgba(26,127,55,.12); color: var(--green); }
+        .fail { background: rgba(207,34,46,.12); color: var(--red); }
+        .error { background: rgba(154,103,0,.14); color: var(--amber); }
+        .stats { display: flex; flex-wrap: wrap; gap: 22px; margin: 4px 0 8px; }
+        .stat .k { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+        .stat .v { font-size: 20px; font-weight: 600; }
+        table { border-collapse: collapse; width: 100%; font-size: 13px; }
+        th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--line); }
+        th { color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .03em; }
+        td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+        .gate { border: 1px solid var(--line); border-left-width: 4px; border-radius: 6px; padding: 10px 14px; margin: 8px 0; }
+        .gate.ok { border-left-color: var(--green); }
+        .gate.bad { border-left-color: var(--red); }
+        .gate ul { margin: 8px 0 0; padding-left: 18px; }
+        .gate li { margin: 2px 0; }
+        .fcase { border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; margin: 8px 0; }
+        .fcase pre { background: #f6f8fa; border-radius: 5px; padding: 10px 12px; overflow-x: auto; font-size: 12px; margin: 8px 0 0; }
+        .muted { color: var(--muted); }
+        .empty { color: var(--muted); font-style: italic; }
+        .bar { display: inline-block; width: 90px; height: 7px; background: rgba(26,127,55,.15); border-radius: 4px; overflow: hidden; vertical-align: middle; }
+        .bar > span { display: block; height: 100%; background: var(--green); }
+        .bar.mid > span { background: var(--amber); }
+        .bar.low > span { background: var(--red); }
+        .toolbar { background: #f6f8fa; border-bottom: 1px solid var(--line); padding: 8px 24px; font-size: 13px; color: var(--muted); }
+        .toolbar button { font: inherit; cursor: pointer; border: 1px solid var(--line); background: #fff; border-radius: 6px; padding: 4px 12px; }
+        footer { margin-top: 32px; padding-top: 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+        @media print { .toolbar { display: none; } .doc { max-width: none; padding: 0; } a { color: inherit; text-decoration: none; } }
+    </style>
+</head>
+<body>
+
+<div class="toolbar">
+    Self-contained export — save this page or
+    <button type="button" onclick="window.print()">Print / Save as PDF</button>
+</div>
+
+<div class="doc">
+    <h1>
+        <span th:text="${run.project.name}">project</span> — Run #<span th:text="${run.id}">1</span>
+        <span class="badge" th:classappend="${run.status == 'PASSED'} ? 'pass' : 'fail'" th:text="${run.status}">PASSED</span>
+    </h1>
+    <p class="sub">
+        <span th:text="${run.branch} ?: 'no branch'">main</span> ·
+        flag <span class="mono" th:text="${run.flag}">default</span> ·
+        commit <span class="mono" th:text="${run.shortSha} ?: '—'">abc1234</span> ·
+        <span th:text="${#temporals.format(run.createdAt, 'yyyy-MM-dd HH:mm')}">date</span>
+        <span th:if="${run.prNumber != null}" th:text="'· PR #' + ${run.prNumber}"></span>
+    </p>
+
+    <div class="stats">
+        <div class="stat"><div class="k">Pass rate</div><div class="v" th:text="${#numbers.formatDecimal(run.passRate(),1,1)} + '%'">100%</div></div>
+        <div class="stat"><div class="k">Tests</div><div class="v" th:text="${run.totalTests}">0</div></div>
+        <div class="stat"><div class="k">Passed</div><div class="v" style="color:var(--green)" th:text="${run.passed}">0</div></div>
+        <div class="stat"><div class="k">Failed</div><div class="v" style="color:var(--red)" th:text="${run.failed + run.errors}">0</div></div>
+        <div class="stat"><div class="k">Skipped</div><div class="v" style="color:var(--amber)" th:text="${run.skipped}">0</div></div>
+        <div class="stat"><div class="k">Duration</div><div class="v" th:text="${#numbers.formatDecimal(run.durationMs / 1000.0,1,1)} + 's'">0s</div></div>
+        <div class="stat" th:if="${coverage != null}"><div class="k">Line cov</div><div class="v" style="color:var(--blue)" th:text="${#numbers.formatDecimal(coverage.linePct,1,1)} + '%'">0%</div></div>
+    </div>
+
+    <div th:if="${gate != null and !gate.rules().isEmpty()}" class="gate" th:classappend="${gate.passed()} ? 'ok' : 'bad'">
+        <strong>Quality gate</strong>
+        <span class="badge" th:classappend="${gate.passed()} ? 'pass' : 'fail'" th:text="${gate.status()}">PASSED</span>
+        <ul>
+            <li th:each="r : ${gate.rules()}">
+                <span th:text="${r.passed()} ? '✓' : '✗'">✓</span>
+                <span class="mono" th:text="${r.name()}">rule</span>
+                <span class="muted" th:text="' — ' + ${r.detail()}">detail</span>
+            </li>
+        </ul>
+    </div>
+
+    <h2>Failures <span class="muted" th:text="'(' + ${failures.size()} + ')'">(0)</span></h2>
+    <div th:if="${failures.isEmpty()}" class="empty">No failed tests.</div>
+    <div th:each="c : ${failures}" class="fcase">
+        <span class="badge" th:classappend="${c.status.name() == 'ERROR'} ? 'error' : 'fail'" th:text="${c.status}">FAILED</span>
+        <span class="mono" th:text="${c.className} + '#' + ${c.name}">Test#method</span>
+        <span class="badge" th:if="${categories.get(c.id) != null and categories.get(c.id) != 'untriaged'}"
+              style="background:rgba(9,105,218,.12);color:var(--blue)" th:text="${categories.get(c.id)}">category</span>
+        <div class="muted" th:if="${c.failureMessage != null}" th:text="${c.failureMessage}">message</div>
+        <pre th:if="${c.failureStacktrace != null}" th:text="${c.failureStacktrace}">stacktrace</pre>
+    </div>
+
+    <h2>Suites</h2>
+    <div th:if="${suites.isEmpty()}" class="empty">No suite data.</div>
+    <table th:unless="${suites.isEmpty()}">
+        <thead>
+        <tr><th>Suite</th><th class="num">Tests</th><th class="num">Failures</th>
+            <th class="num">Errors</th><th class="num">Skipped</th><th class="num">Time</th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="s : ${suites}">
+            <td><span class="mono" th:text="${s.name}">suite</span></td>
+            <td class="num" th:text="${s.tests}">0</td>
+            <td class="num" th:text="${s.failures}">0</td>
+            <td class="num" th:text="${s.errors}">0</td>
+            <td class="num" th:text="${s.skipped}">0</td>
+            <td class="num" th:text="${#numbers.formatDecimal(s.durationMs / 1000.0,1,2)} + 's'">0s</td>
+        </tr>
+        </tbody>
+    </table>
+
+    <div th:if="${coverage != null}">
+        <h2>Coverage by file <span class="muted">(most missed first)</span></h2>
+        <table>
+            <thead>
+            <tr><th>File</th><th class="num">Line %</th><th>&nbsp;</th><th class="num">Covered</th><th class="num">Missed</th></tr>
+            </thead>
+            <tbody>
+            <tr th:each="f : ${coverageFiles}">
+                <td><span class="mono" th:text="${f.path}">path</span></td>
+                <td class="num" th:text="${#numbers.formatDecimal(f.linePct,1,1)} + '%'">0%</td>
+                <td><div class="bar" th:classappend="${f.linePct < 50} ? 'low' : (${f.linePct < 80} ? 'mid' : '')">
+                    <span th:style="'width:' + ${f.linePct} + '%'"></span></div></td>
+                <td class="num" th:text="${f.lineCovered}">0</td>
+                <td class="num" th:text="${f.lineMissed}">0</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <footer>
+        Generated by UniTrack · run #<span th:text="${run.id}">1</span> ·
+        exported <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy-MM-dd HH:mm')}">date</span>
+    </footer>
+</div>
+</body>
+</html>
