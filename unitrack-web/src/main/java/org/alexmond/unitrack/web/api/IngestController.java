@@ -21,6 +21,7 @@ import org.alexmond.unitrack.web.account.MembershipService;
 import org.alexmond.unitrack.web.account.ProjectAccessService;
 import org.alexmond.unitrack.web.github.GitHubPrCommentService;
 import org.alexmond.unitrack.web.github.GitHubStatusService;
+import org.alexmond.unitrack.web.alert.AlertEventPublisher;
 import org.alexmond.unitrack.web.notify.GateFailureNotifier;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -70,6 +71,8 @@ public class IngestController {
 	private final PerfRunRegressionService perfRunRegression;
 
 	private final GateFailureNotifier gateFailureNotifier;
+
+	private final AlertEventPublisher alertEvents;
 
 	private final ReportingService reporting;
 
@@ -130,6 +133,7 @@ public class IngestController {
 		int slowerTests = perfRegression.diff(run.getId()).map(PerfRegressionResult::slowerCount).orElse(0);
 		gitHubPrComment.publish(run, gate, delta, newFailures, slowerTests);
 		gateFailureNotifier.notifyIfFailed(run, gate);
+		alertEvents.publishForRun(run, gate);
 	}
 
 	private void publishPerfComment(PerfRun perfRun) {
