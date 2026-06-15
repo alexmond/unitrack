@@ -6,7 +6,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * Registers UniTrack's read-only {@link UniTrackMcpTools} as MCP tools. The
+ * Registers UniTrack's MCP tools: the read-only {@link UniTrackMcpTools} and the gated,
+ * audited {@link UniTrackMcpActionTools} write tools. The
  * {@code spring-ai-starter-mcp-server-webmvc} starter auto-detects this
  * {@link ToolCallbackProvider} and serves the tools over SSE.
  */
@@ -14,8 +15,8 @@ import org.springframework.context.annotation.Configuration;
 public class McpConfig {
 
 	@Bean
-	public ToolCallbackProvider unitrackToolCallbackProvider(UniTrackMcpTools tools) {
-		return MethodToolCallbackProvider.builder().toolObjects(tools).build();
+	public ToolCallbackProvider unitrackToolCallbackProvider(UniTrackMcpTools tools, UniTrackMcpActionTools actions) {
+		return MethodToolCallbackProvider.builder().toolObjects(tools, actions).build();
 	}
 
 }
