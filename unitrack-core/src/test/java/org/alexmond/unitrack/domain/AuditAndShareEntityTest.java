@@ -23,6 +23,16 @@ class AuditAndShareEntityTest {
 	}
 
 	@Test
+	void alertEventCarriesItsFields() {
+		AlertEvent e = new AlertEvent(3L, "proj", AlertKind.GATE_FAILED, 9L, "Quality gate failed");
+		assertThat(e.projectId()).isEqualTo(3L);
+		assertThat(e.projectName()).isEqualTo("proj");
+		assertThat(e.kind()).isEqualTo(AlertKind.GATE_FAILED);
+		assertThat(e.runId()).isEqualTo(9L);
+		assertThat(e.message()).isEqualTo("Quality gate failed");
+	}
+
+	@Test
 	void shareLinkIsActiveUntilRevoked() {
 		ShareLink link = new ShareLink(null, "hash-value", "sh_abc12…", null);
 		assertThat(link.getTokenHash()).isEqualTo("hash-value");
