@@ -70,8 +70,7 @@ public class AccountController {
 		User user = require(auth);
 		Instant expiresAt = (expiresDays != null && expiresDays > 0) ? Instant.now().plus(expiresDays, ChronoUnit.DAYS)
 				: null;
-		org.alexmond.unitrack.domain.TokenScope tokenScope = "INGEST".equalsIgnoreCase(scope)
-				? org.alexmond.unitrack.domain.TokenScope.INGEST : org.alexmond.unitrack.domain.TokenScope.FULL;
+		org.alexmond.unitrack.domain.TokenScope tokenScope = parseScope(scope);
 		ra.addFlashAttribute("newToken", tokens.create(user, name, expiresAt, tokenScope).rawToken());
 		return "redirect:/profile";
 	}
@@ -81,6 +80,16 @@ public class AccountController {
 		tokens.revoke(id, require(auth).getId());
 		ra.addFlashAttribute("msg", "Token revoked.");
 		return "redirect:/profile";
+	}
+
+	private static org.alexmond.unitrack.domain.TokenScope parseScope(String scope) {
+		if ("INGEST".equalsIgnoreCase(scope)) {
+			return org.alexmond.unitrack.domain.TokenScope.INGEST;
+		}
+		if ("ACTION".equalsIgnoreCase(scope)) {
+			return org.alexmond.unitrack.domain.TokenScope.ACTION;
+		}
+		return org.alexmond.unitrack.domain.TokenScope.FULL;
 	}
 
 	private User require(Authentication auth) {

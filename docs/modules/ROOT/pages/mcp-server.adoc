@@ -38,10 +38,33 @@ The server speaks MCP over HTTP+SSE, served by the running web app:
 
 `summarizeRun` and `compareRuns` are *analysis* tools — they synthesize UniTrack's unified
 test/coverage/flaky/regression data so an assistant can explain a build rather than re-derive it
-from raw stack traces. They remain read-only; guarded write/action tools are a planned follow-up.
+from raw stack traces.
 
 Project-scoped tools accept either the numeric id or the exact project name; run-scoped tools
 take a run id (discover both with `listProjects` / `getProjectRuns`).
+
+=== Action tools (write, gated + audited)
+
+These tools *change state*. They are off by default and only become usable when an operator sets
+`unitrack.mcp.writes-enabled=true`. Each one requires an authenticated caller with **write access**
+to the project, verifies the target actually exists (it won't act on a hallucinated test or
+cluster), and appends a row to the `audit_entry` table recording who did what, where, and via
+which channel.
+
+[cols="1,3"]
+|===
+| Tool | Description
+
+| `quarantineFlakyTest`  | Set a flaky test's status to `QUARANTINED`, `RESOLVED` or `ACTIVE` (mute/unmute it against the build).
+| `createTriageRule`     | Create a rule that auto-categorizes failures whose text matches a regex/substring.
+| `ackFailureCluster`    | Acknowledge a failure cluster by routing its signature to a triage category.
+|===
+
+For AI clients, mint a dedicated **`ACTION`-scoped** token (Profile → API tokens): it
+authenticates only on the MCP transport (`/sse`, `/mcp/**`) and is rejected everywhere else, so a
+leaked copilot token can't browse the UI or REST API — it can only drive these tools, within the
+owner's project permissions. A `FULL` token works too. Writes stay disabled until the
+server-level flag is on, so the model can *propose* an action while a human keeps the final say.
 
 == Connecting Claude
 
@@ -72,6 +95,10 @@ Tokens]):
 
 [source,yaml]
 ----
+unitrack:
+  mcp:
+    writes-enabled: false   # set true to expose the gated action tools (off by default)
+
 spring:
   ai:
     mcp:

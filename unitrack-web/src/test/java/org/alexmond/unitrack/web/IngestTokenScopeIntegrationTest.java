@@ -70,4 +70,16 @@ class IngestTokenScopeIntegrationTest {
 		mvc.perform(get("/api/v1/me").header("Authorization", "Bearer " + fullToken)).andExpect(status().isOk());
 	}
 
+	@Test
+	void actionScopedTokenIsRejectedOutsideMcp() throws Exception {
+		MockMvc mvc = mvc();
+		String actionToken = mint(TokenScope.ACTION);
+		// An ACTION token may only authenticate on the MCP transport; anywhere else is
+		// 403.
+		mvc.perform(get("/api/v1/projects").header("Authorization", "Bearer " + actionToken))
+			.andExpect(status().isForbidden());
+		mvc.perform(get("/api/v1/me").header("Authorization", "Bearer " + actionToken))
+			.andExpect(status().isForbidden());
+	}
+
 }

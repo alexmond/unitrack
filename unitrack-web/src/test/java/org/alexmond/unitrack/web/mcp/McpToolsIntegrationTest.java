@@ -129,7 +129,8 @@ class McpToolsIntegrationTest {
 		ToolCallback[] callbacks = this.toolCallbackProvider.getToolCallbacks();
 		List<String> names = List.of(callbacks).stream().map((c) -> c.getToolDefinition().name()).toList();
 		assertThat(names).contains("listProjects", "getProjectRuns", "getRunDetail", "getQualityGate", "getCoverage",
-				"getFlakyTests", "getFailureClusters", "summarizeRun", "compareRuns");
+				"getFlakyTests", "getFailureClusters", "summarizeRun", "compareRuns", "quarantineFlakyTest",
+				"createTriageRule", "ackFailureCluster");
 	}
 
 }
