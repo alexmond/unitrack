@@ -27,6 +27,7 @@ import org.alexmond.unitrack.report.TestRegressionService;
 import org.alexmond.unitrack.report.TriageService;
 import org.alexmond.unitrack.web.account.MembershipService;
 import org.alexmond.unitrack.web.account.ProjectAccessService;
+import org.alexmond.unitrack.web.account.ShareLinkService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
@@ -93,6 +94,8 @@ public class DashboardController {
 	private final ProjectAccessService access;
 
 	private final MembershipService membership;
+
+	private final ShareLinkService shareLinks;
 
 	@GetMapping("/")
 	public String index(Model model) {
@@ -189,6 +192,10 @@ public class DashboardController {
 		model.addAttribute("coverageFiles", files);
 		model.addAttribute("coverageDiff", coverageDiff.diff(id).orElse(null));
 		model.addAttribute("slowest", performance.slowestInRun(id, SLOWEST_IN_RUN_LIMIT));
+		String username = access.currentUsername();
+		boolean canShare = username != null && membership.canWrite(username, run.getProject().getId());
+		model.addAttribute("canShare", canShare);
+		model.addAttribute("shareLinks", canShare ? shareLinks.listForRun(id) : List.of());
 		return "run";
 	}
 
