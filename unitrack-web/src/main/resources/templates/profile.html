@@ -70,17 +70,29 @@
             <label class="form-label" for="expiresDays">Expires (days)</label>
             <input type="number" id="expiresDays" name="expiresDays" class="form-control" style="width:7rem"/>
         </div>
+        <div>
+            <label class="form-label" for="scope">Scope</label>
+            <select id="scope" name="scope" class="form-select" style="width:auto">
+                <option value="FULL">Full (acts as you)</option>
+                <option value="INGEST">Ingest only (CI upload)</option>
+            </select>
+        </div>
         <button class="btn btn-primary" type="submit">Generate</button>
     </form>
+    <p class="muted" style="font-size:13px;margin-top:4px">
+        <strong>Ingest only</strong> tokens can call <code class="mono">POST /api/v1/ingest</code> and nothing
+        else — use them as least-privilege CI secrets.
+    </p>
 
     <table class="table table-hover align-middle" th:unless="${tokens.isEmpty()}" style="margin-top:12px">
         <thead>
-        <tr><th>Name</th><th>Prefix</th><th>Created</th><th>Expires</th><th>Last used</th><th>State</th><th></th></tr>
+        <tr><th>Name</th><th>Prefix</th><th>Scope</th><th>Created</th><th>Expires</th><th>Last used</th><th>State</th><th></th></tr>
         </thead>
         <tbody>
         <tr th:each="t : ${tokens}">
             <td th:text="${t.name}">ci</td>
             <td><code class="mono" th:text="${t.prefix}">ut_…</code></td>
+            <td><span class="badge tag" th:text="${t.scope}">FULL</span></td>
             <td th:text="${#temporals.format(t.createdAt, 'yyyy-MM-dd')}">date</td>
             <td th:text="${t.expiresAt != null} ? ${#temporals.format(t.expiresAt, 'yyyy-MM-dd')} : 'never'">never</td>
             <td th:text="${t.lastUsedAt != null} ? ${#temporals.format(t.lastUsedAt, 'yyyy-MM-dd HH:mm')} : '—'">—</td>

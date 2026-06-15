@@ -1,5 +1,6 @@
 package org.alexmond.unitrack.web;
 
+import org.alexmond.unitrack.domain.TokenScope;
 import org.alexmond.unitrack.domain.User;
 import org.alexmond.unitrack.web.account.ApiTokenService;
 import org.alexmond.unitrack.web.account.UserService;
@@ -16,8 +17,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest(properties = "unitrack.security.require-ingest-token=true")
-class SecureIngestIntegrationTest {
+/** Ingest-scoped tokens may upload but nothing else; full tokens are unrestricted. */
+@SpringBootTest
+class IngestTokenScopeIntegrationTest {
 
 	private static final byte[] JUNIT = ("<?xml version=\"1.0\"?>"
 			+ "<testsuite name=\"com.x.S\" tests=\"1\" failures=\"0\" errors=\"0\" skipped=\"0\" time=\"0.01\">"
@@ -37,25 +39,35 @@ class SecureIngestIntegrationTest {
 		return MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
 	}
 
+	private String mint(TokenScope scope) {
+		User admin = users.findByUsername("admin").orElseThrow();
+		return tokens.create(admin, "scope-" + scope, null, scope).rawToken();
+	}
+
 	@Test
-	void ingestRequiresTokenButReadsStayOpen() throws Exception {
+	void ingestScopedTokenCanUploadButNotRead() throws Exception {
 		MockMvc mvc = mvc();
+		String ingestToken = mint(TokenScope.INGEST);
 		MockMultipartFile junit = new MockMultipartFile("junit", "TEST.xml", "text/xml", JUNIT);
 
-		// No token -> 401.
-		mvc.perform(multipart("/api/v1/ingest").file(junit).param("project", "sec-demo"))
-			.andExpect(status().isUnauthorized());
-
-		// Valid token -> ingested.
-		User admin = users.findByUsername("admin").orElseThrow();
-		String token = tokens.create(admin, "ci", null, org.alexmond.unitrack.domain.TokenScope.FULL).rawToken();
+		// Ingest works with the scoped token.
 		mvc.perform(multipart("/api/v1/ingest").file(junit)
-			.param("project", "sec-demo")
+			.param("project", "scope-demo")
 			.param("commit", "c1")
-			.header("Authorization", "Bearer " + token)).andExpect(status().isCreated());
+			.header("Authorization", "Bearer " + ingestToken)).andExpect(status().isCreated());
 
-		// Reads remain public in open mode.
-		mvc.perform(get("/api/v1/projects")).andExpect(status().isOk());
+		// The same token is rejected on any other endpoint (least privilege).
+		mvc.perform(get("/api/v1/projects").header("Authorization", "Bearer " + ingestToken))
+			.andExpect(status().isForbidden());
+		mvc.perform(get("/api/v1/me").header("Authorization", "Bearer " + ingestToken))
+			.andExpect(status().isForbidden());
+	}
+
+	@Test
+	void fullTokenIsUnrestricted() throws Exception {
+		MockMvc mvc = mvc();
+		String fullToken = mint(TokenScope.FULL);
+		mvc.perform(get("/api/v1/me").header("Authorization", "Bearer " + fullToken)).andExpect(status().isOk());
 	}
 
 }

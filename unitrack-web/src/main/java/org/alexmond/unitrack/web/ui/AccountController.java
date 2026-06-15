@@ -65,11 +65,14 @@ public class AccountController {
 
 	@PostMapping("/profile/tokens")
 	public String createToken(Authentication auth, @RequestParam String name,
-			@RequestParam(required = false) Integer expiresDays, RedirectAttributes ra) {
+			@RequestParam(required = false) Integer expiresDays, @RequestParam(required = false) String scope,
+			RedirectAttributes ra) {
 		User user = require(auth);
 		Instant expiresAt = (expiresDays != null && expiresDays > 0) ? Instant.now().plus(expiresDays, ChronoUnit.DAYS)
 				: null;
-		ra.addFlashAttribute("newToken", tokens.create(user, name, expiresAt).rawToken());
+		org.alexmond.unitrack.domain.TokenScope tokenScope = "INGEST".equalsIgnoreCase(scope)
+				? org.alexmond.unitrack.domain.TokenScope.INGEST : org.alexmond.unitrack.domain.TokenScope.FULL;
+		ra.addFlashAttribute("newToken", tokens.create(user, name, expiresAt, tokenScope).rawToken());
 		return "redirect:/profile";
 	}
 

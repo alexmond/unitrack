@@ -44,6 +44,11 @@ public class ApiToken {
 	@Column(nullable = false)
 	private String prefix;
 
+	/** What this token may do (FULL acts as the user; INGEST may only upload). */
+	@jakarta.persistence.Enumerated(jakarta.persistence.EnumType.STRING)
+	@Column(nullable = false, length = 16)
+	private TokenScope scope = TokenScope.FULL;
+
 	@Column(name = "created_at", nullable = false)
 	private Instant createdAt = Instant.now();
 
@@ -61,12 +66,13 @@ public class ApiToken {
 	@Column(name = "expiry_reminded_at")
 	private Instant expiryRemindedAt;
 
-	public ApiToken(User user, String name, String tokenHash, String prefix, Instant expiresAt) {
+	public ApiToken(User user, String name, String tokenHash, String prefix, Instant expiresAt, TokenScope scope) {
 		this.user = user;
 		this.name = name;
 		this.tokenHash = tokenHash;
 		this.prefix = prefix;
 		this.expiresAt = expiresAt;
+		this.scope = (scope != null) ? scope : TokenScope.FULL;
 	}
 
 	public boolean isActive() {
