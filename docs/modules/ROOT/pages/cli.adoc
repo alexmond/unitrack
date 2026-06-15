@@ -6,17 +6,24 @@ image, the GitHub Action, and (later) the Maven/Gradle plugins.
 
 == Getting it
 
-The CLI ships as a runnable JAR and as an OCI image built with the same Cloud Native Buildpacks
-builder as the server.
+The CLI ships as a runnable JAR and as a hermetic OCI image (JRE + the jar) published to GHCR
+on each version tag — so it runs on any CI with neither Java nor bash on the host.
 
 [source,bash]
 ----
 # Runnable JAR (from a release, or `./mvnw -pl unitrack-cli -am package`)
 java -jar unitrack-cli.jar --help
 
-# Or the container image (no JDK needed on the host)
-docker run --rm -v "$PWD:/work" -w /work ghcr.io/alexmond/unitrack-cli upload --help
+# Or the container image (no JDK needed on the host). The workspace is mounted at /work;
+# pass the server URL and token via env (never baked into a layer).
+docker run --rm -v "$PWD:/work" \
+  -e UNITRACK_URL=https://unitrack.example -e UNITRACK_TOKEN=ut_xxx \
+  ghcr.io/alexmond/unitrack-uploader upload --project app \
+  --junit 'target/surefire-reports/*.xml'
 ----
+
+The image is built from `deploy/cli.Containerfile` and pushed by the `publish-cli-image`
+workflow (semver + `latest` tags). An ingest-scoped token is the right credential here.
 
 == Uploading
 
