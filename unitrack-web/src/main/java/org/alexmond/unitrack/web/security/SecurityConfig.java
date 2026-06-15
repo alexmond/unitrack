@@ -62,7 +62,7 @@ public class SecurityConfig {
 				// require login.
 				auth.requestMatchers("/import", "/import/**").authenticated();
 				auth.requestMatchers("/projects/*/settings", "/projects/*/visibility", "/projects/*/members",
-						"/projects/*/members/**")
+						"/projects/*/members/**", "/projects/*/alerts", "/projects/*/alerts/**")
 					.authenticated();
 				if (props.isRequireIngestToken()) {
 					auth.requestMatchers(HttpMethod.POST, "/api/v1/ingest").authenticated();

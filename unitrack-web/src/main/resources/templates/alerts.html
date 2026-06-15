@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head><title th:text="'UniTrack — Alerts: ' + ${project.name}">UniTrack</title></head>
+<body>
+
+<main class="container" layout:fragment="content">
+    <p class="crumbs">
+        <a th:href="@{/}">Projects</a> /
+        <a th:href="@{/projects/{id}(id=${project.id})}" th:text="${project.name}">project</a> /
+        Alerts
+    </p>
+    <h1>Alert channels</h1>
+    <nav th:replace="~{fragments/common :: subnav(${project.id}, 'alerts')}"></nav>
+    <p class="muted">
+        Where this project's alerts are delivered. Each channel is owned by this project (not shared
+        globally); secrets are encrypted at rest and shown masked. <em>Tags</em> select which event
+        kinds route here (e.g. <code class="mono">GATE_FAILED,NEW_REGRESSION</code>); leave blank for all.
+        Owner access required to change.
+    </p>
+    <p class="muted"><i class="bi bi-info-circle" aria-hidden="true"></i>
+        Delivery itself (and a live “send test”) arrives with the routing slice — channels configured here
+        are stored and will be used once it lands.</p>
+
+    <div th:if="${channels.isEmpty()}" class="empty">No channels yet — add one below.</div>
+    <table class="table table-hover align-middle" th:unless="${channels.isEmpty()}">
+        <thead>
+        <tr><th>Type</th><th>Label</th><th>Target</th><th>Secret</th><th>Tags</th><th>Enabled</th><th></th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="c : ${channels}" th:classappend="${!c.enabled} ? 'row-muted'">
+            <td><span class="badge tag" th:text="${c.type}">SLACK</span></td>
+            <td th:text="${c.label}">#builds</td>
+            <td><code class="mono" th:text="${c.target} ?: '—'">target</code></td>
+            <td><code class="mono muted" th:text="${maskedSecrets.get(c.id)} ?: '—'">••••</code></td>
+            <td><code class="mono" th:text="${c.tags} ?: 'all'">all</code></td>
+            <td>
+                <form method="post" th:action="@{/projects/{id}/alerts/{cid}/toggle(id=${project.id},cid=${c.id})}"
+                      style="display:inline">
+                    <input type="hidden" name="enabled" th:value="${!c.enabled}"/>
+                    <button class="btn btn-sm" th:classappend="${c.enabled} ? 'btn-success' : 'btn-secondary'"
+                            type="submit" th:text="${c.enabled} ? 'On' : 'Off'">On</button>
+                </form>
+            </td>
+            <td>
+                <form method="post" th:action="@{/projects/{id}/alerts/{cid}/delete(id=${project.id},cid=${c.id})}"
+                      style="display:inline">
+                    <button class="btn btn-sm btn-danger" type="submit">Delete</button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+
+    <h2>Add channel</h2>
+    <form method="post" th:action="@{/projects/{id}/alerts(id=${project.id})}"
+          class="d-flex flex-wrap gap-2 align-items-center">
+        <select name="type" class="form-select" style="width:auto" aria-label="Type">
+            <option th:each="t : ${types}" th:value="${t}" th:text="${t}">SLACK</option>
+        </select>
+        <input type="text" name="label" class="form-control" style="width:auto;flex:1 1 9rem"
+               aria-label="Label" placeholder="Label (e.g. #builds)" required/>
+        <input type="text" name="target" class="form-control" style="width:auto;flex:1 1 12rem"
+               aria-label="Target" placeholder="Target (email address / display URL)"/>
+        <input type="password" name="secret" class="form-control" style="width:auto;flex:1 1 14rem"
+               aria-label="Secret" placeholder="Secret (webhook URL / signing secret)" autocomplete="off"/>
+        <input type="text" name="tags" class="form-control" style="width:auto;flex:1 1 12rem"
+               aria-label="Tags" placeholder="Tags (e.g. GATE_FAILED) — blank = all"/>
+        <button class="btn btn-primary" type="submit">Add</button>
+    </form>
+</main>
+</body>
+</html>

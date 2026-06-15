@@ -56,6 +56,10 @@
        th:classappend="${active == 'owners'} ? 'current'"
        th:attr="aria-current=${active == 'owners'} ? 'page' : null">
         <i class="bi bi-person-badge" aria-hidden="true"></i> Owners</a>
+    <a th:href="@{/projects/{id}/alerts(id=${projectId})}"
+       th:classappend="${active == 'alerts'} ? 'current'"
+       th:attr="aria-current=${active == 'alerts'} ? 'page' : null">
+        <i class="bi bi-bell" aria-hidden="true"></i> Alerts</a>
     <a th:href="@{/projects/{id}/settings(id=${projectId})}"
        th:classappend="${active == 'settings'} ? 'current'"
        th:attr="aria-current=${active == 'settings'} ? 'page' : null">
