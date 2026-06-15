@@ -1,15 +1,21 @@
 package org.alexmond.unitrack.web.mcp;
 
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import lombok.RequiredArgsConstructor;
 import org.alexmond.unitrack.domain.Project;
 import org.alexmond.unitrack.domain.TestCaseResult;
 import org.alexmond.unitrack.domain.TestRun;
+import org.alexmond.unitrack.report.ComparisonService;
 import org.alexmond.unitrack.report.FailureClusteringService;
 import org.alexmond.unitrack.report.FlakyTestService;
 import org.alexmond.unitrack.report.QualityGateService;
 import org.alexmond.unitrack.report.ReportingService;
+import org.alexmond.unitrack.report.RunComparison;
+import org.alexmond.unitrack.report.TestRegressionResult;
+import org.alexmond.unitrack.report.TestRegressionService;
 import org.alexmond.unitrack.web.account.MembershipService;
 import org.alexmond.unitrack.web.account.ProjectAccessService;
 import org.springframework.ai.tool.annotation.Tool;
@@ -37,6 +43,10 @@ public class UniTrackMcpTools {
 	private final FlakyTestService flaky;
 
 	private final FailureClusteringService clustering;
+
+	private final TestRegressionService regression;
+
+	private final ComparisonService comparison;
 
 	private final ProjectAccessService access;
 
@@ -105,6 +115,47 @@ public class UniTrackMcpTools {
 			.stream()
 			.map((c) -> new ClusterInfo(c.failureType(), c.sampleMessage(), c.occurrences(), c.distinctTests()))
 			.toList();
+	}
+
+	@Tool(description = "Triage summary for a run: gate verdict, how many tests fail, which failures are NEW versus "
+			+ "the baseline (the real regressions to look at first), and which failing tests are already known-flaky "
+			+ "(likely noise, not a real break). Use this to explain a red build instead of reading raw stack traces.")
+	public RunTriageSummary summarizeRun(@ToolParam(description = "Test run id") long runId) {
+		TestRun run = readableRun(runId);
+		List<TestCaseResult> failing = this.reporting.failedCasesFor(runId);
+		TestRegressionResult reg = this.regression.diff(runId).orElse(null);
+		// Known-flaky failing tests: failures that match an active flaky-tracked test.
+		Set<String> flakyKeys = this.flaky.listFlaky(run.getProject().getId())
+			.stream()
+			.map((f) -> key(f.className(), f.name()))
+			.collect(Collectors.toSet());
+		List<FailingTest> flakyAmongFailures = failing.stream()
+			.filter((t) -> flakyKeys.contains(key(t.getClassName(), t.getName())))
+			.map(UniTrackMcpTools::toFailingTest)
+			.toList();
+		List<FailingTest> newFailures = (reg != null) ? reg.newFailures()
+			.stream()
+			.map((t) -> new FailingTest(t.className(), t.name(), "FAILED", t.failureType(), t.failureMessage()))
+			.toList() : List.of();
+		return new RunTriageSummary(toSummary(run), gateInfo(runId), failing.size(),
+				(reg != null) && reg.baselineFound(), (reg != null) ? reg.baselineRunId() : null,
+				(reg != null) ? reg.baseBranch() : null, newFailures.size(), newFailures, flakyAmongFailures);
+	}
+
+	@Tool(description = "Diff two runs (head versus base): which tests newly fail, which got fixed, which still fail, "
+			+ "plus pass-rate, coverage and duration deltas. Useful to see what a change moved between two commits.")
+	public RunDiff compareRuns(@ToolParam(description = "Base (earlier) run id") long baseRunId,
+			@ToolParam(description = "Head (later) run id") long headRunId) {
+		readableRun(baseRunId);
+		readableRun(headRunId);
+		RunComparison c = this.comparison.compare(baseRunId, headRunId)
+			.orElseThrow(() -> new IllegalArgumentException("One or both runs not found"));
+		return new RunDiff(baseRunId, headRunId, c.newlyFailing(), c.fixed(), c.stillFailing(), c.passRateDelta(),
+				c.coverageDelta(), c.durationDeltaMs());
+	}
+
+	private static String key(String className, String name) {
+		return ((className == null || className.isBlank()) ? "" : className + "#") + name;
 	}
 
 	private Project resolveProject(String project) {
@@ -193,6 +244,25 @@ public class UniTrackMcpTools {
 
 	/** A cluster of similar failures. */
 	public record ClusterInfo(String failureType, String sampleMessage, int occurrences, int distinctTests) {
+	}
+
+	/**
+	 * Actionable summary of a (usually red) run: the gate verdict, total failing count,
+	 * the failures that are NEW versus the baseline (the real regressions), and the
+	 * failing tests that are already known-flaky (likely noise).
+	 */
+	public record RunTriageSummary(RunSummary summary, GateInfo gate, int totalFailing, boolean baselineFound,
+			Long baselineRunId, String baseBranch, int newFailureCount, List<FailingTest> newFailures,
+			List<FailingTest> flakyAmongFailures) {
+	}
+
+	/**
+	 * Diff between two runs ({@code head} minus {@code base}); test entries are
+	 * {@code class#name} strings. {@code coverageDelta} is null when either run lacks
+	 * coverage.
+	 */
+	public record RunDiff(long baseRunId, long headRunId, List<String> newlyFailing, List<String> fixed,
+			List<String> stillFailing, double passRateDelta, Double coverageDelta, long durationDeltaMs) {
 	}
 
 }
