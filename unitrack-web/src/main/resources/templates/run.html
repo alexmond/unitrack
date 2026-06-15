@@ -17,6 +17,8 @@
            style="background:rgba(68,147,248,.15);color:var(--blue);text-decoration:none"
            th:href="@{/projects/{id}/pr/{pr}(id=${run.project.id},pr=${run.prNumber})}"
            th:text="'PR #' + ${run.prNumber} + (${run.baseBranch != null} ? ' → ' + ${run.baseBranch} : '')">PR #1 → main</a>
+        <a class="badge" style="background:var(--panel);border:1px solid var(--border);text-decoration:none"
+           th:href="@{/runs/{id}/export(id=${run.id})}" title="Self-contained HTML — print or save as PDF">Export ↗</a>
     </h1>
     <p class="muted">
         <span th:text="${run.branch} ?: 'no branch'">main</span> ·
