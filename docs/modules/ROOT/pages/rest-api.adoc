@@ -82,6 +82,25 @@ curl -H "Authorization: Bearer ut_xxxxxxxx" http://localhost:8080/api/v1/me
 }
 ----
 
+== GET /api/v1/events (live updates)
+
+A https://developer.mozilla.org/docs/Web/API/Server-sent_events[Server-Sent-Events] stream that
+pushes a `run` event each time a run is ingested, so the dashboard can update in place without
+polling. Connect with an `EventSource`:
+
+[source,javascript]
+----
+const es = new EventSource('/api/v1/events');
+es.addEventListener('run', (e) => {
+  const u = JSON.parse(e.data); // { projectId, runId, branch, status, passRatePct, lineCoveragePct, ... }
+  // update the matching project card / runs row
+});
+----
+
+The stream connects as the current user (or anonymously) and is **visibility-filtered per
+subscriber**: a private project's run events are delivered only to streams that may read it, so
+they never leak to anonymous or non-member clients. The first message is a `connected` event.
+
 == Authentication mechanisms
 
 UniTrack accepts two kinds of credential:
