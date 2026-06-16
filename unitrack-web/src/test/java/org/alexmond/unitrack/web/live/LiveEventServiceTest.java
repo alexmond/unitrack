@@ -7,6 +7,7 @@ import org.alexmond.unitrack.domain.TestRun;
 import org.alexmond.unitrack.domain.Visibility;
 import org.alexmond.unitrack.web.account.MembershipService;
 import org.junit.jupiter.api.Test;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
@@ -34,6 +35,17 @@ class LiveEventServiceTest {
 
 		// Only the member's stream receives the private project's run.
 		assertThat(this.service.publish(project, UPDATE)).isEqualTo(1);
+	}
+
+	@Test
+	void heartbeatRetainsHealthySubscribers() {
+		SseEmitter emitter = this.service.subscribe("x");
+		assertThat(emitter).isNotNull();
+		assertThat(this.service.subscriberCount()).isEqualTo(1);
+
+		// A keepalive ping to a healthy connection must not drop it.
+		this.service.heartbeat();
+		assertThat(this.service.subscriberCount()).isEqualTo(1);
 	}
 
 	@Test
