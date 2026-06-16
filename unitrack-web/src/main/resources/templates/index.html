@@ -53,20 +53,21 @@
         </tr>
         </thead>
         <tbody>
-        <tr th:each="h : ${board}" th:classappend="${h.hasRuns() and !h.gatePassed()} ? 'row-fail'">
+        <tr th:each="h : ${board}" th:classappend="${h.hasRuns() and !h.gatePassed()} ? 'row-fail'"
+            th:attr="data-project-id=${h.projectId()}">
             <td>
                 <a th:href="@{/projects/{id}(id=${h.projectId()})}" th:text="${h.projectName()}">project</a>
                 <i th:if="${h.isPrivate()}" class="bi bi-lock-fill muted" title="Private" aria-label="Private"></i>
                 <code class="mono muted" th:if="${h.branch() != null}" th:text="${h.branch()}">main</code>
             </td>
-            <td>
+            <td data-live="gate">
                 <span th:if="${h.hasRuns()}" class="badge" th:classappend="${h.gatePassed()} ? 'pass' : 'fail'"
                       th:text="${h.gateStatus()}">PASSED</span>
                 <span th:unless="${h.hasRuns()}" class="muted">—</span>
             </td>
-            <td class="num pct"
+            <td class="num pct" data-live="pass"
                 th:text="${h.passRate() != null} ? ${#numbers.formatDecimal(h.passRate(),1,1)} + '%' : '—'">—</td>
-            <td class="num pct"
+            <td class="num pct" data-live="cov"
                 th:text="${h.coveragePct() != null} ? ${#numbers.formatDecimal(h.coveragePct(),1,1)} + '%' : '—'">—</td>
             <td class="num">
                 <span th:if="${h.flakyCount() > 0}" class="badge skip"
@@ -80,7 +81,7 @@
                    title="Pass rate down vs previous run" aria-label="down"></i>
                 <span th:if="${h.trend() == 0}" class="muted" aria-label="flat">—</span>
             </td>
-            <td>
+            <td data-live="last">
                 <a th:if="${h.hasRuns()}" th:href="@{/runs/{id}(id=${h.lastRunId()})}"
                    th:text="${#temporals.format(h.lastRunAt(), 'MMM dd HH:mm')}">date</a>
                 <span th:unless="${h.hasRuns()}" class="muted">No runs yet</span>
@@ -89,5 +90,39 @@
         </tbody>
     </table>
 </main>
+
+<th:block layout:fragment="scripts">
+    <!-- #147: live-update a project row in place when its project ingests a run. -->
+    <script th:inline="none">
+        (function () {
+            function pct(v) { return (v === null || v === undefined) ? '—' : Number(v).toFixed(1) + '%'; }
+            document.addEventListener('unitrack:run', function (e) {
+                var u = e.detail;
+                if (!u || u.projectId == null) { return; }
+                var row = document.querySelector('tr[data-project-id="' + u.projectId + '"]');
+                if (!row) { return; } // project not currently on the board
+                var passed = u.status === 'PASSED';
+                var gate = row.querySelector('[data-live="gate"]');
+                if (gate) {
+                    gate.innerHTML = '<span class="badge ' + (passed ? 'pass' : 'fail') + '"></span>';
+                    gate.firstChild.textContent = u.status;
+                }
+                var p = row.querySelector('[data-live="pass"]'); if (p) { p.textContent = pct(u.passRatePct); }
+                var c = row.querySelector('[data-live="cov"]'); if (c) { c.textContent = pct(u.lineCoveragePct); }
+                var last = row.querySelector('[data-live="last"]');
+                if (last && u.runId != null) {
+                    last.innerHTML = '<a></a>';
+                    var a = last.firstChild;
+                    a.setAttribute('href', '/runs/' + u.runId);
+                    a.textContent = 'just now';
+                }
+                row.classList.toggle('row-fail', !passed);
+                row.classList.remove('flash');
+                void row.offsetWidth; // reflow so the animation re-triggers
+                row.classList.add('flash');
+            });
+        })();
+    </script>
+</th:block>
 </body>
 </html>
