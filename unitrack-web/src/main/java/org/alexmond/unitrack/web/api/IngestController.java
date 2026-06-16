@@ -22,6 +22,8 @@ import org.alexmond.unitrack.web.account.ProjectAccessService;
 import org.alexmond.unitrack.web.github.GitHubPrCommentService;
 import org.alexmond.unitrack.web.github.GitHubStatusService;
 import org.alexmond.unitrack.web.alert.AlertEventPublisher;
+import org.alexmond.unitrack.web.live.LiveEventService;
+import org.alexmond.unitrack.web.live.RunUpdate;
 import org.alexmond.unitrack.web.notify.GateFailureNotifier;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -73,6 +75,8 @@ public class IngestController {
 	private final GateFailureNotifier gateFailureNotifier;
 
 	private final AlertEventPublisher alertEvents;
+
+	private final LiveEventService liveEvents;
 
 	private final ReportingService reporting;
 
@@ -134,6 +138,7 @@ public class IngestController {
 		gitHubPrComment.publish(run, gate, delta, newFailures, slowerTests);
 		gateFailureNotifier.notifyIfFailed(run, gate);
 		alertEvents.publishForRun(run, gate);
+		liveEvents.publish(run.getProject(), RunUpdate.of(run));
 	}
 
 	private void publishPerfComment(PerfRun perfRun) {
