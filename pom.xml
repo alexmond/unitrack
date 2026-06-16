@@ -63,6 +63,7 @@
         <chartjs.version>4.4.1</chartjs.version>
         <bootstrap-icons.version>1.11.3</bootstrap-icons.version>
         <thymeleaf-layout-dialect.version>3.4.0</thymeleaf-layout-dialect.version>
+        <notify4j.version>0.1.0</notify4j.version>
     </properties>
 
     <modules>

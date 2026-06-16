@@ -54,6 +54,13 @@
             <artifactId>spring-boot-starter-mail</artifactId>
         </dependency>
 
+        <!-- notify4j: multi-channel delivery engine for per-project alert channels (#238). -->
+        <dependency>
+            <groupId>org.alexmond</groupId>
+            <artifactId>notify4j-core</artifactId>
+            <version>${notify4j.version}</version>
+        </dependency>
+
         <!-- Bootstrap (CSS only) served in-jar via WebJars; theme-bridged onto app.css tokens. -->
         <dependency>
             <groupId>org.webjars</groupId>
