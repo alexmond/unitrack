@@ -5,6 +5,8 @@
 <body>
 <header th:fragment="topbar" class="topbar">
     <a class="brand" th:href="@{/}">Uni<span>Track</span></a>
+    <span id="live-dot" class="live-dot" title="Live — reconnecting…"
+          aria-label="Live updates reconnecting" role="status"></span>
     <div class="spacer"></div>
     <nav>
         <a th:href="@{/}">Projects</a>
