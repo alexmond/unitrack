@@ -11,6 +11,7 @@ import org.alexmond.unitrack.domain.Project;
 import org.alexmond.unitrack.web.account.MembershipService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -28,6 +29,8 @@ public class LiveEventService {
 	private static final Logger log = LoggerFactory.getLogger(LiveEventService.class);
 
 	private static final long TIMEOUT_MS = Duration.ofMinutes(30).toMillis();
+
+	private static final long RECONNECT_MS = 3_000L;
 
 	/** Subscriber emitter → the username it connected as (null when anonymous). */
 	private final Map<SseEmitter, String> subscribers = new ConcurrentHashMap<>();
@@ -50,12 +53,36 @@ public class LiveEventService {
 		});
 		emitter.onError((ex) -> this.subscribers.remove(emitter));
 		try {
-			emitter.send(SseEmitter.event().name("connected").data("ok"));
+			// reconnectTime tells the browser EventSource how soon to retry after a drop.
+			emitter.send(SseEmitter.event().name("connected").reconnectTime(RECONNECT_MS).data("ok"));
 		}
 		catch (IOException ex) {
 			this.subscribers.remove(emitter);
 		}
 		return emitter;
+	}
+
+	/**
+	 * Periodic keepalive: sends a comment to every subscriber so idle proxies don't drop
+	 * the connection, and prunes any whose socket is already dead (the send fails).
+	 * Without this a dead client lingers until its read timeout.
+	 */
+	@Scheduled(fixedRateString = "${unitrack.live.heartbeat-ms:25000}")
+	public void heartbeat() {
+		this.broadcastLock.lock();
+		try {
+			for (SseEmitter emitter : this.subscribers.keySet()) {
+				try {
+					emitter.send(SseEmitter.event().comment("ping"));
+				}
+				catch (IOException | RuntimeException ex) {
+					this.subscribers.remove(emitter);
+				}
+			}
+		}
+		finally {
+			this.broadcastLock.unlock();
+		}
 	}
 
 	/**
