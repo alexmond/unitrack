@@ -19,8 +19,9 @@
         Owner access required to change.
     </p>
     <p class="muted"><i class="bi bi-info-circle" aria-hidden="true"></i>
-        Delivery itself (and a live “send test”) arrives with the routing slice — channels configured here
-        are stored and will be used once it lands.</p>
+        Slack and webhook channels are delivered now (via notify4j) on gate-failure, new-regression and
+        coverage-drop events. Email delivery, transition-muting and a live “send test” arrive with the
+        routing slice.</p>
 
     <div th:if="${channels.isEmpty()}" class="empty">No channels yet — add one below.</div>
     <table class="table table-hover align-middle" th:unless="${channels.isEmpty()}">
