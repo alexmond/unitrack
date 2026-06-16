@@ -10,6 +10,9 @@
     <link rel="stylesheet" th:href="@{/webjars/bootstrap/5.3.8/css/bootstrap.min.css}"/>
     <link rel="stylesheet" th:href="@{/webjars/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css}"/>
     <link rel="stylesheet" th:href="@{/css/app.css}"/>
+    <!-- Live-updates SSE client: maintains the topbar "● live" indicator and re-broadcasts
+         run events as the `unitrack:run` DOM event for page scripts. -->
+    <script th:src="@{/js/live.js}" defer></script>
     <!-- Applies the saved theme before paint (no flash); falls back to OS preference. -->
     <script th:inline="none">
         (function () {
