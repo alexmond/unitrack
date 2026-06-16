@@ -162,7 +162,7 @@
             <th class="num">Duration</th>
         </tr>
         </thead>
-        <tbody>
+        <tbody id="runs-body">
         <tr th:each="r : ${runs}" th:classappend="${r.status != 'PASSED'} ? 'row-fail'">
             <td><a th:href="@{/runs/{id}(id=${r.id})}"
                    th:text="${#temporals.format(r.createdAt, 'MMM dd HH:mm')}">date</a></td>
@@ -206,12 +206,13 @@
     const labels = JSON.parse(/*[[${trendLabels}]]*/ '[]');
     const passRate = JSON.parse(/*[[${trendPassRate}]]*/ '[]');
     const coverage = JSON.parse(/*[[${trendCoverage}]]*/ '[]');
+    let trendChartInstance;
     if (labels.length > 0 && window.Chart) {
         const css = getComputedStyle(document.documentElement);
         const muted = css.getPropertyValue('--muted').trim() || '#8b98a5';
         const text = css.getPropertyValue('--text').trim() || '#e6edf3';
         const grid = css.getPropertyValue('--border').trim() || '#2c343d';
-        window.__chart(document.getElementById('trendChart'), {
+        trendChartInstance = window.__chart(document.getElementById('trendChart'), {
             type: 'line',
             data: {
                 labels: labels,
@@ -229,6 +230,83 @@
             }
         });
     }
+
+    // #148: live-prepend a new run to this project's recent-runs table (and nudge the trend).
+    (function () {
+        const projectId = /*[[${project.id}]]*/ 0;
+        const selBranch = /*[[${selectedBranch}]]*/ null;
+        const TREND_MAX = 30;
+
+        function fmtPct(v) { return (v === null || v === undefined) ? '—' : Number(v).toFixed(1) + '%'; }
+
+        function cell(text, cls) {
+            const td = document.createElement('td');
+            if (cls) { td.className = cls; }
+            td.textContent = text;
+            return td;
+        }
+        function monoCell(text) {
+            const td = document.createElement('td');
+            const code = document.createElement('code');
+            code.className = 'mono';
+            code.textContent = text;
+            td.appendChild(code);
+            return td;
+        }
+
+        document.addEventListener('unitrack:run', function (e) {
+            const u = e.detail;
+            if (!u || u.projectId !== projectId) { return; }
+            if (selBranch && u.branch !== selBranch) { return; } // a branch is selected: only its runs
+
+            const body = document.getElementById('runs-body');
+            if (body) {
+                const passed = u.status === 'PASSED';
+                const tr = document.createElement('tr');
+                if (!passed) { tr.className = 'row-fail'; }
+
+                const whenTd = document.createElement('td');
+                const link = document.createElement('a');
+                link.setAttribute('href', '/runs/' + u.runId);
+                link.textContent = 'just now';
+                whenTd.appendChild(link);
+                tr.appendChild(whenTd);
+
+                tr.appendChild(cell(u.branch || '—'));
+                tr.appendChild(monoCell(u.flag || 'default'));
+                tr.appendChild(monoCell(u.shortSha || '—'));
+
+                const statusTd = document.createElement('td');
+                const badge = document.createElement('span');
+                badge.className = 'badge ' + (passed ? 'pass' : 'fail');
+                badge.textContent = u.status;
+                statusTd.appendChild(badge);
+                tr.appendChild(statusTd);
+
+                tr.appendChild(cell(String(u.totalTests), 'num'));
+                tr.appendChild(cell(String(u.failed), 'num'));
+                tr.appendChild(cell(String(u.skipped), 'num'));
+                tr.appendChild(cell(Number(u.passRatePct).toFixed(1) + '%', 'num pct'));
+                tr.appendChild(cell(fmtPct(u.lineCoveragePct), 'num pct'));
+                tr.appendChild(cell((u.durationMs / 1000).toFixed(1) + 's', 'num'));
+
+                body.insertBefore(tr, body.firstChild);
+                tr.classList.add('flash');
+            }
+
+            if (trendChartInstance) {
+                const d = trendChartInstance.data;
+                d.labels.push(u.shortSha || String(u.runId));
+                d.datasets[0].data.push(Number(u.passRatePct.toFixed ? u.passRatePct.toFixed(1) : u.passRatePct));
+                d.datasets[1].data.push(u.lineCoveragePct == null ? null : Number(u.lineCoveragePct));
+                while (d.labels.length > TREND_MAX) {
+                    d.labels.shift();
+                    d.datasets.forEach(function (ds) { ds.data.shift(); });
+                }
+                trendChartInstance.update();
+            }
+        });
+    })();
 </script>
 </th:block>
 </body>

@@ -255,8 +255,8 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
     70% { box-shadow: 0 0 0 6px rgba(46, 160, 67, 0); }
     100% { box-shadow: 0 0 0 0 rgba(46, 160, 67, 0); }
 }
-/* A row that just updated live briefly highlights so the change is noticeable (#147). */
-.board tr.flash > td { animation: row-flash 1.3s ease-out; }
+/* A row that just updated/arrived live briefly highlights so the change is noticeable (#147/#148). */
+tr.flash > td { animation: row-flash 1.3s ease-out; }
 @keyframes row-flash {
     0% { background: rgba(68, 147, 248, .22); }
     100% { background: transparent; }

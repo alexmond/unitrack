@@ -18,8 +18,8 @@ class LiveEventServiceTest {
 
 	private final LiveEventService service = new LiveEventService(this.membership);
 
-	private static final RunUpdate UPDATE = new RunUpdate(1L, 2L, "main", "PASSED", 5, 0, 100.0, 80.0, "abc1234",
-			"2026-06-16T00:00:00Z");
+	private static final RunUpdate UPDATE = new RunUpdate(1L, 2L, "main", "default", "PASSED", 5, 0, 0, 100.0, 80.0,
+			1200L, "abc1234", "2026-06-16T00:00:00Z");
 
 	@Test
 	void publishDeliversOnlyToSubscribersWhoMayReadTheProject() {
@@ -43,12 +43,15 @@ class LiveEventServiceTest {
 		given(run.getProject()).willReturn(p);
 		given(run.getId()).willReturn(9L);
 		given(run.getBranch()).willReturn("main");
+		given(run.getFlag()).willReturn("default");
 		given(run.getStatus()).willReturn("FAILED");
 		given(run.getTotalTests()).willReturn(10);
 		given(run.getFailed()).willReturn(2);
 		given(run.getErrors()).willReturn(1);
+		given(run.getSkipped()).willReturn(1);
 		given(run.passRate()).willReturn(70.0);
 		given(run.getLineCoveragePct()).willReturn(55.5);
+		given(run.getDurationMs()).willReturn(3400L);
 		given(run.getShortSha()).willReturn("deadbee");
 		given(run.getCreatedAt()).willReturn(Instant.parse("2026-06-16T00:00:00Z"));
 
