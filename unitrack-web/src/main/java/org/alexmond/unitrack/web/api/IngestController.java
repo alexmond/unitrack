@@ -17,10 +17,13 @@ import org.alexmond.unitrack.report.QualityGateResult;
 import org.alexmond.unitrack.report.QualityGateService;
 import org.alexmond.unitrack.report.TestRegressionResult;
 import org.alexmond.unitrack.report.TestRegressionService;
+import org.alexmond.unitrack.web.account.AuditService;
 import org.alexmond.unitrack.web.account.MembershipService;
 import org.alexmond.unitrack.web.account.ProjectAccessService;
 import org.alexmond.unitrack.web.github.GitHubPrCommentService;
 import org.alexmond.unitrack.web.github.GitHubStatusService;
+import io.micrometer.observation.Observation;
+import io.micrometer.observation.ObservationRegistry;
 import org.alexmond.unitrack.web.alert.AlertEventPublisher;
 import org.alexmond.unitrack.web.live.LiveEventService;
 import org.alexmond.unitrack.web.live.RunUpdate;
@@ -84,6 +87,10 @@ public class IngestController {
 
 	private final ProjectAccessService access;
 
+	private final ObservationRegistry observationRegistry;
+
+	private final AuditService audit;
+
 	@PostMapping(path = "/ingest", consumes = "multipart/form-data")
 	public ResponseEntity<ApiResponses.IngestResultJson> ingest(@RequestParam String project,
 			@RequestParam(required = false) String repoUrl, @RequestParam(required = false) String branch,
@@ -111,22 +118,52 @@ public class IngestController {
 
 		IngestRequest meta = new IngestRequest(project, repoUrl, branch, flag, commit, buildUrl, ciProvider, runKey,
 				baseBranch, prNumber);
-		TestRun run = null;
-		if (!junitStreams.isEmpty()) {
-			run = ingestService.ingest(meta, junitStreams, toSuppliers(jacoco));
-			publishGitHubStatus(run);
-		}
-		PerfRun perfRun = perfStreams.isEmpty() ? null : perfIngest.ingest(meta, perfStreams);
-		if (perfRun != null) {
-			publishPerfComment(perfRun);
-		}
-		// A newly-created (PRIVATE by default) project gets its uploader as OWNER, so an
-		// authenticated CI/user keeps access to what it just created.
-		if (existing == null && uploader != null) {
-			Long newProjectId = (run != null) ? run.getProject().getId() : perfRun.getProject().getId();
-			membership.grantIfUserExists(newProjectId, uploader, ProjectRole.OWNER);
-		}
-		return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponses.IngestResultJson.of(run, perfRun));
+
+		// One Observation around the unit of work: Boot derives the metric (Timer) and
+		// the
+		// span from it. Low-cardinality dimensions become metric tags; ids/names are
+		// trace-only (high-cardinality) to avoid metric tag explosion.
+		Observation observation = Observation.createNotStarted("unitrack.ingest", observationRegistry)
+			.lowCardinalityKeyValue("kind",
+					junitStreams.isEmpty() ? "perf" : (perfStreams.isEmpty() ? "tests" : "tests+perf"))
+			.lowCardinalityKeyValue("has_coverage", String.valueOf((jacoco != null) && !jacoco.isEmpty()))
+			.highCardinalityKeyValue("project", project);
+
+		return observation.observe(() -> {
+			TestRun run = null;
+			if (!junitStreams.isEmpty()) {
+				run = ingestService.ingest(meta, junitStreams, toSuppliers(jacoco));
+				// Post-ingest publishing as an explicit child span — parent passed
+				// through
+				// (not via thread-local), so it nests correctly even if moved off-thread.
+				TestRun ingested = run;
+				Observation.createNotStarted("unitrack.report", observationRegistry)
+					.parentObservation(observation)
+					.observe(() -> publishGitHubStatus(ingested));
+			}
+			PerfRun perfRun = perfStreams.isEmpty() ? null : perfIngest.ingest(meta, perfStreams);
+			if (perfRun != null) {
+				publishPerfComment(perfRun);
+			}
+			// A newly-created (PRIVATE by default) project gets its uploader as OWNER, so
+			// an
+			// authenticated CI/user keeps access to what it just created.
+			if (existing == null && uploader != null) {
+				Long newProjectId = (run != null) ? run.getProject().getId() : perfRun.getProject().getId();
+				membership.grantIfUserExists(newProjectId, uploader, ProjectRole.OWNER);
+			}
+			observation.lowCardinalityKeyValue("result", (run != null) ? run.getStatus() : "PERF_ONLY");
+			if (run != null) {
+				observation.highCardinalityKeyValue("run.id", String.valueOf(run.getId()));
+				audit.record(uploader, "RUN_INGESTED", "API", run.getProject().getId(), "run #" + run.getId() + " "
+						+ run.getStatus() + " on " + ((run.getBranch() != null) ? run.getBranch() : "-"));
+			}
+			if (perfRun != null) {
+				audit.record(uploader, "PERF_INGESTED", "API", perfRun.getProject().getId(),
+						"perf run #" + perfRun.getId());
+			}
+			return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponses.IngestResultJson.of(run, perfRun));
+		});
 	}
 
 	private void publishGitHubStatus(TestRun run) {

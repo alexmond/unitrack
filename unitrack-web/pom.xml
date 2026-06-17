@@ -61,11 +61,25 @@
             <version>${notify4j.version}</version>
         </dependency>
 
+        <!-- Prometheus exporter: the only registry backend we add; Actuator brings
+             micrometer-core + the Observation API. Exposes /actuator/prometheus. -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+        </dependency>
+
         <!-- Bootstrap (CSS only) served in-jar via WebJars; theme-bridged onto app.css tokens. -->
         <dependency>
             <groupId>org.webjars</groupId>
             <artifactId>bootstrap</artifactId>
             <version>${bootstrap.version}</version>
+        </dependency>
+
+        <!-- HTMX for the ops dashboard's live fragment polling. -->
+        <dependency>
+            <groupId>org.webjars.npm</groupId>
+            <artifactId>htmx.org</artifactId>
+            <version>${htmx.version}</version>
         </dependency>
 
         <!-- Chart.js served in-jar via WebJars (no CDN dependency for the self-hosted app). -->

@@ -30,7 +30,10 @@ scripts/dev-test.sh 'AuthIntegrationTest,Status*'
   (`report/`), JPA repositories (`repository/`). No web concerns.
 - **`unitrack-web`** — the runnable Spring Boot app: REST API (`web/api/`), Thymeleaf dashboard
   (`web/ui/` + `templates/`), accounts/API tokens (`web/account/`, `web/security/`), GitHub
-  commit-status + repo import (`web/github/`), MCP server (`web/mcp/`), demo seeder (`web/demo/`).
+  commit-status + repo import (`web/github/`), MCP server (`web/mcp/`), demo seeder (`web/demo/`),
+  observability (`web/metrics/` MeterBinder gauges, `web/ops/` health + `/ops` dashboard; ingest is
+  wrapped in one `unitrack.ingest` Observation → derived Timer + span). Audit trail in `web/account/`
+  (`AuditService` + `audit_entry`); `/actuator/{health,info,metrics,prometheus}` exposed.
 - **`unitrack-cli`** — dependency-light CLI uploader + quality-gate checker.
 
 Config is env-var driven (`unitrack-web/src/main/resources/application.yml`): `UNITRACK_DB_*`,
@@ -54,10 +57,17 @@ Recurring lint rules that bite: **SpringTernary** wants `(a != b) ? x : y` (pare
 - **Spring Boot 4 moved packages.** Actuator health is `org.springframework.boot.health.*`
   (e.g. `…health.actuate.endpoint.HealthEndpoint`, `…health.contributor.*`); autoconfigure is split
   per-module (Flyway, etc.). Verify imports against the jars, not Boot 3 memory.
+- **Boot 4 micrometer/actuator split.** The metrics + Prometheus endpoint autoconfig lives in
+  `spring-boot-micrometer-metrics` (pulled transitively by `spring-boot-starter-actuator`); the
+  registry backend (`micrometer-registry-prometheus`) is the only thing you add. `src/test/resources/
+  application.yml` **shadows** the main one, so actuator exposure (`management.endpoints.web.exposure
+  .include`) must be mirrored there or tests see only the default single endpoint. `MockMvc` doesn't
+  map actuator web endpoints — assert the registry directly (`PrometheusMeterRegistry.scrape()`) or
+  use `webEnvironment=RANDOM_PORT` + a real HTTP client.
 - **Disable Compose lifecycle in containers**: the app sets `spring.docker.compose.enabled=true`
   for local dev, so deployments must set `SPRING_DOCKER_COMPOSE_ENABLED=false`.
 - **Flyway migrations are immutable + versioned** in `unitrack-web/src/main/resources/db/migration/`.
-  Latest is `V14__run_pr_context.sql`; **next is V15**. Never edit a shipped migration.
+  Latest is `V20__alert_channel.sql`; **next is V21**. Never edit a shipped migration.
 - **Open mode by default** (`unitrack.security.open-mode=true`): all endpoints public so CI/uploader
   keep working. `/profile`, `/api/v1/me`, `/import`, and project settings/members always need auth.
 - **Image build fails under rootless Podman** (buildpacks lifecycle bind-mounts the docker socket) —

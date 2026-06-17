@@ -57,7 +57,8 @@ public class SecurityConfig {
 				// The audit log can name private projects/users — admin-only, even in
 				// open
 				// mode.
-				auth.requestMatchers("/audit/**").hasRole("ADMIN");
+				auth.requestMatchers("/audit/**", "/api/v1/audit", "/api/v1/audit/**", "/ops", "/ops/**")
+					.hasRole("ADMIN");
 				// Provisioning projects from GitHub is a management action: always
 				// require login.
 				auth.requestMatchers("/import", "/import/**").authenticated();

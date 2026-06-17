@@ -23,6 +23,14 @@ public interface TestRunRepository extends JpaRepository<TestRun, Long> {
 
 	long countByProjectIdAndBranch(Long projectId, String branch);
 
+	/** Total runs with a given status — for the ops dashboard pass/fail breakdown. */
+	long countByStatus(String status);
+
+	/**
+	 * Most recent non-passing runs across all projects — the ops "recent failures" list.
+	 */
+	List<TestRun> findTop20ByStatusNotOrderByCreatedAtDesc(String status);
+
 	/**
 	 * Most recent prior run on the baseline branch with the same flag — the gate
 	 * baseline.
