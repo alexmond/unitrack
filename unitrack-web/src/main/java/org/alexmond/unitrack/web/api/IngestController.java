@@ -17,6 +17,7 @@ import org.alexmond.unitrack.report.QualityGateResult;
 import org.alexmond.unitrack.report.QualityGateService;
 import org.alexmond.unitrack.report.TestRegressionResult;
 import org.alexmond.unitrack.report.TestRegressionService;
+import org.alexmond.unitrack.web.account.AuditService;
 import org.alexmond.unitrack.web.account.MembershipService;
 import org.alexmond.unitrack.web.account.ProjectAccessService;
 import org.alexmond.unitrack.web.github.GitHubPrCommentService;
@@ -88,6 +89,8 @@ public class IngestController {
 
 	private final ObservationRegistry observationRegistry;
 
+	private final AuditService audit;
+
 	@PostMapping(path = "/ingest", consumes = "multipart/form-data")
 	public ResponseEntity<ApiResponses.IngestResultJson> ingest(@RequestParam String project,
 			@RequestParam(required = false) String repoUrl, @RequestParam(required = false) String branch,
@@ -146,6 +149,12 @@ public class IngestController {
 			observation.lowCardinalityKeyValue("result", (run != null) ? run.getStatus() : "PERF_ONLY");
 			if (run != null) {
 				observation.highCardinalityKeyValue("run.id", String.valueOf(run.getId()));
+				audit.record(uploader, "RUN_INGESTED", "API", run.getProject().getId(), "run #" + run.getId() + " "
+						+ run.getStatus() + " on " + ((run.getBranch() != null) ? run.getBranch() : "-"));
+			}
+			if (perfRun != null) {
+				audit.record(uploader, "PERF_INGESTED", "API", perfRun.getProject().getId(),
+						"perf run #" + perfRun.getId());
 			}
 			return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponses.IngestResultJson.of(run, perfRun));
 		});
