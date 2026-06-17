@@ -57,6 +57,10 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
                     <mainClass>org.alexmond.unitrack.cli.UnitrackCliApplication</mainClass>
+                    <!-- Attach the executable jar under the 'exec' classifier so the plain main
+                         jar stays a usable library (the Maven/Gradle plugins depend on it). The
+                         runnable artifact is unitrack-cli-exec.jar (used by Docker/Action). -->
+                    <classifier>exec</classifier>
                     <!-- Image name for the buildpacks builder; the shared 'docker' profile supplies the build-image execution. -->
                     <image>
                         <name>unitrack-cli:${project.version}</name>
