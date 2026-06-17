@@ -295,7 +295,13 @@
                     <configuration>
                         <publishingServerId>central</publishingServerId>
                         <autoPublish>true</autoPublish>
-                        <waitUntil>published</waitUntil>
+                        <!--
+                            Return once Central has validated the bundle (signatures, metadata,
+                            structure). autoPublish then publishes in the background. 'published'
+                            blocks until full Maven Central propagation, which routinely exceeds
+                            the plugin's poll timeout and fails an otherwise-successful release.
+                        -->
+                        <waitUntil>validated</waitUntil>
                     </configuration>
                 </plugin>
             </plugins>
