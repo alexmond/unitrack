@@ -91,6 +91,18 @@
             </select>
         </div>
 
+        <h2 style="margin-top:18px">GitLab</h2>
+        <p class="muted" style="margin-top:0">The token stays global; only this is per-project.</p>
+        <div class="mb-3">
+            <label class="form-label" for="glEnabled">Publish commit status &amp; MR note</label>
+            <select id="glEnabled" name="glEnabled" class="form-select">
+                <option value="" th:selected="${settings == null or settings.glEnabled == null}"
+                        th:text="'Inherit (' + (${gitlab.enabled} ? 'on' : 'off') + ')'">Inherit</option>
+                <option value="true" th:selected="${settings != null and settings.glEnabled == true}">On</option>
+                <option value="false" th:selected="${settings != null and settings.glEnabled == false}">Off</option>
+            </select>
+        </div>
+
         <button class="btn btn-primary" type="submit">Save settings</button>
     </form>
 </main>

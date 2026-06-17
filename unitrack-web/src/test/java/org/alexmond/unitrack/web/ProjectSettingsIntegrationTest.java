@@ -78,7 +78,7 @@ class ProjectSettingsIntegrationTest {
 			.andExpect(jsonPath("$.rules[*].name", not(hasItem("min-coverage"))));
 
 		// Set a per-project minimum of 80% -> the run's 50% now fails the gate.
-		settings.save(projectId, null, 80.0, null, null, null, null, null);
+		settings.save(projectId, null, 80.0, null, null, null, null, null, null);
 
 		mvc.perform(get("/api/v1/runs/{id}/quality-gate", runId))
 			.andExpect(status().isOk())

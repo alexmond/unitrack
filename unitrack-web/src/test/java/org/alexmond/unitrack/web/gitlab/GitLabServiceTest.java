@@ -28,6 +28,12 @@ class GitLabServiceTest {
 		return p;
 	}
 
+	/** Resolver over an empty settings repo → always falls back to the global props. */
+	private GitLabConfigResolver resolver(GitLabProperties props) {
+		return new GitLabConfigResolver(props,
+				org.mockito.Mockito.mock(org.alexmond.unitrack.repository.ProjectSettingsRepository.class));
+	}
+
 	private TestRun run(String repoUrl) {
 		TestRun run = new TestRun(new Project("demo", repoUrl), "main", "default", "abc123", null, null);
 		run.applyTotals(3, 1, 0, 0, 100);
@@ -40,7 +46,7 @@ class GitLabServiceTest {
 		GitLabProperties props = props(true);
 		RestClient.Builder builder = RestClient.builder();
 		MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
-		GitLabService service = new GitLabService(props, builder);
+		GitLabService service = new GitLabService(props, resolver(props), builder);
 
 		server.expect(requestTo("https://gitlab.com/api/v4/projects/octo%2Frepo/statuses/abc123"))
 			.andExpect(method(HttpMethod.POST))
@@ -58,7 +64,7 @@ class GitLabServiceTest {
 		GitLabProperties props = props(true);
 		RestClient.Builder builder = RestClient.builder();
 		MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
-		GitLabService service = new GitLabService(props, builder);
+		GitLabService service = new GitLabService(props, resolver(props), builder);
 		TestRun run = run("https://gitlab.com/octo/repo");
 		run.setPrNumber(7);
 
@@ -77,11 +83,11 @@ class GitLabServiceTest {
 		MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
 
 		// Disabled → no request.
-		new GitLabService(props(false), builder).publishStatus(run("https://gitlab.com/octo/repo"),
-				new QualityGateResult(true, List.of()), null);
+		new GitLabService(props(false), resolver(props(false)), builder)
+			.publishStatus(run("https://gitlab.com/octo/repo"), new QualityGateResult(true, List.of()), null);
 		// Enabled but a GitHub repo → no request.
-		new GitLabService(props(true), builder).publishStatus(run("https://github.com/octo/repo"),
-				new QualityGateResult(true, List.of()), null);
+		new GitLabService(props(true), resolver(props(true)), builder)
+			.publishStatus(run("https://github.com/octo/repo"), new QualityGateResult(true, List.of()), null);
 		server.verify();
 	}
 

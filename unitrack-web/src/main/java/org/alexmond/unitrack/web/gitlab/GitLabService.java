@@ -27,16 +27,19 @@ public class GitLabService {
 
 	private final GitLabProperties props;
 
+	private final GitLabConfigResolver config;
+
 	private final RestClient restClient;
 
-	public GitLabService(GitLabProperties props, RestClient.Builder restClientBuilder) {
+	public GitLabService(GitLabProperties props, GitLabConfigResolver config, RestClient.Builder restClientBuilder) {
 		this.props = props;
+		this.config = config;
 		this.restClient = restClientBuilder.build();
 	}
 
 	/** Sets the commit/pipeline status on GitLab for the run's commit. */
 	public void publishStatus(TestRun run, QualityGateResult gate, Double coverageDelta) {
-		if (!active()) {
+		if (!active(run.getProject().getId())) {
 			return;
 		}
 		String path = projectPath(run.getProject().getRepoUrl());
@@ -65,7 +68,7 @@ public class GitLabService {
 
 	/** Posts a results note on the run's merge request, when one is associated. */
 	public void publishMrNote(TestRun run, QualityGateResult gate, Double coverageDelta, int newFailures) {
-		if (!active() || !this.props.isMrNote() || run.getPrNumber() == null) {
+		if (!active(run.getProject().getId()) || !this.props.isMrNote() || run.getPrNumber() == null) {
 			return;
 		}
 		String path = projectPath(run.getProject().getRepoUrl());
@@ -89,8 +92,8 @@ public class GitLabService {
 		}
 	}
 
-	private boolean active() {
-		return this.props.isEnabled() && this.props.getToken() != null && !this.props.getToken().isBlank();
+	private boolean active(Long projectId) {
+		return this.config.enabled(projectId) && this.props.getToken() != null && !this.props.getToken().isBlank();
 	}
 
 	private String describe(TestRun run, QualityGateResult gate, Double coverageDelta) {

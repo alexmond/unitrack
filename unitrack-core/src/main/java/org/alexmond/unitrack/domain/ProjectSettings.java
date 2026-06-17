@@ -50,6 +50,10 @@ public class ProjectSettings {
 	@Column(name = "gh_pr_comment")
 	private Boolean ghPrComment;
 
+	/** Per-project GitLab integration toggle; null inherits the global default. */
+	@Column(name = "gl_enabled")
+	private Boolean glEnabled;
+
 	public ProjectSettings(Long projectId) {
 		this.projectId = projectId;
 	}
