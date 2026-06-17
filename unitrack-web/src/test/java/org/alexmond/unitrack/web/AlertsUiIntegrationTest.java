@@ -1,7 +1,10 @@
 package org.alexmond.unitrack.web;
 
+import org.alexmond.unitrack.domain.AlertChannel;
+import org.alexmond.unitrack.domain.AlertChannelType;
 import org.alexmond.unitrack.domain.Project;
 import org.alexmond.unitrack.repository.ProjectRepository;
+import org.alexmond.unitrack.web.alert.AlertChannelService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -32,6 +35,9 @@ class AlertsUiIntegrationTest {
 
 	@Autowired
 	private ProjectRepository projects;
+
+	@Autowired
+	private AlertChannelService channels;
 
 	private MockMvc mvc() {
 		return MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
@@ -78,6 +84,28 @@ class AlertsUiIntegrationTest {
 			.andExpect(status().isOk())
 			.andExpect(content().string(containsString("#builds")))
 			.andExpect(content().string(not(containsString("plain-sekret-token"))));
+	}
+
+	@Test
+	@WithMockUser(username = "admin", roles = "ADMIN")
+	void ownerCanSendATestThroughAChannel() throws Exception {
+		Long pid = newProject("alerts-test-send");
+		// A webhook pointing nowhere — delivery is best-effort/swallowed; we assert the
+		// flow.
+		AlertChannel ch = this.channels.add(pid, AlertChannelType.WEBHOOK, "wh", null, "https://127.0.0.1:1/hook", "");
+
+		mvc().perform(post("/projects/{id}/alerts/{cid}/test", pid, ch.getId()).with(csrf()))
+			.andExpect(status().is3xxRedirection())
+			.andExpect(redirectedUrl("/projects/" + pid + "/alerts"));
+	}
+
+	@Test
+	@WithMockUser(username = "bob", roles = "USER")
+	void nonOwnerCannotSendTest() throws Exception {
+		Long pid = newProject("alerts-test-forbidden");
+		AlertChannel ch = this.channels.add(pid, AlertChannelType.WEBHOOK, "wh", null, "https://127.0.0.1:1/hook", "");
+		mvc().perform(post("/projects/{id}/alerts/{cid}/test", pid, ch.getId()).with(csrf()))
+			.andExpect(status().isForbidden());
 	}
 
 }

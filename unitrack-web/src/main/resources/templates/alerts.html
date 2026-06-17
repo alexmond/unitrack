@@ -12,6 +12,8 @@
     </p>
     <h1>Alert channels</h1>
     <nav th:replace="~{fragments/common :: subnav(${project.id}, 'alerts')}"></nav>
+    <div th:if="${msg}" class="gate gate-pass" th:text="${msg}">sent</div>
+    <div th:if="${error}" class="gate gate-fail" th:text="${error}">error</div>
     <p class="muted">
         Where this project's alerts are delivered. Each channel is owned by this project (not shared
         globally); secrets are encrypted at rest and shown masked. <em>Tags</em> select which event
@@ -19,9 +21,11 @@
         Owner access required to change.
     </p>
     <p class="muted"><i class="bi bi-info-circle" aria-hidden="true"></i>
-        Slack and webhook channels are delivered now (via notify4j) on gate-failure, new-regression and
-        coverage-drop events. Email delivery, transition-muting and a live “send test” arrive with the
-        routing slice.</p>
+        Slack and webhook channels are delivered via notify4j on gate-failure, new-regression and
+        coverage-drop events. A gate-failure pings only on a green→red <em>transition</em> (not every
+        red run) and is muted when every failure is a known-flaky test. Use <strong>Test</strong> to
+        verify a channel. Email channels are not yet delivered (the per-user email path still handles
+        gate-failure mail).</p>
 
     <div th:if="${channels.isEmpty()}" class="empty">No channels yet — add one below.</div>
     <table class="table table-hover align-middle" th:unless="${channels.isEmpty()}">
@@ -44,6 +48,10 @@
                 </form>
             </td>
             <td>
+                <form method="post" th:action="@{/projects/{id}/alerts/{cid}/test(id=${project.id},cid=${c.id})}"
+                      style="display:inline">
+                    <button class="btn btn-sm btn-secondary" type="submit">Test</button>
+                </form>
                 <form method="post" th:action="@{/projects/{id}/alerts/{cid}/delete(id=${project.id},cid=${c.id})}"
                       style="display:inline">
                     <button class="btn btn-sm btn-danger" type="submit">Delete</button>

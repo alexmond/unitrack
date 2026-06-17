@@ -6,6 +6,7 @@ import org.alexmond.unitrack.domain.AlertChannelType;
 import org.alexmond.unitrack.domain.Project;
 import org.alexmond.unitrack.web.account.MembershipService;
 import org.alexmond.unitrack.web.alert.AlertChannelService;
+import org.alexmond.unitrack.web.alert.Notify4jAlertSink;
 import org.alexmond.unitrack.web.account.ProjectAccessService;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -33,6 +35,8 @@ import java.util.Map;
 public class AlertsUiController {
 
 	private final AlertChannelService channels;
+
+	private final Notify4jAlertSink notify4j;
 
 	private final ProjectAccessService access;
 
@@ -78,6 +82,19 @@ public class AlertsUiController {
 		channels.find(channelId)
 			.filter((c) -> c.getProject().getId().equals(id))
 			.ifPresent((c) -> channels.setEnabled(channelId, enabled));
+		return "redirect:/projects/" + id + "/alerts";
+	}
+
+	@PostMapping("/projects/{id}/alerts/{channelId}/test")
+	public String test(@PathVariable Long id, @PathVariable Long channelId, Authentication auth,
+			RedirectAttributes ra) {
+		requireManage(id, auth);
+		Project project = access.requireReadProject(id);
+		boolean belongs = channels.find(channelId).filter((c) -> c.getProject().getId().equals(id)).isPresent();
+		boolean sent = belongs
+				&& channels.resolveOne(channelId).map((c) -> notify4j.sendTest(c, id, project.getName())).orElse(false);
+		ra.addFlashAttribute(sent ? "msg" : "error",
+				sent ? "Test alert sent — check the channel." : "This channel type can't be test-sent yet.");
 		return "redirect:/projects/" + id + "/alerts";
 	}
 

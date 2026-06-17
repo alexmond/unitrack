@@ -60,6 +60,15 @@ public class AlertChannelService {
 	}
 
 	/**
+	 * Resolves one channel (decrypted) regardless of enabled state — for the send-test.
+	 */
+	public Optional<Resolved> resolveOne(Long channelId) {
+		return this.channels.findById(channelId)
+			.map((c) -> new Resolved(c.getId(), c.getType(), c.getLabel(), c.getTarget(),
+					this.cipher.decrypt(c.getSecret()), tagSet(c.getTags())));
+	}
+
+	/**
 	 * Resolves a project's enabled channels with their secrets decrypted, for the
 	 * delivery layer. Never expose this to a read/UI surface.
 	 */
