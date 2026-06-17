@@ -158,3 +158,25 @@ the project name from the POM. Bind `upload` to `verify`:
 `url`/`token` come from `-Dunitrack.url`/`-Dunitrack.token` or `UNITRACK_URL`/`UNITRACK_TOKEN`.
 The `gate` goal fails the build on a red quality gate. (Published to Maven Central with a `v1`
 line versioned against the ingest API — pending release.)
+
+== Gradle plugin
+
+For Gradle builds, apply the `org.alexmond.unitrack` plugin — it registers `unitrackUpload`
+and `unitrackGate` tasks that run the same CLI engine and default to Gradle's report locations
+(`build/test-results`, `build/reports/jacoco`):
+
+[source,kotlin]
+----
+plugins {
+    id("org.alexmond.unitrack") version "0.1.0-SNAPSHOT"
+}
+
+unitrack {
+    url = providers.environmentVariable("UNITRACK_URL").orNull
+    token = providers.environmentVariable("UNITRACK_TOKEN").orNull
+}
+----
+
+Then `./gradlew test unitrackUpload`. The plugin resolves the `unitrack-cli` executable jar and
+runs it, so there's one upload code path across the CLI, Maven and Gradle. (Published to the
+Gradle Plugin Portal with a `v1` line — pending release.)
