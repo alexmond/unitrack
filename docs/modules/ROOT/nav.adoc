@@ -4,6 +4,7 @@
 * xref:ingestion.adoc[Reporting Results]
 ** xref:cli-reference.adoc[CLI & CI Integration]
 ** xref:cli.adoc[UniTrack CLI uploader]
+** xref:ci-recipes.adoc[CI Recipes (per ecosystem)]
 ** xref:rest-api.adoc[REST API]
 * xref:features.adoc[Features]
 ** xref:flaky-detection.adoc[Flaky Detection]
