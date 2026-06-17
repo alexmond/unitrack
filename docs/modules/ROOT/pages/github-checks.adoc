@@ -97,3 +97,11 @@ xref:load-testing.adoc#_regression_gate[perf-gate verdict] per rule vs the basel
   which repository to annotate. The xref:cli-reference.adoc[upload script] sets these from
   the standard GitHub Actions environment variables.
 * The configured token must have permission to write commit statuses on the target repo.
+
+== GitLab
+
+The same exists for GitLab merge requests. Set `unitrack.gitlab.enabled=true` and a token with
+`api` scope (`UNITRACK_GITLAB_TOKEN`); for self-hosted GitLab override
+`unitrack.gitlab.api-url`. When a project's repo URL is a GitLab one, UniTrack posts a **commit
+status** (success/failed) and, when the run carries an MR number, a **results note** on that
+merge request — mirroring the GitHub commit status + PR comment.
