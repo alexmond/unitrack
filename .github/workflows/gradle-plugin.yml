@@ -1,0 +1,31 @@
+# Builds + tests the standalone unitrack-gradle-plugin (not part of the Maven reactor).
+# Installs unitrack-cli to the local Maven repo first so the plugin can resolve its exec jar.
+name: gradle-plugin
+
+on:
+  push:
+    paths:
+      - 'unitrack-gradle-plugin/**'
+      - 'unitrack-cli/**'
+      - '.github/workflows/gradle-plugin.yml'
+  pull_request:
+    paths:
+      - 'unitrack-gradle-plugin/**'
+      - 'unitrack-cli/**'
+      - '.github/workflows/gradle-plugin.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install unitrack-cli (exec jar) to local Maven repo
+        run: ./mvnw -B -ntp -pl unitrack-cli -am -DskipTests install
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Build the Gradle plugin
+        working-directory: unitrack-gradle-plugin
+        run: gradle build --no-daemon
