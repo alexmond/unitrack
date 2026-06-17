@@ -67,7 +67,7 @@ Recurring lint rules that bite: **SpringTernary** wants `(a != b) ? x : y` (pare
 - **Disable Compose lifecycle in containers**: the app sets `spring.docker.compose.enabled=true`
   for local dev, so deployments must set `SPRING_DOCKER_COMPOSE_ENABLED=false`.
 - **Flyway migrations are immutable + versioned** in `unitrack-web/src/main/resources/db/migration/`.
-  Latest is `V20__alert_channel.sql`; **next is V21**. Never edit a shipped migration.
+  Latest is `V21__project_settings_gitlab.sql`; **next is V22**. Never edit a shipped migration.
 - **Open mode by default** (`unitrack.security.open-mode=true`): all endpoints public so CI/uploader
   keep working. `/profile`, `/api/v1/me`, `/import`, and project settings/members always need auth.
 - **Image build fails under rootless Podman** (buildpacks lifecycle bind-mounts the docker socket) —
@@ -81,6 +81,25 @@ Recurring lint rules that bite: **SpringTernary** wants `(a != b) ? x : y` (pare
   targets the k3s cluster); `scripts/deploy-k8s.sh` builds + `helm upgrade --install` + verifies.
 - **Image**: built by buildpacks via the `docker` Maven profile
   (`./mvnw -Pdocker -pl unitrack-web -am package -Ddocker.image.name=… -Ddocker.publish=true`).
+
+## Release (Maven Central)
+
+- **Only the libraries publish**: `unitrack-core`, `unitrack-cli`, `unitrack-maven-plugin` (+ parent
+  pom). The app `unitrack-web` is **not** in the top-level `<modules>` — it lives in an
+  `activeByDefault` `default` profile. So `-Prelease` deactivates `default` and drops web from the
+  reactor (apps don't go to Central); the `docker` profile **re-adds** web (since activating any
+  profile deactivates `default`). **Gotcha:** any new `-P` profile that needs the app must also list
+  `<module>unitrack-web</module>`, or web vanishes from that reactor.
+- **Cut a release** via the `Maven release` workflow (`workflow_dispatch`, inputs `releaseVersion` /
+  `nextVersion`): `versions:set` → `verify` → tag `v<version>` → `deploy -Prelease` (GPG sign +
+  `central-publishing-maven-plugin`, `autoPublish`/`waitUntil=published`) → bump to next SNAPSHOT.
+  Publishing is **irreversible** — never trigger without explicit go-ahead. Tagging `v<version>`
+  also fires `publish-cli-image.yml` (GHCR uploader image).
+- Secrets (repo-level, set from the `infra` repo's `gh-release-secrets.sh`): `OSSRH_USERNAME`,
+  `OSSRH_PASSWORD`, `GPG_PRIVATE_KEY`, `GPG_PASSPHRASE`, `CODECOV_TOKEN`.
+- The CLI's **main** jar is the thin library; the runnable fat jar is the `exec` classifier
+  (`<classifier>exec</classifier>` on spring-boot-maven-plugin) — don't publish the fat jar as the
+  primary artifact.
 
 ## Docs
 

@@ -17,6 +17,7 @@
     <packaging>pom</packaging>
     <name>unitrack-parent</name>
     <description>UniTrack parent POM — JUnit &amp; coverage tracking server</description>
+    <url>https://github.com/alexmond/unitrack</url>
 
     <issueManagement>
         <system>GitHub</system>
@@ -67,9 +68,14 @@
         <notify4j.version>0.1.0</notify4j.version>
     </properties>
 
+    <!--
+        Only the publishable libraries live here, so `mvn -Prelease deploy` (which deactivates the
+        activeByDefault 'default' profile) publishes just these to Maven Central. The runnable app
+        (unitrack-web) is an application, not a library — it's added by the 'default' and 'docker'
+        profiles below and is never published.
+    -->
     <modules>
         <module>unitrack-core</module>
-        <module>unitrack-web</module>
         <module>unitrack-cli</module>
         <module>unitrack-maven-plugin</module>
     </modules>
@@ -316,6 +322,22 @@
     </build>
 
     <profiles>
+        <!--
+            Adds the runnable app to every normal build (verify, dev, CI). Active unless another
+            profile is explicitly requested — so `-Prelease` drops unitrack-web from the reactor
+            (it must not reach Maven Central), while `-Pdocker` re-adds it (see below) to keep the
+            image build working.
+        -->
+        <profile>
+            <id>default</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <modules>
+                <module>unitrack-web</module>
+            </modules>
+        </profile>
+
         <profile>
             <id>release</id>
             <build>
@@ -356,6 +378,10 @@
         -->
         <profile>
             <id>docker</id>
+            <!-- Re-add the app: explicitly activating this profile deactivates 'default'. -->
+            <modules>
+                <module>unitrack-web</module>
+            </modules>
             <properties>
                 <docker.image.name>unitrack:${project.version}</docker.image.name>
                 <docker.publish>false</docker.publish>
