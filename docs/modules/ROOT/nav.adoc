@@ -12,6 +12,7 @@
 ** xref:report-merging.adoc[Report Merging]
 ** xref:failure-clustering.adoc[Failure Clustering & Triage]
 ** xref:test-regression.adoc[Test Regression Report]
+** xref:pr-delta-baseline.adoc[PR/MR Delta Baseline]
 ** xref:unit-test-performance.adoc[Unit-test Performance]
 ** xref:load-testing.adoc[Load / Performance Tests]
 ** xref:github-checks.adoc[GitHub PR Checks]

@@ -1,0 +1,44 @@
+= PR/MR Delta Baseline (decision)
+
+What a pull/merge-request's coverage and test deltas compare *against*. This records the
+decision behind the PR detail page and the enriched PR comment.
+
+== The question
+
+A PR delta ("coverage −2.1% on this PR") needs a baseline. Three candidates:
+
+. **Target-branch HEAD** — the newest commit on the branch the PR merges into.
+. **Merge-base** — the commit where the PR branch forked from the target (what Codecov uses).
+. **Latest prior run on the base branch** (same coverage flag) — the baseline UniTrack's
+  quality gate and xref:test-regression.adoc[regression report] already use.
+
+== The constraint
+
+UniTrack stores **commit SHAs only — it has no git graph**. It never clones the repo, so it
+cannot compute a merge-base, and it has coverage/test data only for commits it has actually
+*ingested a run for*. A "target HEAD" or "merge-base" baseline is only usable if a run happens
+to exist for that exact commit.
+
+== Decision
+
+**Use the latest prior run on the base branch with the same flag** (option 3) — the same
+baseline the gate uses.
+
+* **Data-available:** it relies only on runs we already have, never on git history we don't.
+* **Consistent:** the PR delta, the quality gate, and the coverage diff all answer the same
+  question — "does this change make the base branch worse?" — against the same reference.
+* **No new infrastructure:** no repo clone, no git server calls, no SHA-graph storage.
+
+== Trade-off
+
+If the base branch advances *after* the PR forked, this baseline reflects current base, not the
+exact fork point — so a delta can include drift from commits the PR didn't touch. For a
+test/coverage dashboard this is acceptable and matches how the gate already reasons. Codecov's
+merge-base precision is explicitly out of scope.
+
+== Future enhancement (not now)
+
+CI already passes the base branch (and could pass the base SHA) at ingest. Because UniTrack
+stores SHAs, a later version could match the run for a *specific* base SHA when one exists,
+moving closer to merge-base semantics without building a git graph. Tracked as a follow-up; the
+current baseline stands until there's demand.
