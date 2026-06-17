@@ -91,6 +91,8 @@ public class IngestController {
 
 	private final AuditService audit;
 
+	private final org.alexmond.unitrack.web.gitlab.GitLabService gitLab;
+
 	@PostMapping(path = "/ingest", consumes = "multipart/form-data")
 	public ResponseEntity<ApiResponses.IngestResultJson> ingest(@RequestParam String project,
 			@RequestParam(required = false) String repoUrl, @RequestParam(required = false) String branch,
@@ -173,6 +175,8 @@ public class IngestController {
 		int newFailures = testRegression.diff(run.getId()).map(TestRegressionResult::newFailureCount).orElse(0);
 		int slowerTests = perfRegression.diff(run.getId()).map(PerfRegressionResult::slowerCount).orElse(0);
 		gitHubPrComment.publish(run, gate, delta, newFailures, slowerTests);
+		gitLab.publishStatus(run, gate, delta);
+		gitLab.publishMrNote(run, gate, delta, newFailures);
 		gateFailureNotifier.notifyIfFailed(run, gate);
 		alertEvents.publishForRun(run, gate);
 		liveEvents.publish(run.getProject(), RunUpdate.of(run));
