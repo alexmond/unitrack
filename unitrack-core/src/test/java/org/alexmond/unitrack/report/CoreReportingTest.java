@@ -204,7 +204,7 @@ class CoreReportingTest {
 
 		// Per-project settings: effective config + persistence.
 		assertThat(settings.globals().baseBranch()).isEqualTo("main");
-		settings.save(projectId, "main", 80.0, 0.5, true, true, "ci/gate", false);
+		settings.save(projectId, "main", 80.0, 0.5, true, true, "ci/gate", false, null);
 		assertThat(settings.find(projectId)).isPresent();
 		assertThat(settings.gateConfig(projectId).minLineCoverage()).isEqualTo(80.0);
 	}

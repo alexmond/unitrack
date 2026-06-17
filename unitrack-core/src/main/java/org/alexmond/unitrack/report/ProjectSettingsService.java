@@ -58,7 +58,7 @@ public class ProjectSettingsService {
 	 */
 	@Transactional
 	public void save(Long projectId, String baseBranch, Double minLineCoverage, Double maxCoverageDropPct,
-			Boolean failOnNewFailures, Boolean ghEnabled, String ghContext, Boolean ghPrComment) {
+			Boolean failOnNewFailures, Boolean ghEnabled, String ghContext, Boolean ghPrComment, Boolean glEnabled) {
 		ProjectSettings s = this.repo.findByProjectId(projectId).orElseGet(() -> new ProjectSettings(projectId));
 		s.setBaseBranch(blankToNull(baseBranch));
 		s.setMinLineCoverage(minLineCoverage);
@@ -67,6 +67,7 @@ public class ProjectSettingsService {
 		s.setGhEnabled(ghEnabled);
 		s.setGhContext(blankToNull(ghContext));
 		s.setGhPrComment(ghPrComment);
+		s.setGlEnabled(glEnabled);
 		this.repo.save(s);
 	}
 

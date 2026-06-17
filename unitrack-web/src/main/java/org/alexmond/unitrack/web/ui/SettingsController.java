@@ -31,6 +31,8 @@ public class SettingsController {
 
 	private final GitHubProperties github;
 
+	private final org.alexmond.unitrack.web.gitlab.GitLabProperties gitlab;
+
 	private final MembershipService membership;
 
 	private final ProjectRepository projects;
@@ -43,6 +45,7 @@ public class SettingsController {
 		model.addAttribute("settings", settings.find(id).orElse(null));
 		model.addAttribute("globals", settings.globals());
 		model.addAttribute("github", github);
+		model.addAttribute("gitlab", gitlab);
 		return "settings";
 	}
 
@@ -52,7 +55,7 @@ public class SettingsController {
 			@RequestParam(required = false) String maxCoverageDropPct,
 			@RequestParam(required = false) String failOnNewFailures, @RequestParam(required = false) String ghEnabled,
 			@RequestParam(required = false) String ghContext, @RequestParam(required = false) String ghPrComment,
-			Authentication auth) {
+			@RequestParam(required = false) String glEnabled, Authentication auth) {
 		if (reporting.findProject(id).isEmpty()) {
 			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found");
 		}
@@ -60,7 +63,8 @@ public class SettingsController {
 			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Project write access required");
 		}
 		settings.save(id, baseBranch, parseDouble(minLineCoverage), parseDouble(maxCoverageDropPct),
-				parseBoolean(failOnNewFailures), parseBoolean(ghEnabled), ghContext, parseBoolean(ghPrComment));
+				parseBoolean(failOnNewFailures), parseBoolean(ghEnabled), ghContext, parseBoolean(ghPrComment),
+				parseBoolean(glEnabled));
 		return "redirect:/projects/" + id + "/settings";
 	}
 
