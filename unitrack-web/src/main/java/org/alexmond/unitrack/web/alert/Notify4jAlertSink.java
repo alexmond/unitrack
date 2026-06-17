@@ -9,6 +9,7 @@ import org.alexmond.notify4j.Notifications;
 import org.alexmond.notify4j.NotificationsFactory;
 import org.alexmond.unitrack.domain.AlertChannelType;
 import org.alexmond.unitrack.domain.AlertEvent;
+import org.alexmond.unitrack.domain.AlertKind;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -47,6 +48,27 @@ public class Notify4jAlertSink implements AlertSink {
 		catch (RuntimeException ex) {
 			log.warn("notify4j delivery failed for project {} ({} channels)", event.projectId(), urls.size(), ex);
 		}
+	}
+
+	/**
+	 * Sends a synthetic test alert through one channel (ignores enabled/tags) so a user
+	 * can verify wiring from the UI. Returns true if the channel maps to a deliverable
+	 * notify4j URL; delivery itself stays best-effort.
+	 */
+	public boolean sendTest(AlertChannelService.Resolved channel, Long projectId, String projectName) {
+		String url = toUrl(channel);
+		if (url == null) {
+			return false;
+		}
+		AlertEvent event = new AlertEvent(projectId, projectName, AlertKind.GATE_FAILED, null,
+				"Test alert from UniTrack — channel '" + channel.label() + "' is wired up.");
+		try {
+			this.factory.create(List.of(url)).send(event, List.of());
+		}
+		catch (RuntimeException ex) {
+			log.warn("notify4j test delivery failed for channel {}", channel.label(), ex);
+		}
+		return true;
 	}
 
 	/**

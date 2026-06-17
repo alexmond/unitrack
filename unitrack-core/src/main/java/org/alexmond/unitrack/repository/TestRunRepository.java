@@ -32,6 +32,13 @@ public interface TestRunRepository extends JpaRepository<TestRun, Long> {
 	List<TestRun> findTop20ByStatusNotOrderByCreatedAtDesc(String status);
 
 	/**
+	 * The run immediately before this one on the same branch + flag — for green→red
+	 * muting.
+	 */
+	Optional<TestRun> findFirstByProjectIdAndBranchAndFlagAndCreatedAtLessThanOrderByCreatedAtDesc(Long projectId,
+			String branch, String flag, Instant createdAt);
+
+	/**
 	 * Most recent prior run on the baseline branch with the same flag — the gate
 	 * baseline.
 	 */
