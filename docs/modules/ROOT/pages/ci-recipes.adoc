@@ -1,0 +1,121 @@
+= CI Recipes (per ecosystem & per CI)
+
+Copy-paste recipes to push results to UniTrack from any CI. Two steps everywhere:
+
+. **Make your tests emit JUnit XML + a coverage report** (most tools need a non-default reporter — see the footguns below).
+. **Add one upload step** (the `unitrack-cli` engine, run as a GitHub Action, a Docker image, or `java -jar`).
+
+The uploader auto-detects project/branch/commit/build-url/PR/run-key from the CI environment, and defaults to conventional report globs — so most recipes are one line.
+
+== Step 1 — emit the reports (per ecosystem)
+
+The silent footgun in every stack: the test runner does **not** write JUnit XML or coverage XML by default. Add the reporter, then point the uploader at its output.
+
+[cols="1,2,2"]
+|===
+| Ecosystem | JUnit XML | Coverage (XML/LCOV)
+
+| **JVM (Maven/Gradle)**
+| Surefire writes `target/surefire-reports/*.xml` by default.
+| JaCoCo XML is **opt-in**: Maven `<format>XML</format>` on the `report` goal; Gradle `jacocoTestReport { reports { xml.required = true } }` → `**/jacoco.xml`.
+
+| **Python**
+| `pytest --junitxml=junit.xml` (cleanest path — the flagship recipe).
+| `coverage run -m pytest && coverage xml` → Cobertura `coverage.xml`.
+
+| **JS/TS**
+| Add `jest-junit` (or vitest's JUnit reporter) — *not* default → `junit.xml`.
+| Istanbul/`--coverage` → `coverage/lcov.info`.
+
+| **.NET**
+| `dotnet test` emits **TRX, not JUnit** — add the `JunitXml.TestLogger` NuGet pkg, then `--logger "junit;LogFilePath=test-results/junit.xml"`.
+| Coverlet → `**/coverage.cobertura.xml` (in a nested GUID dir).
+
+| **Go**
+| Neither output is native: `gotestsum --junitfile junit.xml`.
+| `go test -coverprofile=cover.out` then `gocover-cobertura < cover.out > coverage.xml`.
+|===
+
+== Step 2 — upload (per CI)
+
+=== GitHub Actions
+
+[source,yaml]
+----
+- uses: alexmond/unitrack/action@v1
+  with:
+    url: ${{ vars.UNITRACK_URL }}
+    token: ${{ secrets.UNITRACK_TOKEN }}
+    # junit/jacoco default to conventional globs; override with `junit:` / `jacoco:` if needed
+----
+
+project/branch/commit/buildUrl/PR number/run-key are auto-detected from `GITHUB_*`.
+
+=== GitLab CI
+
+[source,yaml]
+----
+unitrack:
+  stage: .post
+  image: ghcr.io/alexmond/unitrack-uploader:v1
+  script:
+    - upload --junit "**/junit.xml" --jacoco "**/coverage.xml"
+  variables:
+    UNITRACK_URL: $UNITRACK_URL
+    UNITRACK_TOKEN: $UNITRACK_TOKEN
+----
+
+Branch/commit/MR-IID/pipeline-URL are auto-detected from `CI_*`.
+
+=== Jenkins (declarative)
+
+[source,groovy]
+----
+stage('UniTrack') {
+  steps {
+    sh '''
+      docker run --rm -v "$PWD:/work" -w /work \
+        -e UNITRACK_URL -e UNITRACK_TOKEN \
+        ghcr.io/alexmond/unitrack-uploader:v1 \
+        upload --junit "**/surefire-reports/*.xml" --jacoco "**/jacoco.xml"
+    '''
+  }
+}
+----
+
+=== CircleCI
+
+[source,yaml]
+----
+- run:
+    name: Upload to UniTrack
+    command: |
+      docker run --rm -v "$PWD:/work" -w /work \
+        -e UNITRACK_URL -e UNITRACK_TOKEN \
+        ghcr.io/alexmond/unitrack-uploader:v1 \
+        upload --junit "**/test-results/**/*.xml"
+----
+
+Anywhere a JDK is already present, the same command is `java -jar unitrack-cli.jar upload …`.
+
+== The quality gate
+
+Fail the build on a red gate with a second step (exit 1 = gate failed):
+
+[source,bash]
+----
+# any CI, after the upload
+docker run --rm -e UNITRACK_URL -e UNITRACK_TOKEN \
+  ghcr.io/alexmond/unitrack-uploader:v1 \
+  gate --project myapp --commit "$GIT_SHA"
+----
+
+The GitHub Action exposes the same via a `gate: true` input. See xref:quality-gate.adoc[Quality Gate].
+
+== Fork-PR behaviour
+
+On most CIs, secrets are **not** exposed to workflows triggered by forked pull requests, so the
+upload step has no `UNITRACK_TOKEN` and is skipped/fails. Options: guard the step to run only on
+same-repo events, or (open-mode servers) allow tokenless ingest. Don't fail the build on a
+missing token for forks — wrap the upload in a conditional or use the uploader's `--soft-fail`.
+See xref:accounts.adoc[Accounts & API Tokens] for token scopes.
