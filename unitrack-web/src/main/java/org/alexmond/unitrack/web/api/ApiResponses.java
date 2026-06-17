@@ -24,7 +24,7 @@ public interface ApiResponses {
 		}
 	}
 
-	public record RunJson(Long id, Long projectId, String branch, String flag, String commit, String buildUrl,
+	record RunJson(Long id, Long projectId, String branch, String flag, String commit, String buildUrl,
 			Instant createdAt, int total, int passed, int failed, int errors, int skipped, long durationMs,
 			String status, double passRate, Double lineCoveragePct, Double branchCoveragePct, int uploads) {
 
@@ -36,15 +36,15 @@ public interface ApiResponses {
 		}
 	}
 
-	public record SuiteJson(String name, int tests, int failures, int errors, int skipped, long durationMs) {
+	record SuiteJson(String name, int tests, int failures, int errors, int skipped, long durationMs) {
 		public static SuiteJson of(TestSuiteResult s) {
 			return new SuiteJson(s.getName(), s.getTests(), s.getFailures(), s.getErrors(), s.getSkipped(),
 					s.getDurationMs());
 		}
 	}
 
-	public record CaseJson(String suite, String className, String name, String status, long durationMs,
-			String failureType, String failureMessage, String systemOut, String systemErr, List<String> attachments) {
+	record CaseJson(String suite, String className, String name, String status, long durationMs, String failureType,
+			String failureMessage, String systemOut, String systemErr, List<String> attachments) {
 		public static CaseJson of(TestCaseResult c) {
 			return new CaseJson(c.getSuiteName(), c.getClassName(), c.getName(), c.getStatus().name(),
 					c.getDurationMs(), c.getFailureType(), c.getFailureMessage(), c.getSystemOut(), c.getSystemErr(),
@@ -52,8 +52,8 @@ public interface ApiResponses {
 		}
 	}
 
-	public record CoverageJson(double linePct, double branchPct, double instructionPct, double methodPct,
-			int lineCovered, int lineMissed, int branchCovered, int branchMissed, List<FileCoverageJson> files) {
+	record CoverageJson(double linePct, double branchPct, double instructionPct, double methodPct, int lineCovered,
+			int lineMissed, int branchCovered, int branchMissed, List<FileCoverageJson> files) {
 		public static CoverageJson of(CoverageReport r, List<CoverageFileEntry> files) {
 			return new CoverageJson(r.getLinePct(), r.getBranchPct(), r.getInstructionPct(), r.getMethodPct(),
 					r.getLineCovered(), r.getLineMissed(), r.getBranchCovered(), r.getBranchMissed(),
@@ -61,13 +61,13 @@ public interface ApiResponses {
 		}
 	}
 
-	public record FileCoverageJson(String path, double linePct, int lineCovered, int lineMissed) {
+	record FileCoverageJson(String path, double linePct, int lineCovered, int lineMissed) {
 		public static FileCoverageJson of(CoverageFileEntry f) {
 			return new FileCoverageJson(f.getPath(), f.getLinePct(), f.getLineCovered(), f.getLineMissed());
 		}
 	}
 
-	public record RunDetailJson(RunJson run, List<SuiteJson> suites, List<CaseJson> failures, CoverageJson coverage) {
+	record RunDetailJson(RunJson run, List<SuiteJson> suites, List<CaseJson> failures, CoverageJson coverage) {
 	}
 
 	/**
@@ -75,7 +75,7 @@ public interface ApiResponses {
 	 * internal run id needed). {@code passed} maps to the {@code unitrack-gate.sh} exit
 	 * code.
 	 */
-	public record GateReportJson(String project, String branch, String commit, String flag, Long runId, String status,
+	record GateReportJson(String project, String branch, String commit, String flag, Long runId, String status,
 			boolean passed, Double coverageDelta, List<QualityGateResult.RuleResult> rules, String runPath) {
 		public static GateReportJson of(TestRun run, QualityGateResult gate, Double coverageDelta) {
 			return new GateReportJson(run.getProject().getName(), run.getBranch(), run.getCommitSha(), run.getFlag(),
@@ -83,9 +83,8 @@ public interface ApiResponses {
 		}
 	}
 
-	public record IngestResultJson(Long runId, Long projectId, String project, int total, int passed, int failed,
-			int errors, int skipped, String status, Double lineCoveragePct, int uploads, Long perfRunId,
-			Double perfP95Ms) {
+	record IngestResultJson(Long runId, Long projectId, String project, int total, int passed, int failed, int errors,
+			int skipped, String status, Double lineCoveragePct, int uploads, Long perfRunId, Double perfP95Ms) {
 		public static IngestResultJson of(TestRun r, PerfRun perf) {
 			Long projectId = (r != null) ? r.getProject().getId() : ((perf != null) ? perf.getProject().getId() : null);
 			String project = (r != null) ? r.getProject().getName()
