@@ -16,7 +16,7 @@
     <description>UniTrack CI uploader — a Spring Boot CLI that pushes test/coverage/perf results to a UniTrack server</description>
 
     <properties>
-        <picocli.version>4.7.6</picocli.version>
+        <picocli.version>4.7.7</picocli.version>
     </properties>
 
     <dependencies>
