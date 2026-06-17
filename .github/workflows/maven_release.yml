@@ -1,0 +1,71 @@
+name: Maven release
+
+# Cuts a release of the publishable libraries (unitrack-core, unitrack-cli, unitrack-maven-plugin)
+# to Maven Central. Manual only. The runnable app (unitrack-web) is excluded from the release
+# reactor (see the parent pom's 'default'/'release' profiles) and ships as a container image.
+#
+# Tagging v<version> also fires publish-cli-image.yml (GHCR uploader image).
+#
+# Required repo secrets (set via infra/scripts/gh-release-secrets.sh apply alexmond/unitrack):
+#   OSSRH_USERNAME, OSSRH_PASSWORD  — Central Portal user token
+#   GPG_PRIVATE_KEY, GPG_PASSPHRASE — armoured signing key + its passphrase
+on:
+  workflow_dispatch:
+    inputs:
+      releaseVersion:
+        description: 'Release version (e.g. 0.1.0)'
+        required: true
+      nextVersion:
+        description: 'Next development version (e.g. 0.2.0-SNAPSHOT)'
+        required: true
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+          server-id: central
+          server-username: OSSRH_USERNAME
+          server-password: OSSRH_PASSWORD
+          gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
+          gpg-passphrase: GPG_PASSPHRASE
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Set release version
+        run: ./mvnw -B versions:set -DnewVersion=${{ inputs.releaseVersion }} -DgenerateBackupPoms=false
+
+      - name: Build & verify (full gates + tests)
+        run: ./mvnw -B clean verify
+
+      - name: Commit & tag
+        run: |
+          git commit -am "release: ${{ inputs.releaseVersion }}"
+          git tag -a "v${{ inputs.releaseVersion }}" -m "Release ${{ inputs.releaseVersion }}"
+
+      - name: Deploy to Maven Central
+        env:
+          OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
+          OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: ./mvnw -B -Prelease -DskipTests deploy -Dgpg.passphrase="$GPG_PASSPHRASE"
+
+      - name: Set next development version
+        run: ./mvnw -B versions:set -DnewVersion=${{ inputs.nextVersion }} -DgenerateBackupPoms=false
+
+      - name: Commit next version & push
+        run: |
+          git commit -am "chore: prepare for next development iteration ${{ inputs.nextVersion }}"
+          git push origin HEAD:${{ github.ref_name }} --follow-tags
