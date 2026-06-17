@@ -75,6 +75,13 @@
             <version>${bootstrap.version}</version>
         </dependency>
 
+        <!-- HTMX for the ops dashboard's live fragment polling. -->
+        <dependency>
+            <groupId>org.webjars.npm</groupId>
+            <artifactId>htmx.org</artifactId>
+            <version>${htmx.version}</version>
+        </dependency>
+
         <!-- Chart.js served in-jar via WebJars (no CDN dependency for the self-hosted app). -->
         <dependency>
             <groupId>org.webjars.npm</groupId>
