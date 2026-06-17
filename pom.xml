@@ -71,6 +71,7 @@
         <module>unitrack-core</module>
         <module>unitrack-web</module>
         <module>unitrack-cli</module>
+        <module>unitrack-maven-plugin</module>
     </modules>
 
     <dependencyManagement>

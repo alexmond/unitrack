@@ -134,3 +134,27 @@ java -jar unitrack-cli.jar gate --project myapp --commit "$GIT_SHA"
 
 Upload and gate are separate steps with separate exit semantics: a flaky upload should not
 redden a green build, while the gate step is the one allowed to fail it.
+
+== Maven plugin
+
+For Maven builds, the `unitrack-maven-plugin` is the idiomatic, lowest-config path — it reuses
+the same CLI engine, auto-discovers Surefire/Failsafe/JaCoCo reports under the project, and reads
+the project name from the POM. Bind `upload` to `verify`:
+
+[source,xml]
+----
+<plugin>
+  <groupId>org.alexmond</groupId>
+  <artifactId>unitrack-maven-plugin</artifactId>
+  <version>0.1.0-SNAPSHOT</version>
+  <executions>
+    <execution>
+      <goals><goal>upload</goal></goals>
+    </execution>
+  </executions>
+</plugin>
+----
+
+`url`/`token` come from `-Dunitrack.url`/`-Dunitrack.token` or `UNITRACK_URL`/`UNITRACK_TOKEN`.
+The `gate` goal fails the build on a red quality gate. (Published to Maven Central with a `v1`
+line versioned against the ingest API — pending release.)

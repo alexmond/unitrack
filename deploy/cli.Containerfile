@@ -15,7 +15,8 @@ FROM docker.io/library/eclipse-temurin:21-jre
 
 # The mounted workspace is the working dir, so report globs resolve relative to it.
 WORKDIR /work
-COPY unitrack-cli.jar /app/unitrack-cli.jar
+# The runnable jar is attached under the 'exec' classifier (the plain main jar is a library).
+COPY unitrack-cli-exec.jar /app/unitrack-cli.jar
 
 RUN useradd --uid 1001 --system --create-home --shell /usr/sbin/nologin app
 USER 1001
