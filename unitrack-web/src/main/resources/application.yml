@@ -54,6 +54,10 @@ management:
     web:
       exposure:
         include: health,info,metrics,prometheus
+  info:
+    # Expose info.* (app metadata below) and the generated build-info on /actuator/info.
+    env:
+      enabled: true
   endpoint:
     health:
       probes:
@@ -62,6 +66,13 @@ management:
       # their details to the health endpoint (this is an internal self-hosted dashboard).
       show-components: always
       show-details: always
+
+# Static app metadata for /actuator/info (alongside the generated build-info).
+info:
+  app:
+    name: UniTrack
+    description: Self-hosted JUnit test + multi-language coverage tracking
+    component: unitrack-web
 
 unitrack:
   notifications:

@@ -16,6 +16,26 @@ spring:
     compose:
       enabled: false
 
+# Mirror the actuator exposure from the main application.yml (the test config shadows it).
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  info:
+    env:
+      enabled: true
+  endpoint:
+    health:
+      show-components: always
+      show-details: always
+
+info:
+  app:
+    name: UniTrack
+    description: Self-hosted JUnit test + multi-language coverage tracking
+    component: unitrack-web
+
 unitrack:
   security:
     admin-password: testadmin
