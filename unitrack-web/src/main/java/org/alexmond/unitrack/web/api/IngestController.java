@@ -133,7 +133,13 @@ public class IngestController {
 			TestRun run = null;
 			if (!junitStreams.isEmpty()) {
 				run = ingestService.ingest(meta, junitStreams, toSuppliers(jacoco));
-				publishGitHubStatus(run);
+				// Post-ingest publishing as an explicit child span — parent passed
+				// through
+				// (not via thread-local), so it nests correctly even if moved off-thread.
+				TestRun ingested = run;
+				Observation.createNotStarted("unitrack.report", observationRegistry)
+					.parentObservation(observation)
+					.observe(() -> publishGitHubStatus(ingested));
 			}
 			PerfRun perfRun = perfStreams.isEmpty() ? null : perfIngest.ingest(meta, perfStreams);
 			if (perfRun != null) {
