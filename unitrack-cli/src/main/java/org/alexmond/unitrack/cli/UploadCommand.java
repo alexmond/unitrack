@@ -30,10 +30,11 @@ class UploadCommand implements Callable<Integer> {
 	private static final long MAX_REQUEST_BYTES = 100L * 1024 * 1024;
 
 	/**
-	 * Per-shard target — under the request cap, leaving headroom for multipart + a CDN
-	 * body limit.
+	 * Per-shard target. Kept small (8 MB) because some ingress paths — e.g. a Cloudflare
+	 * Tunnel that NATs to a cross-subnet origin — reset connections on larger request
+	 * bodies; shards under ~10 MB traverse reliably.
 	 */
-	private static final long SHARD_TARGET_BYTES = 90L * 1024 * 1024;
+	private static final long SHARD_TARGET_BYTES = 8L * 1024 * 1024;
 
 	@Option(names = "--url", defaultValue = "${env:UNITRACK_URL:-http://localhost:8080}",
 			description = "UniTrack server URL (env UNITRACK_URL).")
