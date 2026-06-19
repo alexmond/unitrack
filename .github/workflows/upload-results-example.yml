@@ -16,6 +16,9 @@ on:
 
 jobs:
   test-and-report:
+    # This file is a copy-paste template for OTHER repos — don't run it in UniTrack's own CI
+    # (it would duplicate the real build and resolve the action against this very repo).
+    if: github.repository != 'alexmond/unitrack'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
