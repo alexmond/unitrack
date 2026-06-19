@@ -31,6 +31,30 @@ class ReportResolverTest {
 	}
 
 	@Test
+	void resolvesLeadingWildcardRelativeToWorkingDir() throws IOException {
+		// The documented glob form "**/surefire-reports/*.xml" starts with a wildcard; it
+		// must
+		// resolve against the working directory (a leading "**" used to leave the
+		// resolver with
+		// a bare "file:" root and match nothing).
+		Files.createDirectories(Path.of("target"));
+		Path subdir = Files.createTempDirectory(Path.of("target"), "rrtest-");
+		try {
+			Files.writeString(subdir.resolve("TEST-leading.xml"), "<testsuite/>");
+			assertThat(this.resolver.resolve(List.of("**/TEST-leading.xml"))).isNotEmpty();
+		}
+		finally {
+			Files.walk(subdir).sorted(java.util.Comparator.reverseOrder()).forEach((p) -> {
+				try {
+					Files.delete(p);
+				}
+				catch (IOException ignored) {
+				}
+			});
+		}
+	}
+
+	@Test
 	void ignoresNullAndBlankPatterns() {
 		assertThat(this.resolver.resolve(null)).isEmpty();
 		assertThat(this.resolver.resolve(List.of("   "))).isEmpty();
