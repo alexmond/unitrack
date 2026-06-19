@@ -51,6 +51,10 @@ ingress:
   annotations: {}
   #   traefik.ingress.kubernetes.io/router.entrypoints: websecure
   host: unitrack.local
+  # Additional hostnames routed to the same service (e.g. a public hostname fronted by a
+  # Cloudflare Tunnel). Listing the real host here — rather than rewriting Host at the tunnel —
+  # lets the app emit correct absolute URLs (login redirects, notification links) for that host.
+  extraHosts: []
   path: /
   pathType: Prefix
   tls: false
@@ -111,6 +115,19 @@ extraEnv: []
 # Application configuration (maps to UniTrack's UNITRACK_* env contract).
 # ---------------------------------------------------------------------------------------
 app:
+  # Authentication / exposure. Defaults preserve open mode (all endpoints public) so CI and
+  # the uploader keep working out of the box. When exposing the instance externally, flip
+  # openMode off and require an ingest token — ideally behind a blanket gate (e.g. Cloudflare
+  # Access) on the UI, with a service-token / bypass policy on /api so CI can still publish.
+  security:
+    # false = UI requires login, API requires a token. true (default) = everything public.
+    openMode: true
+    # Require a valid API/ingest token on POST /api/v1/ingest even in open mode.
+    requireIngestToken: false
+    # Seeded admin (created on first boot when there are no users).
+    adminUsername: admin
+    # Admin password: leave empty to auto-generate one on first boot (printed in the pod log).
+    # For a known login, set secret.adminPassword below or reference an existingSecret.
   notifications:
     enabled: false
     mailFrom: unitrack@localhost
@@ -168,6 +185,9 @@ secret:
     dbPassword: db-password
     githubToken: github-token
     mailPassword: mail-password
+    adminPassword: admin-password
   # Optional sensitive values folded into the chart-managed Secret.
   githubToken: ""
   mailPassword: ""
+  # Admin password for the seeded admin. Empty = auto-generate on first boot (see pod log).
+  adminPassword: ""

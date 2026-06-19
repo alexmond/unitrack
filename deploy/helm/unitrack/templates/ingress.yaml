@@ -1,8 +1,13 @@
 {{- if .Values.ingress.enabled }}
+{{- $fullName := include "unitrack.fullname" . -}}
+{{- $svcPort := .Values.service.port -}}
+{{- $path := .Values.ingress.path -}}
+{{- $pathType := .Values.ingress.pathType -}}
+{{- $hosts := prepend (.Values.ingress.extraHosts | default list) .Values.ingress.host -}}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ include "unitrack.fullname" . }}
+  name: {{ $fullName }}
   labels:
     {{- include "unitrack.labels" . | nindent 4 }}
   {{- with .Values.ingress.annotations }}
@@ -16,20 +21,24 @@ spec:
   {{- if .Values.ingress.tls }}
   tls:
     - hosts:
-        - {{ .Values.ingress.host | quote }}
-      {{- if .Values.ingress.tlsSecretName }}
-      secretName: {{ .Values.ingress.tlsSecretName }}
+        {{- range $hosts }}
+        - {{ . | quote }}
+        {{- end }}
+      {{- if $.Values.ingress.tlsSecretName }}
+      secretName: {{ $.Values.ingress.tlsSecretName }}
       {{- end }}
   {{- end }}
   rules:
-    - host: {{ .Values.ingress.host | quote }}
+    {{- range $hosts }}
+    - host: {{ . | quote }}
       http:
         paths:
-          - path: {{ .Values.ingress.path }}
-            pathType: {{ .Values.ingress.pathType }}
+          - path: {{ $path }}
+            pathType: {{ $pathType }}
             backend:
               service:
-                name: {{ include "unitrack.fullname" . }}
+                name: {{ $fullName }}
                 port:
-                  number: {{ .Values.service.port }}
+                  number: {{ $svcPort }}
+    {{- end }}
 {{- end }}
