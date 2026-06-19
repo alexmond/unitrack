@@ -95,6 +95,13 @@ spec:
                   name: {{ include "unitrack.secretName" . }}
                   key: {{ .Values.secret.keys.mailPassword }}
                   optional: true
+            # Seeded admin password; optional — when unset the app generates one and logs it.
+            - name: UNITRACK_SECURITY_ADMINPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "unitrack.secretName" . }}
+                  key: {{ .Values.secret.keys.adminPassword }}
+                  optional: true
             {{- with .Values.extraEnv }}
             {{- toYaml . | nindent 12 }}
             {{- end }}

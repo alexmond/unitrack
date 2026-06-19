@@ -9,6 +9,9 @@ data:
   SPRING_DOCKER_COMPOSE_ENABLED: "false"
   UNITRACK_DB_URL: {{ include "unitrack.jdbcUrl" . | quote }}
   UNITRACK_DB_USER: {{ include "unitrack.dbUser" . | quote }}
+  UNITRACK_SECURITY_OPENMODE: {{ .Values.app.security.openMode | quote }}
+  UNITRACK_SECURITY_REQUIREINGESTTOKEN: {{ .Values.app.security.requireIngestToken | quote }}
+  UNITRACK_SECURITY_ADMINUSERNAME: {{ .Values.app.security.adminUsername | quote }}
   UNITRACK_NOTIFICATIONS_ENABLED: {{ .Values.app.notifications.enabled | quote }}
   UNITRACK_MAIL_FROM: {{ .Values.app.notifications.mailFrom | quote }}
   {{- if .Values.app.notifications.baseUrl }}

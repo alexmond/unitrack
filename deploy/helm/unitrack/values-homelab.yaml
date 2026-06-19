@@ -30,8 +30,21 @@ ingress:
     traefik.ingress.kubernetes.io/router.entrypoints: websecure
 
 app:
+  # Closed mode for external exposure: UI requires login, API requires a token. Pair with a
+  # blanket gate (Cloudflare Access) on the UI and a service-token/bypass policy on /api so CI
+  # can still publish (see docs/.../ci-recipes.adoc "Behind Cloudflare Access").
+  security:
+    openMode: false
+    requireIngestToken: true
   notifications:
     baseUrl: https://unitrack.k8s.home.int
+
+# Set a known admin password at install (don't commit it), e.g.:
+#   helm upgrade --install ... --set secret.adminPassword="$UNITRACK_ADMIN_PASSWORD"
+# Or leave it unset and read the generated one from the pod log on first boot:
+#   kubectl -n unitrack logs deploy/unitrack | grep -i 'generated admin password'
+# secret:
+#   adminPassword: ""
 
 postgresql:
   enabled: true

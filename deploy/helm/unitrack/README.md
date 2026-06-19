@@ -70,6 +70,9 @@ helm test unitrack -n unitrack          # hits /actuator/health
 | `externalDatabase.url` | `""` | Required JDBC URL when `postgresql.enabled=false`. |
 | `externalDatabase.existingSecret` | `""` | Bring your own Secret for the DB password. |
 | `ingress.enabled` | `false` | Set host/className/tls to expose the UI. |
+| `app.security.openMode` | `true` | `false` → UI requires login, API requires a token. Set `false` when exposing externally. |
+| `app.security.requireIngestToken` | `false` | `true` → `POST /api/v1/ingest` always needs a token (CI must authenticate). |
+| `secret.adminPassword` | `""` | Seeded admin password; empty = auto-generated and printed in the pod log. |
 | `app.github.enabled` | `false` | GitHub commit-status; token via `secret.githubToken`. |
 | `app.notifications.*` | disabled | Email notifications; SMTP host via `extraEnv`. |
 | `resources.limits.memory` | `1Gi` | The buildpack JVM sizes its heap from this. |
