@@ -198,7 +198,7 @@ public class IngestController {
 			}
 			suppliers.add(() -> {
 				try {
-					return file.getInputStream();
+					return org.alexmond.unitrack.ingest.GzipStreams.gunzipIfNeeded(file.getInputStream());
 				}
 				catch (IOException ex) {
 					throw new IngestException("Could not read upload '" + file.getOriginalFilename() + "'", ex);

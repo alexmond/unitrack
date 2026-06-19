@@ -128,10 +128,28 @@ class UploadCommandTest {
 	void rejectsUploadWhenAFileExceedsTheCap(@TempDir Path dir) throws IOException {
 		Files.write(dir.resolve("TEST-big.xml"), new byte[26 * 1024 * 1024]);
 		UploadCommand c = command();
+		c.gzip = false; // exercise the raw-size cap (gzip would shrink the zero-filled
+						// file)
 		c.junit = List.of(dir + "/TEST-big.xml");
 
 		assertThat(c.call()).isEqualTo(ExitCodes.REJECTED);
 		verifyNoInteractions(this.client);
+	}
+
+	@Test
+	void gzipLetsALargeButCompressibleUploadThrough(@TempDir Path dir) throws IOException {
+		Files.write(dir.resolve("TEST-big.xml"), new byte[26 * 1024 * 1024]); // > 25MB
+																				// raw,
+																				// tiny
+																				// gzipped
+		given(this.client.ingest(any(), any(), any(), any(), any())).willReturn(new IngestResponse(5L));
+		UploadCommand c = command();
+		c.project = "p";
+		c.junit = List.of(dir + "/TEST-big.xml");
+
+		assertThat(c.call()).isEqualTo(ExitCodes.OK); // gzip shrinks it under the
+														// per-file cap
+		verify(this.client).ingest(any(), any(), any(), any(), any());
 	}
 
 	@Test
