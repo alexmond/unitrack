@@ -46,6 +46,9 @@ jobs:
             type=semver,pattern={{major}}
             type=sha
             type=raw,value=latest
+            # Manual dispatch carries no semver ref, so move the major `0` alias explicitly —
+            # lets `action@v0` (FROM :0) pick up a pre-release uploader (e.g. the gzip CLI).
+            type=raw,value=0,enable=${{ github.event_name == 'workflow_dispatch' }}
 
       - name: Build & push
         uses: docker/build-push-action@v6
