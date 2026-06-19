@@ -113,8 +113,24 @@ curl -X POST \
   http://localhost:8080/api/v1/ingest
 ```
 
-For GitHub Actions, copy [`.github/workflows/upload-results-example.yml`](.github/workflows/upload-results-example.yml)
-into your project and set a `UNITRACK_URL` repository variable.
+### GitHub Actions
+
+Add one step — the published action wraps the uploader and auto-detects
+project/branch/commit/build-url/PR from `GITHUB_*`:
+
+```yaml
+- uses: alexmond/unitrack/action@v0
+  with:
+    url: ${{ vars.UNITRACK_URL }}
+    token: ${{ secrets.UNITRACK_TOKEN }}   # only if the server requires an ingest token
+    # junit/jacoco default to conventional globs; override with `junit:` / `jacoco:` if needed
+    gate: "true"                            # optional: fail the build on a red quality gate
+```
+
+Pin a release with `@v0.1.0`. A ready-to-copy workflow lives in
+[`.github/workflows/upload-results-example.yml`](.github/workflows/upload-results-example.yml);
+more per-CI recipes (GitLab, Jenkins, CircleCI, raw `docker`/`java -jar`) are in the
+[CI Recipes](docs/modules/ROOT/pages/ci-recipes.adoc) docs.
 
 ## REST API
 

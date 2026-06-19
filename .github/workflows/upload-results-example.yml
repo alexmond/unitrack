@@ -1,11 +1,12 @@
-# Example workflow for OTHER projects that want to report their JUnit + JaCoCo
+# Example workflow for OTHER projects that want to report their JUnit + coverage
 # results to a UniTrack server. Copy this into your repo's .github/workflows/.
 #
 # Prerequisites:
-#   - Your build produces Surefire XML (target/surefire-reports/TEST-*.xml)
-#     and a JaCoCo XML report (target/site/jacoco/jacoco.xml).
-#     For Maven, add the jacoco-maven-plugin 'report' goal to your build.
+#   - Your build emits Surefire/JUnit XML and a coverage report (JaCoCo XML / Cobertura /
+#     LCOV / OpenCover). For Maven, add the jacoco-maven-plugin 'report' goal.
 #   - Set a repository variable UNITRACK_URL pointing at your UniTrack server.
+#   - If the server requires an ingest token, set the UNITRACK_TOKEN secret (mint it on the
+#     UniTrack profile page; an ingest-scoped token is recommended).
 
 name: Report tests to UniTrack
 
@@ -15,6 +16,9 @@ on:
 
 jobs:
   test-and-report:
+    # This file is a copy-paste template for OTHER repos — don't run it in UniTrack's own CI
+    # (it would duplicate the real build and resolve the action against this very repo).
+    if: github.repository != 'alexmond/unitrack'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -29,22 +33,14 @@ jobs:
       - name: Run tests
         run: mvn -B verify || true
 
+      # The action wraps the uploader and auto-detects project/branch/commit/build-url/PR
+      # from GITHUB_*. junit/jacoco default to conventional globs — override only if needed.
       - name: Upload to UniTrack
         if: always() && vars.UNITRACK_URL != ''
-        env:
-          UNITRACK_URL: ${{ vars.UNITRACK_URL }}
-          # Set the UNITRACK_TOKEN secret if the server requires a token
-          # (unitrack.security.require-ingest-token). Mint it on the UniTrack profile page.
-          UNITRACK_TOKEN: ${{ secrets.UNITRACK_TOKEN }}
-        run: |
-          curl --fail --show-error --silent -X POST \
-            ${UNITRACK_TOKEN:+-H "Authorization: Bearer ${UNITRACK_TOKEN}"} \
-            -F "project=${GITHUB_REPOSITORY##*/}" \
-            -F "branch=${GITHUB_REF_NAME}" \
-            -F "commit=${GITHUB_SHA}" \
-            -F "buildUrl=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
-            -F "repoUrl=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}" \
-            -F "ciProvider=github-actions" \
-            $(for f in target/surefire-reports/TEST-*.xml; do echo -n "-F junit=@$f "; done) \
-            -F "jacoco=@target/site/jacoco/jacoco.xml;type=text/xml" \
-            "${UNITRACK_URL}/api/v1/ingest"
+        uses: alexmond/unitrack/action@v0
+        with:
+          url: ${{ vars.UNITRACK_URL }}
+          token: ${{ secrets.UNITRACK_TOKEN }}
+          # junit: '**/surefire-reports/TEST-*.xml'
+          # jacoco: '**/jacoco.xml'
+          # gate: "true"   # fail the build on a red quality gate
