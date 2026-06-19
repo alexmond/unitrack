@@ -42,7 +42,7 @@ The silent footgun in every stack: the test runner does **not** write JUnit XML 
 
 [source,yaml]
 ----
-- uses: alexmond/unitrack/action@v1
+- uses: alexmond/unitrack/action@v0
   with:
     url: ${{ vars.UNITRACK_URL }}
     token: ${{ secrets.UNITRACK_TOKEN }}
@@ -57,7 +57,7 @@ project/branch/commit/buildUrl/PR number/run-key are auto-detected from `GITHUB_
 ----
 unitrack:
   stage: .post
-  image: ghcr.io/alexmond/unitrack-uploader:v1
+  image: ghcr.io/alexmond/unitrack-uploader:0
   script:
     - upload --junit "**/junit.xml" --jacoco "**/coverage.xml"
   variables:
@@ -76,7 +76,7 @@ stage('UniTrack') {
     sh '''
       docker run --rm -v "$PWD:/work" -w /work \
         -e UNITRACK_URL -e UNITRACK_TOKEN \
-        ghcr.io/alexmond/unitrack-uploader:v1 \
+        ghcr.io/alexmond/unitrack-uploader:0 \
         upload --junit "**/surefire-reports/*.xml" --jacoco "**/jacoco.xml"
     '''
   }
@@ -92,7 +92,7 @@ stage('UniTrack') {
     command: |
       docker run --rm -v "$PWD:/work" -w /work \
         -e UNITRACK_URL -e UNITRACK_TOKEN \
-        ghcr.io/alexmond/unitrack-uploader:v1 \
+        ghcr.io/alexmond/unitrack-uploader:0 \
         upload --junit "**/test-results/**/*.xml"
 ----
 
@@ -106,7 +106,7 @@ Fail the build on a red gate with a second step (exit 1 = gate failed):
 ----
 # any CI, after the upload
 docker run --rm -e UNITRACK_URL -e UNITRACK_TOKEN \
-  ghcr.io/alexmond/unitrack-uploader:v1 \
+  ghcr.io/alexmond/unitrack-uploader:0 \
   gate --project myapp --commit "$GIT_SHA"
 ----
 

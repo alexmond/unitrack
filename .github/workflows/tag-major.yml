@@ -1,0 +1,29 @@
+name: Update major action tag
+
+# Keeps the moving major tag (e.g. v0, later v1) pointing at the newest full release, so
+# consumers of the GitHub Action can pin `uses: alexmond/unitrack/action@v0` and get patch/minor
+# updates without editing their workflow. Fires after a release tag (v1.2.3) is pushed.
+on:
+  push:
+    tags: [ 'v*.*.*' ]
+
+jobs:
+  retag:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Move the major tag to this release
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"        # e.g. v0.1.0
+          major="${tag%%.*}"               # e.g. v0
+          echo "Pointing ${major} at ${tag}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -f "${major}" "${tag}"
+          git push origin -f "refs/tags/${major}"

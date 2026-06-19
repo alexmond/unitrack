@@ -1,11 +1,12 @@
 name: Publish CLI image
 
 # Builds the hermetic uploader image (JRE + unitrack-cli jar) and pushes it to GHCR.
-# Fires on a version tag (v1.2.3) and can be run manually. Kept separate from ci.yml so the
-# build/test pipeline stays simple.
+# Fires on a full release tag (v1.2.3) and can be run manually. Kept separate from ci.yml so the
+# build/test pipeline stays simple. The pattern excludes moving major aliases like `v0`/`v1`
+# (maintained by tag-major.yml) so they don't trigger a redundant image rebuild.
 on:
   push:
-    tags: [ 'v*' ]
+    tags: [ 'v*.*.*' ]
   workflow_dispatch:
 
 jobs:
