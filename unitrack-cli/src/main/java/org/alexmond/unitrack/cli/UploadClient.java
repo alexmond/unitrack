@@ -1,5 +1,6 @@
 package org.alexmond.unitrack.cli;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -47,7 +48,8 @@ class UploadClient {
 	 * POSTs a multipart ingest; returns the created run id (or {@code null} if the server
 	 * reported none).
 	 */
-	IngestResponse ingest(String baseUrl, String token, Map<String, String> fields, Map<String, List<Resource>> files) {
+	IngestResponse ingest(String baseUrl, String token, Map<String, String> headers, Map<String, String> fields,
+			Map<String, List<Resource>> files) {
 		MultiValueMap<String, Object> parts = new LinkedMultiValueMap<>();
 		fields.forEach((k, v) -> {
 			if (v != null && !v.isBlank()) {
@@ -56,7 +58,7 @@ class UploadClient {
 		});
 		files.forEach((field, list) -> list.forEach((r) -> parts.add(field, r)));
 		return withRetry(baseUrl, () -> {
-			String body = client(baseUrl, token).post()
+			String body = client(baseUrl, token, headers).post()
 				.uri("/api/v1/ingest")
 				.contentType(MediaType.MULTIPART_FORM_DATA)
 				.body(parts)
@@ -70,10 +72,11 @@ class UploadClient {
 	 * Looks up the latest run's gate verdict by project + commit/branch.
 	 * {@code found=false} on 404.
 	 */
-	GateResponse gate(String baseUrl, String token, String project, String commit, String branch, String flag) {
+	GateResponse gate(String baseUrl, String token, Map<String, String> headers, String project, String commit,
+			String branch, String flag) {
 		return withRetry(baseUrl, () -> {
 			try {
-				String body = client(baseUrl, token).get()
+				String body = client(baseUrl, token, headers).get()
 					.uri((uri) -> uri.path("/api/v1/gate")
 						.queryParam("project", project)
 						.queryParamIfPresent("commit", Optional.ofNullable(blankToNull(commit)))
@@ -158,12 +161,35 @@ class UploadClient {
 		return code == 429 || code == 502 || code == 503 || code == 504;
 	}
 
-	private RestClient client(String baseUrl, String token) {
+	private RestClient client(String baseUrl, String token, Map<String, String> headers) {
 		return this.builder.clone().baseUrl(baseUrl).defaultHeaders((h) -> {
 			if (token != null && !token.isBlank()) {
 				h.setBearerAuth(token);
 			}
+			if (headers != null) {
+				headers.forEach((name, value) -> h.set(name, value));
+			}
 		}).build();
+	}
+
+	/**
+	 * Parses {@code Name: Value} header arguments (curl's {@code -H} form) into an
+	 * ordered map. Lets an upload carry extra headers such as a proxy/WAF's credentials —
+	 * e.g. Cloudflare Access service-token headers ({@code CF-Access-Client-Id} /
+	 * {@code CF-Access-Client-Secret}) when the server sits behind Zero Trust.
+	 */
+	static Map<String, String> parseHeaders(List<String> headerArgs) {
+		Map<String, String> map = new LinkedHashMap<>();
+		if (headerArgs != null) {
+			for (String header : headerArgs) {
+				int colon = (header != null) ? header.indexOf(':') : -1;
+				if (colon <= 0) {
+					throw new IllegalArgumentException("Invalid --header '" + header + "': expected 'Name: Value'");
+				}
+				map.put(header.substring(0, colon).trim(), header.substring(colon + 1).trim());
+			}
+		}
+		return map;
 	}
 
 	private static Long extractLong(String body) {

@@ -12,6 +12,12 @@ inputs:
   token:
     description: API token (Bearer). An ingest-scoped token is recommended.
     required: false
+  headers:
+    description: >-
+      Extra HTTP headers, one "Name: Value" per line — sent on the upload (and gate) request.
+      Use for a proxy/WAF in front of the server, e.g. Cloudflare Access service-token headers
+      (CF-Access-Client-Id / CF-Access-Client-Secret).
+    required: false
   project:
     description: Project name (auto-detected from CI when omitted).
     required: false

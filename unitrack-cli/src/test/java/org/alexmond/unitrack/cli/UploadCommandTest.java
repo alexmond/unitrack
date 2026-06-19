@@ -59,18 +59,18 @@ class UploadCommandTest {
 	@Test
 	void uploadsMatchedFilesAndReportsRunId(@TempDir Path dir) throws IOException {
 		Files.writeString(dir.resolve("TEST-a.xml"), "<testsuite/>");
-		given(this.client.ingest(any(), any(), any(), any())).willReturn(new IngestResponse(7L));
+		given(this.client.ingest(any(), any(), any(), any(), any())).willReturn(new IngestResponse(7L));
 		UploadCommand c = command();
 		c.junit = List.of(dir + "/TEST-*.xml");
 
 		assertThat(c.call()).isEqualTo(ExitCodes.OK);
-		verify(this.client).ingest(any(), any(), any(), any());
+		verify(this.client).ingest(any(), any(), any(), any(), any());
 	}
 
 	@Test
 	void propagatesUploadFailureExitCode(@TempDir Path dir) throws IOException {
 		Files.writeString(dir.resolve("TEST-a.xml"), "<testsuite/>");
-		given(this.client.ingest(any(), any(), any(), any()))
+		given(this.client.ingest(any(), any(), any(), any(), any()))
 			.willThrow(new UploadException(ExitCodes.REJECTED, "boom"));
 		UploadCommand c = command();
 		c.junit = List.of(dir + "/TEST-*.xml");
@@ -80,18 +80,18 @@ class UploadCommandTest {
 
 	@Test
 	void allowEmptyUploadsMetadataOnly() {
-		given(this.client.ingest(any(), any(), any(), any())).willReturn(new IngestResponse(null));
+		given(this.client.ingest(any(), any(), any(), any(), any())).willReturn(new IngestResponse(null));
 		UploadCommand c = command();
 		c.allowEmpty = true;
 
 		assertThat(c.call()).isEqualTo(ExitCodes.OK);
-		verify(this.client).ingest(any(), any(), any(), any());
+		verify(this.client).ingest(any(), any(), any(), any(), any());
 	}
 
 	@Test
 	void softFailDowngradesTransportFailureToSuccess(@TempDir Path dir) throws IOException {
 		Files.writeString(dir.resolve("TEST-a.xml"), "<testsuite/>");
-		given(this.client.ingest(any(), any(), any(), any()))
+		given(this.client.ingest(any(), any(), any(), any(), any()))
 			.willThrow(new UploadException(ExitCodes.TRANSPORT, "down"));
 		UploadCommand c = command();
 		c.junit = List.of(dir + "/TEST-*.xml");
@@ -103,7 +103,7 @@ class UploadCommandTest {
 	@Test
 	void verbosePrintsResolvedRequestAndUploads(@TempDir Path dir) throws IOException {
 		Files.writeString(dir.resolve("TEST-a.xml"), "<testsuite/>");
-		given(this.client.ingest(any(), any(), any(), any())).willReturn(new IngestResponse(1L));
+		given(this.client.ingest(any(), any(), any(), any(), any())).willReturn(new IngestResponse(1L));
 		UploadCommand c = command();
 		c.token = "secret";
 		c.verbose = true;
@@ -140,7 +140,7 @@ class UploadCommandTest {
 		Map<String, String> ghEnv = Map.of("GITHUB_ACTIONS", "true", "GITHUB_REPOSITORY", "octo/myapp",
 				"GITHUB_SERVER_URL", "https://github.com", "GITHUB_RUN_ID", "99", "GITHUB_EVENT_NAME", "push",
 				"GITHUB_REF_NAME", "ci-branch", "GITHUB_SHA", "detectedsha");
-		given(this.client.ingest(any(), any(), any(), any())).willReturn(new IngestResponse(1L));
+		given(this.client.ingest(any(), any(), any(), any(), any())).willReturn(new IngestResponse(1L));
 		UploadCommand c = command(new CiMetadataDetector(ghEnv::get));
 		c.project = null; // detected from CI
 		c.branch = "explicit-branch"; // explicit overrides detection
@@ -150,7 +150,7 @@ class UploadCommandTest {
 
 		@SuppressWarnings("unchecked")
 		ArgumentCaptor<Map<String, String>> fields = ArgumentCaptor.forClass(Map.class);
-		verify(this.client).ingest(any(), any(), fields.capture(), any());
+		verify(this.client).ingest(any(), any(), any(), fields.capture(), any());
 		assertThat(fields.getValue()).containsEntry("project", "myapp") // detected
 			.containsEntry("commit", "detectedsha") // detected
 			.containsEntry("branch", "explicit-branch") // explicit wins

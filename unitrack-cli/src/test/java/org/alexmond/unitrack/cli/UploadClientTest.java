@@ -16,6 +16,7 @@ import org.springframework.web.client.RestClient;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.queryParam;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
@@ -50,10 +51,34 @@ class UploadClientTest {
 			.andExpect(method(HttpMethod.POST))
 			.andRespond(withSuccess("{\"runId\":42,\"project\":\"demo\"}", MediaType.APPLICATION_JSON));
 
-		IngestResponse r = this.client.ingest("http://unitrack.test", "tok", Map.of("project", "demo"), Map.of());
+		IngestResponse r = this.client.ingest("http://unitrack.test", "tok", Map.of(), Map.of("project", "demo"),
+				Map.of());
 
 		assertThat(r.runId()).isEqualTo(42L);
 		this.server.verify();
+	}
+
+	@Test
+	void ingestSendsCustomHeaders() {
+		newClient();
+		this.server.expect(requestTo("http://unitrack.test/api/v1/ingest"))
+			.andExpect(header("CF-Access-Client-Id", "cid"))
+			.andExpect(header("CF-Access-Client-Secret", "csecret"))
+			.andRespond(withSuccess("{\"runId\":1}", MediaType.APPLICATION_JSON));
+
+		this.client.ingest("http://unitrack.test", "tok",
+				Map.of("CF-Access-Client-Id", "cid", "CF-Access-Client-Secret", "csecret"), Map.of("project", "demo"),
+				Map.of());
+
+		this.server.verify();
+	}
+
+	@Test
+	void parseHeadersSplitsOnFirstColonAndTrims() {
+		Map<String, String> parsed = UploadClient.parseHeaders(List.of("CF-Access-Client-Id:  abc ", "X-Note: a: b"));
+		assertThat(parsed).containsEntry("CF-Access-Client-Id", "abc").containsEntry("X-Note", "a: b");
+		assertThatThrownBy(() -> UploadClient.parseHeaders(List.of("no-colon")))
+			.isInstanceOf(IllegalArgumentException.class);
 	}
 
 	@Test
@@ -62,8 +87,8 @@ class UploadClientTest {
 		this.server.expect(requestTo("http://unitrack.test/api/v1/ingest"))
 			.andRespond(withStatus(HttpStatus.UNPROCESSABLE_ENTITY));
 
-		assertThatThrownBy(
-				() -> this.client.ingest("http://unitrack.test", null, Map.of("project", "demo"), emptyFiles()))
+		assertThatThrownBy(() -> this.client.ingest("http://unitrack.test", null, Map.of(), Map.of("project", "demo"),
+				emptyFiles()))
 			.isInstanceOfSatisfying(UploadException.class,
 					(ex) -> assertThat(ex.exitCode()).isEqualTo(ExitCodes.REJECTED));
 	}
@@ -74,7 +99,8 @@ class UploadClientTest {
 		this.server.expect(requestTo("http://unitrack.test/api/v1/ingest"))
 			.andRespond(withStatus(HttpStatus.INTERNAL_SERVER_ERROR));
 
-		assertThatThrownBy(() -> this.client.ingest("http://unitrack.test", null, Map.of("project", "demo"), Map.of()))
+		assertThatThrownBy(
+				() -> this.client.ingest("http://unitrack.test", null, Map.of(), Map.of("project", "demo"), Map.of()))
 			.isInstanceOfSatisfying(UploadException.class,
 					(ex) -> assertThat(ex.exitCode()).isEqualTo(ExitCodes.TRANSPORT));
 	}
@@ -87,7 +113,8 @@ class UploadClientTest {
 		this.server.expect(requestTo("http://unitrack.test/api/v1/ingest"))
 			.andRespond(withSuccess("{\"runId\":7}", MediaType.APPLICATION_JSON));
 
-		IngestResponse r = this.client.ingest("http://unitrack.test", null, Map.of("project", "demo"), Map.of());
+		IngestResponse r = this.client.ingest("http://unitrack.test", null, Map.of(), Map.of("project", "demo"),
+				Map.of());
 
 		assertThat(r.runId()).isEqualTo(7L);
 		this.server.verify();
@@ -101,7 +128,7 @@ class UploadClientTest {
 			.andExpect(queryParam("commit", "abc123"))
 			.andRespond(withSuccess("{\"passed\":false,\"status\":\"FAILED\"}", MediaType.APPLICATION_JSON));
 
-		GateResponse g = this.client.gate("http://unitrack.test", null, "demo", "abc123", null, null);
+		GateResponse g = this.client.gate("http://unitrack.test", null, Map.of(), "demo", "abc123", null, null);
 
 		assertThat(g.found()).isTrue();
 		assertThat(g.passed()).isFalse();
@@ -114,7 +141,7 @@ class UploadClientTest {
 		this.server.expect(requestTo(Matchers.containsString("/api/v1/gate")))
 			.andRespond(withStatus(HttpStatus.NOT_FOUND));
 
-		GateResponse g = this.client.gate("http://unitrack.test", null, "demo", "nope", null, null);
+		GateResponse g = this.client.gate("http://unitrack.test", null, Map.of(), "demo", "nope", null, null);
 
 		assertThat(g.found()).isFalse();
 	}

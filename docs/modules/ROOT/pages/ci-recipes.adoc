@@ -112,6 +112,35 @@ docker run --rm -e UNITRACK_URL -e UNITRACK_TOKEN \
 
 The GitHub Action exposes the same via a `gate: true` input. See xref:quality-gate.adoc[Quality Gate].
 
+== Behind Cloudflare Access (or any proxy/WAF)
+
+When the server is exposed publicly behind a blanket gate, keep the gate on the **UI** and let CI
+reach the **API** with a machine credential — the two are already separate paths (`/api/**` vs the
+dashboard at `/`), so a per-path policy covers it without moving anything.
+
+With **Cloudflare Access**, create two Access applications on the host:
+
+* `unitrack.example.org/api/*` → a **Service Token** policy (machines).
+* `unitrack.example.org` (everything else) → interactive login (humans).
+
+The uploader then sends the service-token headers via the action's `headers:` input (or the CLI's
+repeatable `--header` / `-H`):
+
+[source,yaml]
+----
+- uses: alexmond/unitrack/action@v0
+  with:
+    url: ${{ vars.UNITRACK_URL }}
+    token: ${{ secrets.UNITRACK_TOKEN }}        # app-level ingest token (authn at UniTrack)
+    headers: |                                  # Cloudflare Access service token (authn at the edge)
+      CF-Access-Client-Id: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+      CF-Access-Client-Secret: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+----
+
+Run the server in closed mode so it enforces auth too (defense in depth): set
+`unitrack.security.open-mode=false` and `unitrack.security.require-ingest-token=true`. See
+xref:configuration.adoc[Configuration] and xref:accounts.adoc[Accounts & API Tokens].
+
 == Fork-PR behaviour
 
 On most CIs, secrets are **not** exposed to workflows triggered by forked pull requests, so the

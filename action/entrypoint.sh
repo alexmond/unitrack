@@ -60,6 +60,20 @@ fi
 [ "${INPUT_DRY_RUN:-false}" = "true" ] && set -- "$@" --dry-run
 [ "${INPUT_SOFT_FAIL:-false}" = "true" ] && set -- "$@" --soft-fail
 
+# Extra HTTP headers, one "Name: Value" per line — e.g. Cloudflare Access service-token
+# headers (CF-Access-Client-Id / CF-Access-Client-Secret) when the server is behind Zero Trust.
+if [ -n "${INPUT_HEADERS:-}" ]; then
+	old_ifs="$IFS"
+	IFS='
+'
+	set -f
+	for h in $INPUT_HEADERS; do
+		[ -n "$h" ] && set -- "$@" --header "$h"
+	done
+	set +f
+	IFS="$old_ifs"
+fi
+
 echo "unitrack upload ($#-arg invocation)"
 java -jar "$JAR" "$@"
 
@@ -69,6 +83,17 @@ if [ "${INPUT_GATE:-false}" = "true" ]; then
 	[ -n "${INPUT_COMMIT:-}" ] && set -- "$@" --commit "$INPUT_COMMIT"
 	[ -n "${INPUT_BRANCH:-}" ] && set -- "$@" --branch "$INPUT_BRANCH"
 	[ -n "${INPUT_FLAG:-}" ] && set -- "$@" --flag "$INPUT_FLAG"
+	if [ -n "${INPUT_HEADERS:-}" ]; then
+		old_ifs="$IFS"
+		IFS='
+'
+		set -f
+		for h in $INPUT_HEADERS; do
+			[ -n "$h" ] && set -- "$@" --header "$h"
+		done
+		set +f
+		IFS="$old_ifs"
+	fi
 	echo "unitrack gate"
 	java -jar "$JAR" "$@"
 fi
