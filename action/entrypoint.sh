@@ -9,6 +9,13 @@ JAR="${UNITRACK_CLI_JAR:-/app/unitrack-cli.jar}"
 [ -n "${INPUT_URL:-}" ] && export UNITRACK_URL="$INPUT_URL"
 [ -n "${INPUT_TOKEN:-}" ] && export UNITRACK_TOKEN="$INPUT_TOKEN"
 
+# GitHub exposes a hyphenated input `foo-bar` as the env var INPUT_FOO-BAR, which the shell
+# can't expand by name (`$INPUT_FOO-BAR` parses as ${INPUT_FOO} + "-BAR"). Read those via
+# printenv into the underscore names the rest of this script uses.
+INPUT_RUN_KEY="${INPUT_RUN_KEY:-$(printenv 'INPUT_RUN-KEY' 2>/dev/null || true)}"
+INPUT_DRY_RUN="${INPUT_DRY_RUN:-$(printenv 'INPUT_DRY-RUN' 2>/dev/null || true)}"
+INPUT_SOFT_FAIL="${INPUT_SOFT_FAIL:-$(printenv 'INPUT_SOFT-FAIL' 2>/dev/null || true)}"
+
 # Append each non-empty line of $2 as a repeated "$1 <value>" pair to the arg list.
 # (Used via the surrounding `set --`; emits NUL-free args one per line.)
 
