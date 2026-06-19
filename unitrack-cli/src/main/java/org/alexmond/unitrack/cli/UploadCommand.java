@@ -29,6 +29,12 @@ class UploadCommand implements Callable<Integer> {
 
 	private static final long MAX_REQUEST_BYTES = 100L * 1024 * 1024;
 
+	/**
+	 * Per-shard target — under the request cap, leaving headroom for multipart + a CDN
+	 * body limit.
+	 */
+	private static final long SHARD_TARGET_BYTES = 90L * 1024 * 1024;
+
 	@Option(names = "--url", defaultValue = "${env:UNITRACK_URL:-http://localhost:8080}",
 			description = "UniTrack server URL (env UNITRACK_URL).")
 	String url;
@@ -148,9 +154,10 @@ class UploadCommand implements Callable<Integer> {
 		List<Resource> allFiles = new ArrayList<>(junitFiles);
 		allFiles.addAll(jacocoFiles);
 		allFiles.addAll(perfFiles);
-		String oversize = oversizeError(allFiles, MAX_FILE_BYTES, MAX_REQUEST_BYTES);
-		if (oversize != null) {
-			System.err.println("error: " + oversize + ".");
+		// A single file over the per-file cap can't be split — hard fail.
+		String tooBig = perFileError(allFiles, MAX_FILE_BYTES);
+		if (tooBig != null) {
+			System.err.println("error: " + tooBig + ".");
 			return ExitCodes.REJECTED;
 		}
 		if (this.verbose) {
@@ -163,10 +170,35 @@ class UploadCommand implements Callable<Integer> {
 			return ExitCodes.OK;
 		}
 
+		// Too big for one request (even gzipped) → split into shards the server merges by
+		// run key.
+		List<Map<String, List<Resource>>> batches = splitIntoBatches(files, SHARD_TARGET_BYTES);
+		if (batches.size() > 1) {
+			if (blankToNull(fields.get("runKey")) == null) {
+				fields.put("runKey", "split-" + System.nanoTime());
+			}
+			System.out.printf("Upload exceeds %d MB — splitting into %d requests (run key '%s'); merged server-side.%n",
+					mb(SHARD_TARGET_BYTES), batches.size(), fields.get("runKey"));
+		}
+		return upload(batches, fields);
+	}
+
+	/**
+	 * POSTs each shard (a single batch in the common case), reporting the run and
+	 * honouring --soft-fail.
+	 */
+	private Integer upload(List<Map<String, List<Resource>>> batches, Map<String, String> fields) {
 		try {
-			IngestResponse response = this.client.ingest(this.url, this.token, UploadClient.parseHeaders(this.headers),
-					fields, files);
-			if (response.runId() != null) {
+			IngestResponse response = null;
+			for (int i = 0; i < batches.size(); i++) {
+				IngestResponse r = this.client.ingest(this.url, this.token, UploadClient.parseHeaders(this.headers),
+						fields, batches.get(i));
+				response = (response != null) ? response : r;
+				if (batches.size() > 1) {
+					System.out.printf("  shard %d/%d uploaded.%n", i + 1, batches.size());
+				}
+			}
+			if (response != null && response.runId() != null) {
 				System.out.printf("Uploaded run #%d -> %s/runs/%d%n", response.runId(), this.url, response.runId());
 			}
 			else {
@@ -194,22 +226,72 @@ class UploadCommand implements Callable<Integer> {
 	}
 
 	/**
-	 * Returns an error message if any file exceeds {@code maxFile} or the total exceeds
-	 * {@code maxTotal}; else null.
+	 * Returns an error if any single file exceeds {@code maxFile} (a single file can't be
+	 * split); else null. A too-large total is handled by sharding, not rejected.
 	 */
-	static String oversizeError(List<Resource> files, long maxFile, long maxTotal) {
-		long total = 0;
+	static String perFileError(List<Resource> files, long maxFile) {
 		for (Resource r : files) {
 			long len = sizeOf(r);
-			total += len;
 			if (len > maxFile) {
-				return nameOf(r) + " is " + mb(len) + " MB (max " + mb(maxFile) + " MB per file)";
+				return nameOf(r) + " is " + mb(len) + " MB (max " + mb(maxFile) + " MB per file; can't be split)";
 			}
 		}
-		if (total > maxTotal) {
-			return "total upload " + mb(total) + " MB exceeds the " + mb(maxTotal) + " MB request limit";
-		}
 		return null;
+	}
+
+	/**
+	 * Packs the report files into batches each within {@code target} bytes, so a payload
+	 * too large for one request (even gzipped) is sharded — the server merges the shards
+	 * by run key. Returns the single map unchanged when it already fits. Every batch
+	 * keeps at least one junit/perf part (the server rejects coverage-only requests);
+	 * coverage rides along.
+	 */
+	static List<Map<String, List<Resource>>> splitIntoBatches(Map<String, List<Resource>> files, long target) {
+		List<Part> anchors = new ArrayList<>();
+		List<Part> riders = new ArrayList<>();
+		long total = 0;
+		for (Map.Entry<String, List<Resource>> entry : files.entrySet()) {
+			for (Resource r : entry.getValue()) {
+				Part part = new Part(entry.getKey(), r, sizeOf(r));
+				total += part.size();
+				("jacoco".equals(entry.getKey()) ? riders : anchors).add(part);
+			}
+		}
+		if (total <= target) {
+			return List.of(files);
+		}
+		// First-fit-decreasing: anchors first (so every bin has a junit/perf part), then
+		// riders.
+		anchors.sort((a, b) -> Long.compare(b.size(), a.size()));
+		List<List<Part>> bins = new ArrayList<>();
+		List<Long> sizes = new ArrayList<>();
+		for (Part p : anchors) {
+			place(bins, sizes, p, target);
+		}
+		for (Part p : riders) {
+			place(bins, sizes, p, target);
+		}
+		List<Map<String, List<Resource>>> batches = new ArrayList<>();
+		for (List<Part> bin : bins) {
+			Map<String, List<Resource>> batch = new LinkedHashMap<>();
+			for (Part p : bin) {
+				batch.computeIfAbsent(p.field(), (k) -> new ArrayList<>()).add(p.resource());
+			}
+			batches.add(batch);
+		}
+		return batches;
+	}
+
+	private static void place(List<List<Part>> bins, List<Long> sizes, Part part, long target) {
+		for (int i = 0; i < bins.size(); i++) {
+			if (sizes.get(i) + part.size() <= target) {
+				bins.get(i).add(part);
+				sizes.set(i, sizes.get(i) + part.size());
+				return;
+			}
+		}
+		bins.add(new ArrayList<>(List.of(part)));
+		sizes.add(part.size());
 	}
 
 	private static long sizeOf(Resource r) {
@@ -236,6 +318,10 @@ class UploadCommand implements Callable<Integer> {
 
 	private static String coalesce(String explicit, String detected) {
 		return (explicit != null && !explicit.isBlank()) ? explicit : detected;
+	}
+
+	private static String blankToNull(String s) {
+		return (s == null || s.isBlank()) ? null : s;
 	}
 
 	private Map<String, String> buildFields(String project, CiMetadata ci) {
@@ -275,6 +361,13 @@ class UploadCommand implements Callable<Integer> {
 				return filename;
 			}
 		};
+	}
+
+	/**
+	 * A single multipart part: its form field
+	 * ({@code junit}/{@code jacoco}/{@code perf}), resource and size.
+	 */
+	private record Part(String field, Resource resource, long size) {
 	}
 
 }

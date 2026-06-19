@@ -113,15 +113,32 @@ class UploadCommandTest {
 	}
 
 	@Test
-	void oversizeErrorFlagsAnOversizedFileAndTotal(@TempDir Path dir) throws IOException {
+	void perFileErrorFlagsAnOversizedFile(@TempDir Path dir) throws IOException {
 		Files.write(dir.resolve("big.xml"), new byte[2048]);
 		Files.write(dir.resolve("small.xml"), new byte[600]);
 		Resource big = new FileSystemResource(dir.resolve("big.xml"));
 		Resource small = new FileSystemResource(dir.resolve("small.xml"));
 
-		assertThat(UploadCommand.oversizeError(List.of(big), 1024, 100_000)).contains("big.xml");
-		assertThat(UploadCommand.oversizeError(List.of(small), 100_000, 1000)).isNull();
-		assertThat(UploadCommand.oversizeError(List.of(big, small), 100_000, 1000)).contains("total");
+		assertThat(UploadCommand.perFileError(List.of(big), 1024)).contains("big.xml");
+		assertThat(UploadCommand.perFileError(List.of(big, small), 100_000)).isNull();
+	}
+
+	@Test
+	void splitIntoBatchesShardsAnOversizedTotalKeepingJunitInEach(@TempDir Path dir) throws IOException {
+		Files.write(dir.resolve("TEST-a.xml"), new byte[700]);
+		Files.write(dir.resolve("TEST-b.xml"), new byte[700]);
+		Files.write(dir.resolve("cov.xml"), new byte[200]);
+		Map<String, List<Resource>> files = new java.util.LinkedHashMap<>();
+		files.put("junit", List.of(new FileSystemResource(dir.resolve("TEST-a.xml")),
+				new FileSystemResource(dir.resolve("TEST-b.xml"))));
+		files.put("jacoco", List.of(new FileSystemResource(dir.resolve("cov.xml"))));
+
+		// Fits the target -> one request, unchanged.
+		assertThat(UploadCommand.splitIntoBatches(files, 100_000)).hasSize(1);
+		// Target too small for both junit in one request -> 2 shards, each carrying a
+		// junit part.
+		List<Map<String, List<Resource>>> batches = UploadCommand.splitIntoBatches(files, 1000);
+		assertThat(batches).hasSize(2).allSatisfy((batch) -> assertThat(batch).containsKey("junit"));
 	}
 
 	@Test
