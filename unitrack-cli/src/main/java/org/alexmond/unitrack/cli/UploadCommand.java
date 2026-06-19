@@ -1,11 +1,16 @@
 package org.alexmond.unitrack.cli;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.zip.GZIPOutputStream;
 
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 import picocli.CommandLine.Command;
@@ -82,6 +87,11 @@ class UploadCommand implements Callable<Integer> {
 	@Option(names = "--soft-fail", description = "Treat an upload/transport failure as a warning (exit 0).")
 	boolean softFail;
 
+	@Option(names = "--gzip", negatable = true,
+			description = "Gzip each report before upload (default true) — report XML compresses ~10-20x, "
+					+ "keeping large multi-module uploads under request-size limits. --no-gzip to disable.")
+	boolean gzip = true;
+
 	private final UploadClient client;
 
 	private final ReportResolver resolver;
@@ -120,15 +130,16 @@ class UploadCommand implements Callable<Integer> {
 			System.out.println("Detected CI: " + ci.ciProvider());
 		}
 
-		Map<String, String> fields = new LinkedHashMap<>();
-		fields.put("project", resolvedProject);
-		fields.put("branch", coalesce(this.branch, ci.branch()));
-		fields.put("commit", coalesce(this.commit, ci.commit()));
-		fields.put("buildUrl", coalesce(this.buildUrl, ci.buildUrl()));
-		fields.put("repoUrl", coalesce(this.repoUrl, ci.repoUrl()));
-		fields.put("flag", this.flag);
-		fields.put("runKey", coalesce(this.runKey, ci.runKey()));
-		fields.put("ciProvider", coalesce(this.ciProvider, ci.ciProvider()));
+		Map<String, String> fields = buildFields(resolvedProject, ci);
+		// Gzip each report (the server transparently inflates). Done before the size
+		// check so
+		// the limits apply to what is actually sent — a large but compressible upload
+		// fits.
+		if (this.gzip) {
+			junitFiles = gzipAll(junitFiles);
+			jacocoFiles = gzipAll(jacocoFiles);
+			perfFiles = gzipAll(perfFiles);
+		}
 		Map<String, List<Resource>> files = new LinkedHashMap<>();
 		files.put("junit", junitFiles);
 		files.put("jacoco", jacocoFiles);
@@ -205,7 +216,7 @@ class UploadCommand implements Callable<Integer> {
 		try {
 			return r.contentLength();
 		}
-		catch (java.io.IOException ex) {
+		catch (IOException ex) {
 			return 0;
 		}
 	}
@@ -225,6 +236,45 @@ class UploadCommand implements Callable<Integer> {
 
 	private static String coalesce(String explicit, String detected) {
 		return (explicit != null && !explicit.isBlank()) ? explicit : detected;
+	}
+
+	private Map<String, String> buildFields(String project, CiMetadata ci) {
+		Map<String, String> fields = new LinkedHashMap<>();
+		fields.put("project", project);
+		fields.put("branch", coalesce(this.branch, ci.branch()));
+		fields.put("commit", coalesce(this.commit, ci.commit()));
+		fields.put("buildUrl", coalesce(this.buildUrl, ci.buildUrl()));
+		fields.put("repoUrl", coalesce(this.repoUrl, ci.repoUrl()));
+		fields.put("flag", this.flag);
+		fields.put("runKey", coalesce(this.runKey, ci.runKey()));
+		fields.put("ciProvider", coalesce(this.ciProvider, ci.ciProvider()));
+		return fields;
+	}
+
+	private static List<Resource> gzipAll(List<Resource> files) {
+		List<Resource> out = new ArrayList<>(files.size());
+		for (Resource file : files) {
+			out.add(gzip(file));
+		}
+		return out;
+	}
+
+	/** Gzips a resource into an in-memory part, preserving its filename. */
+	private static Resource gzip(Resource source) {
+		String filename = source.getFilename();
+		ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+		try (InputStream in = source.getInputStream(); GZIPOutputStream out = new GZIPOutputStream(buffer)) {
+			in.transferTo(out);
+		}
+		catch (IOException ex) {
+			throw new UploadException(ExitCodes.REJECTED, "Could not gzip " + filename, ex);
+		}
+		return new ByteArrayResource(buffer.toByteArray()) {
+			@Override
+			public String getFilename() {
+				return filename;
+			}
+		};
 	}
 
 }
