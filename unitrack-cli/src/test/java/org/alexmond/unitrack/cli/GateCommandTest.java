@@ -21,28 +21,28 @@ class GateCommandTest {
 
 	@Test
 	void passesWhenGatePassed() {
-		given(this.client.gate(any(), any(), any(), any(), any(), any()))
+		given(this.client.gate(any(), any(), any(), any(), any(), any(), any()))
 			.willReturn(new GateResponse(true, true, "PASSED"));
 		assertThat(command().call()).isEqualTo(ExitCodes.OK);
 	}
 
 	@Test
 	void failsWhenGateFailed() {
-		given(this.client.gate(any(), any(), any(), any(), any(), any()))
+		given(this.client.gate(any(), any(), any(), any(), any(), any(), any()))
 			.willReturn(new GateResponse(true, false, "FAILED"));
 		assertThat(command().call()).isEqualTo(ExitCodes.GATE_FAILED);
 	}
 
 	@Test
 	void usageErrorWhenNoRunFound() {
-		given(this.client.gate(any(), any(), any(), any(), any(), any()))
+		given(this.client.gate(any(), any(), any(), any(), any(), any(), any()))
 			.willReturn(new GateResponse(false, false, null));
 		assertThat(command().call()).isEqualTo(ExitCodes.USAGE);
 	}
 
 	@Test
 	void propagatesTransportFailure() {
-		given(this.client.gate(any(), any(), any(), any(), any(), any()))
+		given(this.client.gate(any(), any(), any(), any(), any(), any(), any()))
 			.willThrow(new UploadException(ExitCodes.TRANSPORT, "down"));
 		assertThat(command().call()).isEqualTo(ExitCodes.TRANSPORT);
 	}

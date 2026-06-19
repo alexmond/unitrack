@@ -32,6 +32,11 @@ class UploadCommand implements Callable<Integer> {
 			description = "API token, sent as a Bearer header (env UNITRACK_TOKEN).")
 	String token;
 
+	@Option(names = { "--header", "-H" },
+			description = "Extra HTTP header 'Name: Value' (repeatable) — e.g. Cloudflare Access "
+					+ "service-token headers when the server is behind a proxy/WAF.")
+	List<String> headers = new ArrayList<>();
+
 	@Option(names = "--project", description = "Project name (auto-detected from CI when omitted).")
 	String project;
 
@@ -148,7 +153,8 @@ class UploadCommand implements Callable<Integer> {
 		}
 
 		try {
-			IngestResponse response = this.client.ingest(this.url, this.token, fields, files);
+			IngestResponse response = this.client.ingest(this.url, this.token, UploadClient.parseHeaders(this.headers),
+					fields, files);
 			if (response.runId() != null) {
 				System.out.printf("Uploaded run #%d -> %s/runs/%d%n", response.runId(), this.url, response.runId());
 			}

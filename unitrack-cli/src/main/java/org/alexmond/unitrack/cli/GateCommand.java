@@ -1,5 +1,7 @@
 package org.alexmond.unitrack.cli;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Callable;
 
 import org.springframework.stereotype.Component;
@@ -23,6 +25,11 @@ class GateCommand implements Callable<Integer> {
 
 	@Option(names = "--token", defaultValue = "${env:UNITRACK_TOKEN}", description = "API token (env UNITRACK_TOKEN).")
 	String token;
+
+	@Option(names = { "--header", "-H" },
+			description = "Extra HTTP header 'Name: Value' (repeatable) — e.g. Cloudflare Access "
+					+ "service-token headers when the server is behind a proxy/WAF.")
+	List<String> headers = new ArrayList<>();
 
 	@Option(names = "--project", description = "Project name (auto-detected from CI when omitted).")
 	String project;
@@ -56,8 +63,8 @@ class GateCommand implements Callable<Integer> {
 		String resolvedCommit = coalesce(this.commit, ci.commit());
 		String resolvedBranch = coalesce(this.branch, ci.branch());
 		try {
-			GateResponse gate = this.client.gate(this.url, this.token, resolvedProject, resolvedCommit, resolvedBranch,
-					this.flag);
+			GateResponse gate = this.client.gate(this.url, this.token, UploadClient.parseHeaders(this.headers),
+					resolvedProject, resolvedCommit, resolvedBranch, this.flag);
 			if (!gate.found()) {
 				System.err.println("error: no run found for the given project/commit/branch.");
 				return ExitCodes.USAGE;
