@@ -50,7 +50,16 @@ class ReportResolver {
 		if (pattern.startsWith("file:") || pattern.startsWith("classpath:")) {
 			return pattern;
 		}
-		return "file:" + pattern;
+		if (pattern.startsWith("/")) {
+			return "file:" + pattern;
+		}
+		// Anchor relative patterns to the working directory. Without the "./", a leading
+		// wildcard (e.g. "**/surefire-reports/*.xml" — the documented form) leaves
+		// Spring's
+		// resolver with a root dir of bare "file:", which it rejects as an invalid URI
+		// and
+		// matches nothing.
+		return "file:./" + pattern;
 	}
 
 }
