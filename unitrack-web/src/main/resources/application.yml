@@ -48,6 +48,13 @@ server:
   # Let in-flight ingests finish when the process is told to stop (e.g. a Kubernetes
   # rolling update sends SIGTERM); Spring stops accepting new requests, then drains.
   shutdown: graceful
+  tomcat:
+    # Tomcat 11 (Spring Boot 4) caps a multipart request at 10 parts by default. An ingest
+    # sends one part per report file — a normal suite easily has dozens of JUnit XMLs in a
+    # single request — so the default rejects them with "Maximum upload size exceeded". Raise
+    # it well above any real suite (the CLI shards by size, not count, so one request can
+    # carry many small files).
+    max-part-count: 10000
 
 management:
   endpoints:
