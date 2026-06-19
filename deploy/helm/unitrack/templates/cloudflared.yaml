@@ -1,0 +1,54 @@
+{{- if .Values.cloudflared.enabled }}
+# In-cluster Cloudflare Tunnel connector. It dials outbound to Cloudflare's edge and forwards the
+# public hostname straight to the unitrack Service — no ingress, no NAT, no cross-subnet hop, which
+# avoids the connection resets a docker-host connector hits on large upload bodies. The tunnel +
+# its ingress rules are managed in Cloudflare (config_src=cloudflare); this only runs the connector.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "unitrack.fullname" . }}-cloudflared
+  labels:
+    {{- include "unitrack.labels" . | nindent 4 }}
+    app.kubernetes.io/component: cloudflared
+spec:
+  replicas: {{ .Values.cloudflared.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "unitrack.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: cloudflared
+  template:
+    metadata:
+      labels:
+        {{- include "unitrack.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: cloudflared
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: cloudflared
+          image: {{ .Values.cloudflared.image | quote }}
+          args: ["tunnel", "--no-autoupdate", "--metrics", "0.0.0.0:2000", "run"]
+          env:
+            - name: TUNNEL_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ required "cloudflared.tokenSecret is required" .Values.cloudflared.tokenSecret }}
+                  key: {{ .Values.cloudflared.tokenSecretKey }}
+          livenessProbe:
+            httpGet:
+              path: /ready
+              port: 2000
+            periodSeconds: 10
+            failureThreshold: 3
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            {{- toYaml .Values.cloudflared.resources | nindent 12 }}
+{{- end }}

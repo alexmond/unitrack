@@ -106,6 +106,23 @@ nodeSelector: {}
 tolerations: []
 affinity: {}
 
+# Optional in-cluster Cloudflare Tunnel connector. When enabled, it forwards a public hostname
+# straight to the unitrack Service (no ingress / NAT hop) — the robust path for large uploads.
+# Create the tunnel in Cloudflare (config_src=cloudflare, ingress → http://<svc>:8080) and a Secret
+# holding its connector token out-of-band, then point tokenSecret at it.
+cloudflared:
+  enabled: false
+  image: cloudflare/cloudflared:2025.2.1
+  replicaCount: 2
+  tokenSecret: ""
+  tokenSecretKey: token
+  resources:
+    requests:
+      cpu: 25m
+      memory: 32Mi
+    limits:
+      memory: 128Mi
+
 # Extra free-form env passed straight to the app container (e.g. SPRING_MAIL_HOST).
 extraEnv: []
 #  - name: SPRING_MAIL_HOST
