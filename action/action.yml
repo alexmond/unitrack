@@ -67,3 +67,9 @@ inputs:
 runs:
   using: docker
   image: Dockerfile
+  # Docker drops env vars whose names contain a hyphen, so GitHub's INPUT_SOFT-FAIL etc. never
+  # reach the container. Re-expose the hyphenated inputs under underscore names the entrypoint reads.
+  env:
+    INPUT_SOFT_FAIL: ${{ inputs.soft-fail }}
+    INPUT_DRY_RUN: ${{ inputs.dry-run }}
+    INPUT_RUN_KEY: ${{ inputs.run-key }}
