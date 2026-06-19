@@ -51,6 +51,10 @@ ingress:
   annotations: {}
   #   traefik.ingress.kubernetes.io/router.entrypoints: websecure
   host: unitrack.local
+  # Additional hostnames routed to the same service (e.g. a public hostname fronted by a
+  # Cloudflare Tunnel). Listing the real host here — rather than rewriting Host at the tunnel —
+  # lets the app emit correct absolute URLs (login redirects, notification links) for that host.
+  extraHosts: []
   path: /
   pathType: Prefix
   tls: false
