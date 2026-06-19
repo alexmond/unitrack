@@ -30,11 +30,15 @@ class UploadCommand implements Callable<Integer> {
 	private static final long MAX_REQUEST_BYTES = 100L * 1024 * 1024;
 
 	/**
-	 * Per-shard target. Kept small (8 MB) because some ingress paths — e.g. a Cloudflare
-	 * Tunnel that NATs to a cross-subnet origin — reset connections on larger request
-	 * bodies; shards under ~10 MB traverse reliably.
+	 * Per-shard target (8 MB) — small shards cross a fronting proxy/CDN most reliably.
+	 * Paired with a brief pause between shards. Note a constrained free-tier CDN tunnel
+	 * may still cap the total upload (~tens of MB) regardless; scope very large suites or
+	 * upload coverage separately.
 	 */
 	private static final long SHARD_TARGET_BYTES = 8L * 1024 * 1024;
+
+	/** Brief pause between shards so a CDN/proxy doesn't rate-limit a rapid burst. */
+	private static final long SHARD_PAUSE_MS = 1000L;
 
 	@Option(names = "--url", defaultValue = "${env:UNITRACK_URL:-http://localhost:8080}",
 			description = "UniTrack server URL (env UNITRACK_URL).")
@@ -192,6 +196,9 @@ class UploadCommand implements Callable<Integer> {
 		try {
 			IngestResponse response = null;
 			for (int i = 0; i < batches.size(); i++) {
+				if (i > 0) {
+					pauseBetweenShards();
+				}
 				IngestResponse r = this.client.ingest(this.url, this.token, UploadClient.parseHeaders(this.headers),
 						fields, batches.get(i));
 				response = (response != null) ? response : r;
@@ -336,6 +343,15 @@ class UploadCommand implements Callable<Integer> {
 		fields.put("runKey", coalesce(this.runKey, ci.runKey()));
 		fields.put("ciProvider", coalesce(this.ciProvider, ci.ciProvider()));
 		return fields;
+	}
+
+	private static void pauseBetweenShards() {
+		try {
+			Thread.sleep(SHARD_PAUSE_MS);
+		}
+		catch (InterruptedException ex) {
+			Thread.currentThread().interrupt();
+		}
 	}
 
 	private static List<Resource> gzipAll(List<Resource> files) {
