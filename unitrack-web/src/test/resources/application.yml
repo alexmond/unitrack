@@ -16,6 +16,17 @@ spring:
     compose:
       enabled: false
 
+  servlet:
+    multipart:
+      max-file-size: 25MB
+      max-request-size: 100MB
+
+# Mirror the multipart part-count cap from the main application.yml (the test config shadows it):
+# Tomcat 11 defaults to 10 parts per request, which rejects a normal multi-file ingest.
+server:
+  tomcat:
+    max-part-count: 10000
+
 # Mirror the actuator exposure from the main application.yml (the test config shadows it).
 management:
   endpoints:
