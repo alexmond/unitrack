@@ -176,4 +176,58 @@ public class ReportingService {
 			.toList();
 	}
 
+	/**
+	 * Per-module line/branch totals for a coverage report. A multi-module project is
+	 * uploaded flat (no module concept), so the module is derived from the package tree:
+	 * the segment that follows the longest package prefix common to every file (e.g.
+	 * {@code …builder/<module>/…}). Returns at most one entry for a single-module
+	 * project, so callers can hide the view.
+	 */
+	public List<ModuleCoverage> moduleCoverage(Long reportId) {
+		List<CoverageFileEntry> files = coverageFiles.findByReportIdOrderByLineMissedDescPackageNameAsc(reportId);
+		if (files.isEmpty()) {
+			return List.of();
+		}
+		List<String[]> segments = files.stream().map((f) -> splitPackage(f.getPackageName())).toList();
+		int prefix = commonPrefixLength(segments);
+		Map<String, int[]> byModule = new TreeMap<>();
+		for (int i = 0; i < files.size(); i++) {
+			CoverageFileEntry f = files.get(i);
+			String[] s = segments.get(i);
+			String module = (s.length > prefix) ? s[prefix] : "(root)";
+			int[] a = byModule.computeIfAbsent(module, (k) -> new int[5]);
+			a[0] += f.getLineCovered();
+			a[1] += f.getLineMissed();
+			a[2] += f.getBranchCovered();
+			a[3] += f.getBranchMissed();
+			a[4] += 1;
+		}
+		return byModule.entrySet()
+			.stream()
+			.map((e) -> new ModuleCoverage(e.getKey(), e.getValue()[0], e.getValue()[1], e.getValue()[2],
+					e.getValue()[3], e.getValue()[4]))
+			.toList();
+	}
+
+	private static String[] splitPackage(String pkg) {
+		return (pkg == null || pkg.isBlank()) ? new String[0] : pkg.split("[./]+");
+	}
+
+	/** The number of leading package segments shared by every file. */
+	private static int commonPrefixLength(List<String[]> segments) {
+		int len = Integer.MAX_VALUE;
+		for (String[] s : segments) {
+			len = Math.min(len, s.length);
+		}
+		String[] first = segments.get(0);
+		for (int i = 0; i < len; i++) {
+			for (String[] s : segments) {
+				if (!first[i].equals(s[i])) {
+					return i;
+				}
+			}
+		}
+		return len;
+	}
+
 }

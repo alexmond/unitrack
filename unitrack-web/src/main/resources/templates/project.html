@@ -72,6 +72,23 @@
         <p class="muted" th:if="${runs.isEmpty()}">No runs to chart yet.</p>
     </div>
 
+    <div th:if="${modules != null and modules.size() > 1}">
+        <h2>Coverage by module <span class="muted">(latest run)</span></h2>
+        <table class="table table-hover align-middle">
+            <thead>
+            <tr><th>Module</th><th class="num">Line coverage</th><th class="num">Lines</th><th class="num">Files</th></tr>
+            </thead>
+            <tbody>
+            <tr th:each="m : ${modules}">
+                <td><code class="mono" th:text="${m.name()}">core</code></td>
+                <td class="num pct" th:text="${#numbers.formatDecimal(m.linePct(),1,1)} + '%'">0%</td>
+                <td class="num muted" th:text="${m.lineCovered()} + '/' + ${m.lineTotal()}">0/0</td>
+                <td class="num muted" th:text="${m.files()}">0</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
     <div th:if="${flags.size() > 1}">
         <h2>Coverage by flag</h2>
         <table class="table table-hover align-middle">

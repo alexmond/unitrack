@@ -121,6 +121,8 @@ public class DashboardController {
 		model.addAttribute("branchSummaries", branchSummaries);
 		model.addAttribute("runs", runs);
 		model.addAttribute("flags", reporting.flagSummaries(id));
+		model.addAttribute("modules",
+				reporting.latestCoverage(id).map((c) -> reporting.moduleCoverage(c.getId())).orElse(List.of()));
 		model.addAttribute("trendLabels", toJson(labels(trend.stream().map(TestRun::getShortSha).toList())));
 		model.addAttribute("trendPassRate", toJson(trend.stream().map((r) -> round(r.passRate())).toList()));
 		model.addAttribute("trendCoverage", toJson(trend.stream().map(TestRun::getLineCoveragePct).toList()));
@@ -190,6 +192,7 @@ public class DashboardController {
 		model.addAttribute("coverage", coverage.orElse(null));
 		List<?> files = coverage.map((c) -> reporting.coverageFiles(c.getId(), COVERAGE_FILE_LIMIT)).orElse(List.of());
 		model.addAttribute("coverageFiles", files);
+		model.addAttribute("modules", coverage.map((c) -> reporting.moduleCoverage(c.getId())).orElse(List.of()));
 		model.addAttribute("coverageDiff", coverageDiff.diff(id).orElse(null));
 		model.addAttribute("slowest", performance.slowestInRun(id, SLOWEST_IN_RUN_LIMIT));
 		String username = access.currentUsername();
