@@ -18,6 +18,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -70,6 +73,19 @@ public class ReportingService {
 			return recentRuns(projectId, limit);
 		}
 		return runs.findByProjectIdAndBranchOrderByCreatedAtDesc(projectId, branch, PageRequest.ofSize(limit));
+	}
+
+	/**
+	 * The latest two runs of every project, grouped by project id (newest first) — the
+	 * board's batch fetch, so it doesn't query runs once per project.
+	 */
+	public Map<Long, List<TestRun>> latestRunsByProject() {
+		Map<Long, List<TestRun>> byProject = new HashMap<>();
+		for (TestRun r : runs.findLatestTwoRunsPerProject()) {
+			byProject.computeIfAbsent(r.getProject().getId(), (k) -> new ArrayList<>()).add(r);
+		}
+		byProject.values().forEach((list) -> list.sort(Comparator.comparing(TestRun::getCreatedAt).reversed()));
+		return byProject;
 	}
 
 	/** Oldest first — for trend charts. */

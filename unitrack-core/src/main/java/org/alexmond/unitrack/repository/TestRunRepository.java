@@ -14,6 +14,20 @@ public interface TestRunRepository extends JpaRepository<TestRun, Long> {
 
 	List<TestRun> findByProjectIdOrderByCreatedAtDesc(Long projectId, Pageable pageable);
 
+	/**
+	 * The latest two runs of every project in one query — the board's batch fetch (avoids
+	 * a per-project query). Returns rows for all projects that have runs; group by
+	 * project in memory. The extra {@code rn} column is ignored by the entity mapping.
+	 */
+	@Query(nativeQuery = true, value = """
+			SELECT z.* FROM (
+			    SELECT t.*, ROW_NUMBER() OVER (PARTITION BY t.project_id ORDER BY t.created_at DESC, t.id DESC) AS rn
+			    FROM test_run t
+			) z
+			WHERE z.rn <= 2
+			""")
+	List<TestRun> findLatestTwoRunsPerProject();
+
 	List<TestRun> findByProjectIdOrderByCreatedAtAsc(Long projectId, Pageable pageable);
 
 	/** Recent runs on a single branch, newest first — for branch-scoped Overview. */

@@ -46,6 +46,18 @@ public class FlakyTestService {
 		return flakyTests.findFlakyStats(projectId).size();
 	}
 
+	/**
+	 * Flaky-test counts for every project in one query — the board's batch fetch (avoids
+	 * running the detection query once per project). Projects with no flaky tests map to
+	 * 0 via the caller.
+	 */
+	@Transactional(readOnly = true)
+	public Map<Long, Long> flakyCountsByProject() {
+		Map<Long, Long> counts = new HashMap<>();
+		flakyTests.flakyCountsPerProject().forEach((c) -> counts.put(c.getProjectId(), c.getCnt()));
+		return counts;
+	}
+
 	private FlakyTestView toView(FlakyStat stat, Map<String, FlakyTest> stored) {
 		FlakyTest ft = stored.get(key(stat.getClassName(), stat.getName()));
 		FlakyStatus status = (ft != null) ? ft.getStatus() : FlakyStatus.ACTIVE;
