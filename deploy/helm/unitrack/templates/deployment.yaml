@@ -24,6 +24,9 @@ spec:
         {{- end }}
       labels:
         {{- include "unitrack.selectorLabels" . | nindent 8 }}
+        # Distinguishes the app pods from the cloudflared pods (which share the name/instance
+        # selector labels) so the Service targets only the app — see service.yaml.
+        app.kubernetes.io/component: web
         {{- with .Values.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
