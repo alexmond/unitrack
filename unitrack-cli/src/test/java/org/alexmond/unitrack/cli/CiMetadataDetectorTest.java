@@ -23,9 +23,11 @@ class CiMetadataDetectorTest {
 
 	@Test
 	void githubPushBuildsMetadataFromEnv() {
-		CiMetadata m = detect(Map.of("GITHUB_ACTIONS", "true", "GITHUB_REPOSITORY", "octo/myapp", "GITHUB_SERVER_URL",
-				"https://github.com", "GITHUB_RUN_ID", "99", "GITHUB_RUN_ATTEMPT", "2", "GITHUB_EVENT_NAME", "push",
-				"GITHUB_REF_NAME", "main", "GITHUB_SHA", "abc123"));
+		CiMetadata m = detect(Map.ofEntries(Map.entry("GITHUB_ACTIONS", "true"),
+				Map.entry("GITHUB_REPOSITORY", "octo/myapp"), Map.entry("GITHUB_SERVER_URL", "https://github.com"),
+				Map.entry("GITHUB_RUN_ID", "99"), Map.entry("GITHUB_RUN_NUMBER", "42"),
+				Map.entry("GITHUB_RUN_ATTEMPT", "2"), Map.entry("GITHUB_EVENT_NAME", "push"),
+				Map.entry("GITHUB_REF_NAME", "main"), Map.entry("GITHUB_SHA", "abc123")));
 
 		assertThat(m.ciProvider()).isEqualTo("github-actions");
 		assertThat(m.project()).isEqualTo("myapp");
@@ -33,6 +35,8 @@ class CiMetadataDetectorTest {
 		assertThat(m.commit()).isEqualTo("abc123");
 		assertThat(m.repoUrl()).isEqualTo("https://github.com/octo/myapp");
 		assertThat(m.buildUrl()).isEqualTo("https://github.com/octo/myapp/actions/runs/99");
+		// The friendly run number (not the opaque run id) is the displayed build name.
+		assertThat(m.buildName()).isEqualTo("42");
 		assertThat(m.runKey()).isEqualTo("gha-99.2");
 	}
 
@@ -54,14 +58,15 @@ class CiMetadataDetectorTest {
 	@Test
 	void gitlabUsesCiVars() {
 		CiMetadata m = detect(Map.of("GITLAB_CI", "true", "CI_PROJECT_NAME", "svc", "CI_COMMIT_SHA", "sha1",
-				"CI_COMMIT_REF_NAME", "dev", "CI_PIPELINE_ID", "321", "CI_JOB_URL", "https://gl/job/1",
-				"CI_PROJECT_URL", "https://gl/group/svc"));
+				"CI_COMMIT_REF_NAME", "dev", "CI_PIPELINE_ID", "321", "CI_PIPELINE_IID", "7", "CI_JOB_URL",
+				"https://gl/job/1", "CI_PROJECT_URL", "https://gl/group/svc"));
 
 		assertThat(m.ciProvider()).isEqualTo("gitlab-ci");
 		assertThat(m.project()).isEqualTo("svc");
 		assertThat(m.commit()).isEqualTo("sha1");
 		assertThat(m.branch()).isEqualTo("dev");
 		assertThat(m.buildUrl()).isEqualTo("https://gl/job/1");
+		assertThat(m.buildName()).isEqualTo("7");
 		assertThat(m.runKey()).isEqualTo("gitlab-321");
 	}
 

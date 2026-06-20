@@ -41,7 +41,9 @@ class IngestIntegrationTest {
 						.file(new MockMultipartFile("jacoco", "jacoco.xml", "text/xml", jacoco))
 						.param("project", "ingest-demo")
 						.param("branch", "main")
-						.param("commit", "abcdef1234567890"))
+						.param("commit", "abcdef1234567890")
+						.param("buildUrl", "https://ci.example/run/1")
+						.param("buildName", "123"))
 			.andExpect(status().isCreated())
 			.andExpect(jsonPath("$.project").value("ingest-demo"))
 			.andExpect(jsonPath("$.total").value(4))
@@ -75,7 +77,9 @@ class IngestIntegrationTest {
 			.andExpect(content().string(containsString("Recent runs")));
 		mvc.perform(get("/runs/{id}", runId))
 			.andExpect(status().isOk())
-			.andExpect(content().string(containsString("Coverage by file")));
+			.andExpect(content().string(containsString("Coverage by file")))
+			// The discovered build number is shown as a deep link on the run page.
+			.andExpect(content().string(containsString("build #123")));
 	}
 
 	@Test

@@ -19,6 +19,7 @@ set -- upload
 [ -n "${INPUT_BRANCH:-}" ] && set -- "$@" --branch "$INPUT_BRANCH"
 [ -n "${INPUT_COMMIT:-}" ] && set -- "$@" --commit "$INPUT_COMMIT"
 [ -n "${INPUT_BUILD:-}" ] && set -- "$@" --build "$INPUT_BUILD"
+[ -n "${INPUT_BUILD_NAME:-}" ] && set -- "$@" --build-name "$INPUT_BUILD_NAME"
 [ -n "${INPUT_REPO:-}" ] && set -- "$@" --repo "$INPUT_REPO"
 [ -n "${INPUT_FLAG:-}" ] && set -- "$@" --flag "$INPUT_FLAG"
 [ -n "${INPUT_RUN_KEY:-}" ] && set -- "$@" --run-key "$INPUT_RUN_KEY"

@@ -8,9 +8,9 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Infers build metadata (project, branch, commit, build URL, repo, run key, PR number)
- * from the CI environment, so the uploader needs almost no flags. Supports GitHub
- * Actions, GitLab CI, Jenkins, CircleCI, Buildkite and Azure Pipelines; returns
+ * Infers build metadata (project, branch, commit, build URL, build number, repo, run key,
+ * PR number) from the CI environment, so the uploader needs almost no flags. Supports
+ * GitHub Actions, GitLab CI, Jenkins, CircleCI, Buildkite and Azure Pipelines; returns
  * {@link CiMetadata#empty()} when no known CI is detected.
  */
 @Component
@@ -70,40 +70,42 @@ class CiMetadataDetector {
 			branch = env("GITHUB_REF_NAME");
 			commit = env("GITHUB_SHA");
 		}
-		return new CiMetadata("github-actions", lastSegment(repo), branch, commit, buildUrl, repoUrl, runKey, prNumber);
+		return new CiMetadata("github-actions", lastSegment(repo), branch, commit, buildUrl, env("GITHUB_RUN_NUMBER"),
+				repoUrl, runKey, prNumber);
 	}
 
 	private CiMetadata gitlab() {
 		String runKey = (env("CI_PIPELINE_ID") != null) ? "gitlab-" + env("CI_PIPELINE_ID") : null;
 		String branch = coalesce(env("CI_MERGE_REQUEST_SOURCE_BRANCH_NAME"), env("CI_COMMIT_REF_NAME"));
 		return new CiMetadata("gitlab-ci", env("CI_PROJECT_NAME"), branch, env("CI_COMMIT_SHA"), env("CI_JOB_URL"),
-				env("CI_PROJECT_URL"), runKey, env("CI_MERGE_REQUEST_IID"));
+				env("CI_PIPELINE_IID"), env("CI_PROJECT_URL"), runKey, env("CI_MERGE_REQUEST_IID"));
 	}
 
 	private CiMetadata jenkins() {
 		String runKey = (env("BUILD_TAG") != null) ? "jenkins-" + env("BUILD_TAG") : null;
 		return new CiMetadata("jenkins", lastSegment(env("JOB_NAME")), stripOrigin(env("GIT_BRANCH")),
-				env("GIT_COMMIT"), env("BUILD_URL"), env("GIT_URL"), runKey, null);
+				env("GIT_COMMIT"), env("BUILD_URL"), env("BUILD_NUMBER"), env("GIT_URL"), runKey, null);
 	}
 
 	private CiMetadata circleci() {
 		String runKey = "circle-" + coalesce(env("CIRCLE_WORKFLOW_ID"), env("CIRCLE_BUILD_NUM"));
 		return new CiMetadata("circleci", env("CIRCLE_PROJECT_REPONAME"), env("CIRCLE_BRANCH"), env("CIRCLE_SHA1"),
-				env("CIRCLE_BUILD_URL"), env("CIRCLE_REPOSITORY_URL"), runKey, env("CIRCLE_PR_NUMBER"));
+				env("CIRCLE_BUILD_URL"), env("CIRCLE_BUILD_NUM"), env("CIRCLE_REPOSITORY_URL"), runKey,
+				env("CIRCLE_PR_NUMBER"));
 	}
 
 	private CiMetadata buildkite() {
 		String pr = env("BUILDKITE_PULL_REQUEST");
 		String runKey = (env("BUILDKITE_BUILD_ID") != null) ? "buildkite-" + env("BUILDKITE_BUILD_ID") : null;
 		return new CiMetadata("buildkite", env("BUILDKITE_PIPELINE_SLUG"), env("BUILDKITE_BRANCH"),
-				env("BUILDKITE_COMMIT"), env("BUILDKITE_BUILD_URL"), env("BUILDKITE_REPO"), runKey,
-				("false".equals(pr)) ? null : pr);
+				env("BUILDKITE_COMMIT"), env("BUILDKITE_BUILD_URL"), env("BUILDKITE_BUILD_NUMBER"),
+				env("BUILDKITE_REPO"), runKey, ("false".equals(pr)) ? null : pr);
 	}
 
 	private CiMetadata azure() {
 		String runKey = (env("BUILD_BUILDID") != null) ? "azure-" + env("BUILD_BUILDID") : null;
 		return new CiMetadata("azure-pipelines", env("BUILD_REPOSITORY_NAME"), env("BUILD_SOURCEBRANCHNAME"),
-				env("BUILD_SOURCEVERSION"), null, env("BUILD_REPOSITORY_URI"), runKey, null);
+				env("BUILD_SOURCEVERSION"), null, env("BUILD_BUILDNUMBER"), env("BUILD_REPOSITORY_URI"), runKey, null);
 	}
 
 	private PrInfo readPullRequest(String eventPath) {

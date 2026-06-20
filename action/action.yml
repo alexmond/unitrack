@@ -30,6 +30,9 @@ inputs:
   build:
     description: CI build URL (deep link to the job).
     required: false
+  build-name:
+    description: Friendly build identifier (e.g. CI run number). Auto-detected on known CI; set to override.
+    required: false
   repo:
     description: Repository URL.
     required: false
@@ -73,3 +76,4 @@ runs:
     INPUT_SOFT_FAIL: ${{ inputs.soft-fail }}
     INPUT_DRY_RUN: ${{ inputs.dry-run }}
     INPUT_RUN_KEY: ${{ inputs.run-key }}
+    INPUT_BUILD_NAME: ${{ inputs.build-name }}
