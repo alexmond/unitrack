@@ -28,6 +28,17 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- Caching for deterministic per-run read results (#280); Caffeine backs it for
+             bounded size + TTL via the Boot starter's auto-configuration. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-cache</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
+        </dependency>
+
         <!-- JSON parsing for the k6 perf-result format (version from the Spring Boot BOM). -->
         <dependency>
             <groupId>tools.jackson.core</groupId>

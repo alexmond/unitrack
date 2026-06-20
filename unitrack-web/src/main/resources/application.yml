@@ -23,6 +23,13 @@ spring:
   flyway:
     enabled: true
 
+  # Cache deterministic per-run read results (gate, regression, diffs, blame) — see #280.
+  # Caffeine: bounded + a short write-TTL backstop; merges evict the affected run explicitly.
+  cache:
+    type: caffeine
+    caffeine:
+      spec: maximumSize=2000,expireAfterWrite=10m
+
   docker:
     compose:
       enabled: true

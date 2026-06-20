@@ -15,6 +15,7 @@ import org.alexmond.unitrack.report.QualityGateResult.RuleResult;
 import org.alexmond.unitrack.repository.FlakyTestRepository;
 import org.alexmond.unitrack.repository.TestCaseResultRepository;
 import org.alexmond.unitrack.repository.TestRunRepository;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,6 +36,7 @@ public class QualityGateService {
 	private final ProjectSettingsService settings;
 
 	/** Evaluates the gate for a run, or empty if the run does not exist. */
+	@Cacheable(value = "gate", key = "#runId")
 	public Optional<QualityGateResult> evaluate(Long runId) {
 		return runs.findById(runId).map(this::evaluate);
 	}
@@ -61,6 +63,7 @@ public class QualityGateService {
 	}
 
 	/** Evaluates the gate for an already-loaded run (avoids a re-fetch by id). */
+	@Cacheable(value = "gateForRun", key = "#run.id")
 	public QualityGateResult evaluate(TestRun run) {
 		Long projectId = run.getProject().getId();
 		GateConfig cfg = settings.gateConfig(projectId);

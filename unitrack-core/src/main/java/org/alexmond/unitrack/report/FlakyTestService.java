@@ -12,6 +12,7 @@ import org.alexmond.unitrack.domain.FlakyTest;
 import org.alexmond.unitrack.domain.Project;
 import org.alexmond.unitrack.repository.FlakyTestRepository;
 import org.alexmond.unitrack.repository.ProjectRepository;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -56,7 +57,11 @@ public class FlakyTestService {
 	}
 
 	/** Sets the quarantine/resolution state for a test, creating the record if needed. */
+	// Quarantine state feeds the gate's new-failure rule, so changing it invalidates the
+	// cached
+	// gate/regression results (keyed by run id, so clear wholesale — #280).
 	@Transactional
+	@CacheEvict(value = { "gate", "gateForRun", "regression" }, allEntries = true)
 	public FlakyTest setStatus(Long projectId, String className, String name, FlakyStatus status, String note) {
 		FlakyTest ft = flakyTests.findOne(projectId, className, name).orElseGet(() -> {
 			Project project = projects.findById(projectId)

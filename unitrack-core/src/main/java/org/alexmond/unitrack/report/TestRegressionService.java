@@ -15,6 +15,7 @@ import org.alexmond.unitrack.domain.TestStatus;
 import org.alexmond.unitrack.report.TestRegressionResult.RegressedTest;
 import org.alexmond.unitrack.repository.TestCaseResultRepository;
 import org.alexmond.unitrack.repository.TestRunRepository;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,6 +38,7 @@ public class TestRegressionService {
 	private final ProjectSettingsService settings;
 
 	/** Computes the regression diff for a run, or empty if the run does not exist. */
+	@Cacheable(value = "regression", key = "#runId")
 	public Optional<TestRegressionResult> diff(Long runId) {
 		return this.runs.findById(runId).map(this::diff);
 	}

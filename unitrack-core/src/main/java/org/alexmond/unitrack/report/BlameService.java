@@ -13,6 +13,7 @@ import org.alexmond.unitrack.domain.TestRun;
 import org.alexmond.unitrack.domain.TestStatus;
 import org.alexmond.unitrack.repository.TestCaseResultRepository;
 import org.alexmond.unitrack.repository.TestRunRepository;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,6 +39,7 @@ public class BlameService {
 	/**
 	 * Blame entries for a run's current failures, keyed by case id — for the run page.
 	 */
+	@Cacheable(value = "blame", key = "#run.id")
 	public Map<Long, BlameEntry> blameByCaseId(TestRun run, List<TestCaseResult> failures) {
 		Map<Long, BlameEntry> byCase = new LinkedHashMap<>();
 		for (TestCaseResult c : failures) {
