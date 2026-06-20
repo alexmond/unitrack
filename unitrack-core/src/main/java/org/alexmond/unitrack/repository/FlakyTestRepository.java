@@ -54,4 +54,32 @@ public interface FlakyTestRepository extends JpaRepository<FlakyTest, Long> {
 			""")
 	List<FlakyStat> findFlakyStats(@Param("projectId") Long projectId);
 
+	/**
+	 * Flaky-test count per project in one pass — the board's batch query (avoids running
+	 * {@link #findFlakyStats} once per project). Same flakiness rule: a test is flaky
+	 * when it both passed and failed within a single commit. Projects with no flaky tests
+	 * are absent.
+	 */
+	@Query(nativeQuery = true, value = """
+			SELECT pcn.project_id AS projectId, COUNT(*) AS cnt
+			FROM (
+			    SELECT per.project_id
+			    FROM (
+			        SELECT tr.project_id AS project_id,
+			               tc.class_name AS class_name,
+			               tc.name AS name,
+			               MAX(CASE WHEN tc.status = 'PASSED' THEN 1 ELSE 0 END) AS passed_c,
+			               MAX(CASE WHEN tc.status IN ('FAILED', 'ERROR') THEN 1 ELSE 0 END) AS failed_c
+			        FROM test_case_result tc
+			        JOIN test_run tr ON tr.id = tc.run_id
+			        WHERE tr.commit_sha IS NOT NULL
+			        GROUP BY tr.project_id, tc.class_name, tc.name, tr.commit_sha
+			    ) per
+			    GROUP BY per.project_id, per.class_name, per.name
+			    HAVING SUM(per.passed_c * per.failed_c) > 0
+			) pcn
+			GROUP BY pcn.project_id
+			""")
+	List<ProjectFlakyCount> flakyCountsPerProject();
+
 }

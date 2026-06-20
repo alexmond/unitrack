@@ -2,6 +2,7 @@ package org.alexmond.unitrack.report;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.OptionalDouble;
 import java.util.function.Predicate;
@@ -37,10 +38,15 @@ public class ProjectHealthService {
 	 * filter).
 	 */
 	public List<ProjectHealth> board(Predicate<Project> include) {
+		// Two batch queries for the whole board instead of run + flaky queries per
+		// project.
+		Map<Long, List<TestRun>> runsByProject = this.reporting.latestRunsByProject();
+		Map<Long, Long> flakyByProject = this.flaky.flakyCountsByProject();
 		return this.reporting.listProjects()
 			.stream()
 			.filter(include)
-			.map(this::health)
+			.map((project) -> health(project, runsByProject.getOrDefault(project.getId(), List.of()),
+					flakyByProject.getOrDefault(project.getId(), 0L)))
 			.sorted(Comparator.comparingInt(ProjectHealthService::rank).thenComparing(ProjectHealth::projectName))
 			.toList();
 	}
@@ -57,10 +63,8 @@ public class ProjectHealthService {
 		return new BoardSummary(board.size(), failingGates, flakyTotal, avg.isPresent() ? avg.getAsDouble() : null);
 	}
 
-	private ProjectHealth health(Project project) {
+	private ProjectHealth health(Project project, List<TestRun> recent, long flakyCount) {
 		Long id = project.getId();
-		List<TestRun> recent = this.reporting.recentRuns(id, 2);
-		long flakyCount = this.flaky.flakyCount(id);
 		if (recent.isEmpty()) {
 			return new ProjectHealth(id, project.getName(), null, null, null, null, null, null, flakyCount, 0,
 					project.getVisibility());
