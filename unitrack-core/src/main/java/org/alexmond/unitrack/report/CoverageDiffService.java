@@ -18,6 +18,7 @@ import org.alexmond.unitrack.report.CoverageDiff.Kind;
 import org.alexmond.unitrack.repository.CoverageFileEntryRepository;
 import org.alexmond.unitrack.repository.CoverageReportRepository;
 import org.alexmond.unitrack.repository.TestRunRepository;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -46,6 +47,7 @@ public class CoverageDiffService {
 	 * Coverage diff for a run, or empty if the run, its coverage, or a baseline is
 	 * missing.
 	 */
+	@Cacheable(value = "coverageDiff", key = "#runId")
 	public Optional<CoverageDiff> diff(Long runId) {
 		return runs.findById(runId).flatMap(this::diff);
 	}

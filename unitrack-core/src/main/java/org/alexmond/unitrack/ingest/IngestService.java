@@ -15,7 +15,9 @@ import org.alexmond.unitrack.repository.TestRunRepository;
 import org.alexmond.unitrack.repository.TestSuiteResultRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -46,6 +48,12 @@ public class IngestService {
 	private final JUnitXmlParser junitParser;
 
 	private final CoverageParsers coverageParsers;
+
+	/**
+	 * Optional — present only in the web app where caching is enabled; absent in core
+	 * tests.
+	 */
+	private final ObjectProvider<CacheManager> cacheManager;
 
 	/**
 	 * Visibility assigned to auto-created projects on first ingest. Defaults to PRIVATE.
@@ -98,10 +106,33 @@ public class IngestService {
 			runs.save(run);
 		}
 
+		// A merge changed an existing run's totals/coverage, so its cached read results
+		// are stale.
+		if (merging) {
+			evictRunCaches(run.getId());
+		}
+
 		log.info("{} run {} for project '{}' ({} tests, {} failed, {} errors, {} uploads)",
 				merging ? "Merged into" : "Ingested", run.getId(), project.getName(), run.getTotalTests(),
 				run.getFailed(), run.getErrors(), run.getUploads());
 		return run;
+	}
+
+	/**
+	 * Drops the per-run read caches (gate/regression/diffs/blame) for a run whose data
+	 * changed.
+	 */
+	private void evictRunCaches(Long runId) {
+		CacheManager cm = this.cacheManager.getIfAvailable();
+		if (cm == null) {
+			return;
+		}
+		for (String name : List.of("gate", "gateForRun", "regression", "perfRegression", "coverageDiff", "blame")) {
+			var cache = cm.getCache(name);
+			if (cache != null) {
+				cache.evict(runId);
+			}
+		}
 	}
 
 	private Project findOrCreateProject(String name, String repoUrl) {

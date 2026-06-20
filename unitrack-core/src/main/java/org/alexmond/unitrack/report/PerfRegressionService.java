@@ -13,6 +13,7 @@ import org.alexmond.unitrack.domain.TestRun;
 import org.alexmond.unitrack.report.PerfRegressionResult.Slowdown;
 import org.alexmond.unitrack.repository.TestCaseResultRepository;
 import org.alexmond.unitrack.repository.TestRunRepository;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,6 +34,7 @@ public class PerfRegressionService {
 	private final PerformanceProperties props;
 
 	/** Slow-test regression diff for a run, or empty if the run does not exist. */
+	@Cacheable(value = "perfRegression", key = "#runId")
 	public Optional<PerfRegressionResult> diff(Long runId) {
 		return this.runs.findById(runId).map(this::diff);
 	}

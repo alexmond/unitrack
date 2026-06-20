@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.alexmond.unitrack.config.QualityGateProperties;
 import org.alexmond.unitrack.domain.ProjectSettings;
 import org.alexmond.unitrack.repository.ProjectSettingsRepository;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -56,7 +57,12 @@ public class ProjectSettingsService {
 	 * Saves per-project overrides; null values clear an override back to the global
 	 * default.
 	 */
+	// Gate config feeds the gate/regression/coverage-diff results, so changing it
+	// invalidates
+	// those caches for every run (they are keyed by run id, so clear them wholesale —
+	// #280).
 	@Transactional
+	@CacheEvict(value = { "gate", "gateForRun", "regression", "coverageDiff" }, allEntries = true)
 	public void save(Long projectId, String baseBranch, Double minLineCoverage, Double maxCoverageDropPct,
 			Boolean failOnNewFailures, Boolean ghEnabled, String ghContext, Boolean ghPrComment, Boolean glEnabled) {
 		ProjectSettings s = this.repo.findByProjectId(projectId).orElseGet(() -> new ProjectSettings(projectId));
