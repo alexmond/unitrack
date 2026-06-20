@@ -16,6 +16,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
@@ -167,6 +168,37 @@ class UploadCommandTest {
 		assertThat(c.call()).isEqualTo(ExitCodes.OK); // gzip shrinks it under the
 														// per-file cap
 		verify(this.client).ingest(any(), any(), any(), any(), any());
+	}
+
+	@Test
+	void moduleOfUsesTheDirectoryBeforeTarget() {
+		assertThat(UploadCommand.moduleOf(new FileSystemResource("/repo/builder-core/target/surefire-reports/T.xml")))
+			.isEqualTo("builder-core");
+		assertThat(UploadCommand.moduleOf(new FileSystemResource("/repo/target/site/jacoco/jacoco.xml")))
+			.isEqualTo("repo");
+		assertThat(UploadCommand.moduleOf(new FileSystemResource("/loose/file.xml"))).isEqualTo("(root)");
+	}
+
+	@Test
+	void splitByModuleUploadsEachModulePlusRollup(@TempDir Path dir) throws IOException {
+		Files.createDirectories(dir.resolve("modA/target/surefire-reports"));
+		Files.createDirectories(dir.resolve("modB/target/surefire-reports"));
+		Files.writeString(dir.resolve("modA/target/surefire-reports/TEST-a.xml"), "<testsuite/>");
+		Files.writeString(dir.resolve("modB/target/surefire-reports/TEST-b.xml"), "<testsuite/>");
+		given(this.client.ingest(any(), any(), any(), any(), any())).willReturn(new IngestResponse(1L));
+		UploadCommand c = command();
+		c.splitByModule = true;
+		c.junit = List.of(dir + "/**/target/surefire-reports/TEST-*.xml");
+
+		assertThat(c.call()).isEqualTo(ExitCodes.OK);
+
+		// Two modules as their own flags, plus the merged rollup under the default flag
+		// (null).
+		@SuppressWarnings("unchecked")
+		ArgumentCaptor<Map<String, String>> fields = ArgumentCaptor.forClass(Map.class);
+		verify(this.client, times(3)).ingest(any(), any(), any(), fields.capture(), any());
+		assertThat(fields.getAllValues()).extracting((f) -> f.get("flag"))
+			.containsExactlyInAnyOrder("modA", "modB", null);
 	}
 
 	@Test

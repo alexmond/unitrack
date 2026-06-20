@@ -62,6 +62,7 @@ fi
 
 [ "${INPUT_DRY_RUN:-false}" = "true" ] && set -- "$@" --dry-run
 [ "${INPUT_SOFT_FAIL:-false}" = "true" ] && set -- "$@" --soft-fail
+[ "${INPUT_SPLIT_BY_MODULE:-false}" = "true" ] && set -- "$@" --split-by-module
 
 # Extra HTTP headers, one "Name: Value" per line — e.g. Cloudflare Access service-token
 # headers (CF-Access-Client-Id / CF-Access-Client-Secret) when the server is behind Zero Trust.

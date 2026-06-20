@@ -33,6 +33,10 @@ inputs:
   build-name:
     description: Friendly build identifier (e.g. CI run number). Auto-detected on known CI; set to override.
     required: false
+  split-by-module:
+    description: Upload each module (dir before /target/) as its own coverage flag/component, plus a rollup.
+    required: false
+    default: "false"
   repo:
     description: Repository URL.
     required: false
@@ -77,3 +81,4 @@ runs:
     INPUT_DRY_RUN: ${{ inputs.dry-run }}
     INPUT_RUN_KEY: ${{ inputs.run-key }}
     INPUT_BUILD_NAME: ${{ inputs.build-name }}
+    INPUT_SPLIT_BY_MODULE: ${{ inputs.split-by-module }}

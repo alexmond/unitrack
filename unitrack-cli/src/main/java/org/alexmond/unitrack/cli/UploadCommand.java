@@ -107,6 +107,11 @@ class UploadCommand implements Callable<Integer> {
 					+ "keeping large multi-module uploads under request-size limits. --no-gzip to disable.")
 	boolean gzip = true;
 
+	@Option(names = "--split-by-module",
+			description = "Upload each module (the directory before /target/) as its own coverage flag/component, "
+					+ "plus a merged rollup — so a multi-module project shows per-module tests, coverage and gates.")
+	boolean splitByModule;
+
 	private final UploadClient client;
 
 	private final ReportResolver resolver;
@@ -145,24 +150,33 @@ class UploadCommand implements Callable<Integer> {
 			System.out.println("Detected CI: " + ci.ciProvider());
 		}
 
-		Map<String, String> fields = buildFields(resolvedProject, ci);
-		// Gzip each report (the server transparently inflates). Done before the size
-		// check so
-		// the limits apply to what is actually sent — a large but compressible upload
-		// fits.
-		if (this.gzip) {
-			junitFiles = gzipAll(junitFiles);
-			jacocoFiles = gzipAll(jacocoFiles);
-			perfFiles = gzipAll(perfFiles);
+		if (this.splitByModule) {
+			return uploadPerModule(resolvedProject, ci, junitFiles, jacocoFiles, perfFiles);
 		}
-		Map<String, List<Resource>> files = new LinkedHashMap<>();
-		files.put("junit", junitFiles);
-		files.put("jacoco", jacocoFiles);
-		files.put("perf", perfFiles);
+		return uploadFileSet(buildFields(resolvedProject, ci), junitFiles, jacocoFiles, perfFiles);
+	}
 
-		List<Resource> allFiles = new ArrayList<>(junitFiles);
-		allFiles.addAll(jacocoFiles);
-		allFiles.addAll(perfFiles);
+	/**
+	 * Gzips (if enabled), enforces the per-file cap, shards on the request-size limit,
+	 * and POSTs one logical run described by {@code fields} (its
+	 * {@code flag}/{@code runKey} already set).
+	 */
+	private Integer uploadFileSet(Map<String, String> fields, List<Resource> junitFiles, List<Resource> jacocoFiles,
+			List<Resource> perfFiles) {
+		// Gzip each report (the server transparently inflates). Done before the size
+		// check so the
+		// limits apply to what is actually sent — a large but compressible upload fits.
+		List<Resource> junitOut = this.gzip ? gzipAll(junitFiles) : junitFiles;
+		List<Resource> jacocoOut = this.gzip ? gzipAll(jacocoFiles) : jacocoFiles;
+		List<Resource> perfOut = this.gzip ? gzipAll(perfFiles) : perfFiles;
+		Map<String, List<Resource>> files = new LinkedHashMap<>();
+		files.put("junit", junitOut);
+		files.put("jacoco", jacocoOut);
+		files.put("perf", perfOut);
+
+		List<Resource> allFiles = new ArrayList<>(junitOut);
+		allFiles.addAll(jacocoOut);
+		allFiles.addAll(perfOut);
 		// A single file over the per-file cap can't be split — hard fail.
 		String tooBig = perFileError(allFiles, MAX_FILE_BYTES);
 		if (tooBig != null) {
@@ -190,6 +204,84 @@ class UploadCommand implements Callable<Integer> {
 					mb(SHARD_TARGET_BYTES), batches.size(), fields.get("runKey"));
 		}
 		return upload(batches, fields);
+	}
+
+	/**
+	 * Uploads each module (grouped by the directory before {@code /target/}) as its own
+	 * coverage flag, then a merged rollup under the default flag. The rollup is uploaded
+	 * LAST so it is the project's latest run — keeping the dashboard headline
+	 * whole-project while each module appears as a component with its own tests, coverage
+	 * and gate. A distinct run key per component stops the server merging them into one
+	 * run.
+	 */
+	private Integer uploadPerModule(String project, CiMetadata ci, List<Resource> junit, List<Resource> jacoco,
+			List<Resource> perf) {
+		Map<String, ModuleGroup> byModule = groupByModule(junit, jacoco, perf);
+		if (byModule.size() <= 1) {
+			System.out.println("Only one module detected — uploading as a single run.");
+			return uploadFileSet(buildFields(project, ci), junit, jacoco, perf);
+		}
+		String base = coalesce(this.runKey, ci.runKey());
+		System.out.printf("Splitting into %d module component(s) + a rollup.%n", byModule.size());
+		int worst = ExitCodes.OK;
+		for (Map.Entry<String, ModuleGroup> e : byModule.entrySet()) {
+			String module = e.getKey();
+			ModuleGroup g = e.getValue();
+			Map<String, String> fields = buildFields(project, ci);
+			fields.put("flag", module);
+			fields.put("runKey", (base != null) ? base + "::" + module : null);
+			System.out.printf("→ module '%s'%n", module);
+			worst = Math.max(worst, uploadFileSet(fields, g.junit(), g.jacoco(), g.perf()));
+		}
+		Map<String, String> rollup = buildFields(project, ci);
+		rollup.put("runKey", (base != null) ? base + "::rollup" : null);
+		System.out.println("→ rollup (all modules)");
+		return Math.max(worst, uploadFileSet(rollup, junit, jacoco, perf));
+	}
+
+	private static Map<String, ModuleGroup> groupByModule(List<Resource> junit, List<Resource> jacoco,
+			List<Resource> perf) {
+		Map<String, List<Resource>[]> acc = new java.util.TreeMap<>();
+		index(acc, junit, 0);
+		index(acc, jacoco, 1);
+		index(acc, perf, 2);
+		Map<String, ModuleGroup> out = new java.util.TreeMap<>();
+		acc.forEach((module, lists) -> out.put(module, new ModuleGroup(lists[0], lists[1], lists[2])));
+		return out;
+	}
+
+	@SuppressWarnings("unchecked")
+	private static void index(Map<String, List<Resource>[]> acc, List<Resource> files, int slot) {
+		for (Resource r : files) {
+			List<Resource>[] lists = acc.computeIfAbsent(moduleOf(r),
+					(k) -> new List[] { new ArrayList<>(), new ArrayList<>(), new ArrayList<>() });
+			lists[slot].add(r);
+		}
+	}
+
+	/**
+	 * The module name for a report: the path segment immediately before {@code /target/}.
+	 */
+	static String moduleOf(Resource r) {
+		String path;
+		try {
+			path = r.getURI().getPath();
+		}
+		catch (IOException | RuntimeException ex) {
+			path = r.getFilename();
+		}
+		if (path == null) {
+			return "(root)";
+		}
+		path = path.replace('\\', '/');
+		int target = path.indexOf("/target/");
+		if (target < 0) {
+			return "(root)";
+		}
+		String beforeTarget = path.substring(0, target);
+		int slash = beforeTarget.lastIndexOf('/');
+		String module = (slash >= 0) ? beforeTarget.substring(slash + 1) : beforeTarget;
+		return module.isBlank() ? "(root)" : module;
 	}
 
 	/**
@@ -389,6 +481,10 @@ class UploadCommand implements Callable<Integer> {
 	 * A single multipart part: its form field
 	 * ({@code junit}/{@code jacoco}/{@code perf}), resource and size.
 	 */
+	/** Resolved reports grouped by the module they belong to. */
+	private record ModuleGroup(List<Resource> junit, List<Resource> jacoco, List<Resource> perf) {
+	}
+
 	private record Part(String field, Resource resource, long size) {
 	}
 
