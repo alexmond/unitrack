@@ -99,6 +99,8 @@ public class DashboardController {
 
 	private final io.micrometer.observation.ObservationRegistry observationRegistry;
 
+	private final java.util.concurrent.ExecutorService pageRenderExecutor;
+
 	/**
 	 * Times one section of a page render as a child observation ({@code unitrack.page}
 	 * with {@code page}/{@code section} tags) so the read-path breakdown is visible in
@@ -110,6 +112,17 @@ public class DashboardController {
 			.lowCardinalityKeyValue("page", page)
 			.lowCardinalityKeyValue("section", section)
 			.observe(work);
+	}
+
+	/**
+	 * Runs a timed, self-contained read section on the page pool so independent sections
+	 * execute concurrently (each service call opens its own read transaction). Only for
+	 * sections returning detached DTOs that read no lazy associations off-thread (#280).
+	 */
+	private <T> java.util.concurrent.CompletableFuture<T> async(String page, String section,
+			java.util.function.Supplier<T> work) {
+		return java.util.concurrent.CompletableFuture.supplyAsync(() -> timed(page, section, work),
+				this.pageRenderExecutor);
 	}
 
 	@GetMapping("/")
@@ -192,35 +205,51 @@ public class DashboardController {
 	@GetMapping("/runs/{id}")
 	public String run(@PathVariable Long id, Model model) {
 		TestRun run = access.requireReadRun(id);
+		Long projectId = run.getProject().getId();
 		model.addAttribute("run", run);
-		model.addAttribute("gate", timed("run", "gate", () -> qualityGate.evaluate(id).orElse(null)));
-		model.addAttribute("regression", timed("run", "regression", () -> regression.diff(id).orElse(null)));
-		model.addAttribute("perfRegression",
-				timed("run", "perfRegression", () -> perfRegression.diff(id).orElse(null)));
-		model.addAttribute("suites", timed("run", "suites", () -> reporting.suitesFor(id)));
-		List<TestCaseResult> failures = timed("run", "failedCases", () -> reporting.failedCasesFor(id));
-		model.addAttribute("failures", failures);
-		model.addAttribute("categories",
-				timed("run", "triage", () -> triage.categoryByCaseId(run.getProject().getId(), failures)));
-		model.addAttribute("owners",
-				timed("run", "owners", () -> ownership.ownerByCaseId(run.getProject().getId(), failures)));
-		model.addAttribute("blame", timed("run", "blame", () -> blame.blameByCaseId(run, failures)));
 
+		// Independent, DTO-returning sections run concurrently (each opens its own read
+		// tx).
+		var gateF = async("run", "gate", () -> qualityGate.evaluate(id).orElse(null));
+		var regressionF = async("run", "regression", () -> regression.diff(id).orElse(null));
+		var perfRegressionF = async("run", "perfRegression", () -> perfRegression.diff(id).orElse(null));
+		var coverageDiffF = async("run", "coverageDiff", () -> coverageDiff.diff(id).orElse(null));
+		var slowestF = async("run", "slowest", () -> performance.slowestInRun(id, SLOWEST_IN_RUN_LIMIT));
+
+		// failedCases is rendered and feeds triage/owners/blame; fetch it here, then
+		// those three
+		// (also DTO-returning, reading only the already-loaded scalar fields) run
+		// concurrently.
+		List<TestCaseResult> failures = timed("run", "failedCases", () -> reporting.failedCasesFor(id));
+		var triageF = async("run", "triage", () -> triage.categoryByCaseId(projectId, failures));
+		var ownersF = async("run", "owners", () -> ownership.ownerByCaseId(projectId, failures));
+		var blameF = async("run", "blame", () -> blame.blameByCaseId(run, failures));
+
+		// Entity-returning sections stay on the request thread (rendered under
+		// open-in-view).
+		model.addAttribute("suites", timed("run", "suites", () -> reporting.suitesFor(id)));
 		Optional<CoverageReport> coverage = timed("run", "coverage", () -> reporting.coverageFor(id));
 		model.addAttribute("coverage", coverage.orElse(null));
-		List<?> files = timed("run", "coverageFiles",
-				() -> coverage.map((c) -> reporting.coverageFiles(c.getId(), COVERAGE_FILE_LIMIT)).orElse(List.of()));
-		model.addAttribute("coverageFiles", files);
+		model.addAttribute("coverageFiles", timed("run", "coverageFiles",
+				() -> coverage.map((c) -> reporting.coverageFiles(c.getId(), COVERAGE_FILE_LIMIT)).orElse(List.of())));
 		model.addAttribute("modules", timed("run", "modules",
 				() -> coverage.map((c) -> reporting.moduleCoverage(c.getId())).orElse(List.of())));
-		model.addAttribute("coverageDiff", timed("run", "coverageDiff", () -> coverageDiff.diff(id).orElse(null)));
-		model.addAttribute("slowest",
-				timed("run", "slowest", () -> performance.slowestInRun(id, SLOWEST_IN_RUN_LIMIT)));
 		String username = access.currentUsername();
-		boolean canShare = username != null && membership.canWrite(username, run.getProject().getId());
+		boolean canShare = username != null && membership.canWrite(username, projectId);
 		model.addAttribute("canShare", canShare);
 		model.addAttribute("shareLinks",
 				timed("run", "shareLinks", () -> canShare ? shareLinks.listForRun(id) : List.of()));
+
+		// Join the concurrent sections.
+		model.addAttribute("failures", failures);
+		model.addAttribute("gate", gateF.join());
+		model.addAttribute("regression", regressionF.join());
+		model.addAttribute("perfRegression", perfRegressionF.join());
+		model.addAttribute("coverageDiff", coverageDiffF.join());
+		model.addAttribute("slowest", slowestF.join());
+		model.addAttribute("categories", triageF.join());
+		model.addAttribute("owners", ownersF.join());
+		model.addAttribute("blame", blameF.join());
 		return "run";
 	}
 
