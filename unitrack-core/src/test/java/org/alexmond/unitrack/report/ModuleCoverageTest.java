@@ -2,9 +2,9 @@ package org.alexmond.unitrack.report;
 
 import java.util.List;
 
-import org.alexmond.unitrack.domain.CoverageFileEntry;
 import org.alexmond.unitrack.repository.CoverageFileEntryRepository;
 import org.alexmond.unitrack.repository.CoverageReportRepository;
+import org.alexmond.unitrack.repository.PackageCoverage;
 import org.alexmond.unitrack.repository.ProjectRepository;
 import org.alexmond.unitrack.repository.TestCaseResultRepository;
 import org.alexmond.unitrack.repository.TestRunRepository;
@@ -20,8 +20,8 @@ import static org.mockito.BDDMockito.given;
 
 /**
  * Modules are derived from the package tree of a coverage report (no module concept at
- * ingest): the segment after the longest package prefix common to every file becomes the
- * module.
+ * ingest): the segment after the longest package prefix common to every package becomes
+ * the module. The input is the per-package SQL aggregate.
  */
 @ExtendWith(MockitoExtension.class)
 class ModuleCoverageTest {
@@ -47,15 +47,16 @@ class ModuleCoverageTest {
 	@InjectMocks
 	private ReportingService reporting;
 
-	private static CoverageFileEntry file(String pkg, int covered, int missed) {
-		return new CoverageFileEntry(null, pkg, "X.java", covered, missed, 0, 0);
+	/** One file in a package. */
+	private static PackageCoverage pkg(String name, long covered, long missed) {
+		return new Pkg(name, covered, missed, 1);
 	}
 
 	@Test
 	void groupsByModuleSegmentAfterCommonPrefix() {
-		given(coverageFiles.findByReportIdOrderByLineMissedDescPackageNameAsc(1L))
-			.willReturn(List.of(file("org/alexmond/builder/api", 10, 90), file("org/alexmond/builder/api/sub", 5, 5),
-					file("org/alexmond/builder/core", 80, 20), file("org/alexmond/builder/web", 0, 50)));
+		given(coverageFiles.aggregateByPackage(1L))
+			.willReturn(List.of(pkg("org/alexmond/builder/api", 10, 90), pkg("org/alexmond/builder/api/sub", 5, 5),
+					pkg("org/alexmond/builder/core", 80, 20), pkg("org/alexmond/builder/web", 0, 50)));
 
 		List<ModuleCoverage> mods = reporting.moduleCoverage(1L);
 
@@ -69,10 +70,45 @@ class ModuleCoverageTest {
 
 	@Test
 	void singleModuleCollapsesToOneEntrySoTheViewCanHide() {
-		given(coverageFiles.findByReportIdOrderByLineMissedDescPackageNameAsc(2L))
-			.willReturn(List.of(file("com/example/app", 1, 1), file("com/example/app", 2, 0)));
+		// Files in one package collapse to a single aggregate row → one (root) module.
+		given(coverageFiles.aggregateByPackage(2L)).willReturn(List.of(new Pkg("com/example/app", 3, 1, 2)));
 
 		assertThat(reporting.moduleCoverage(2L)).hasSize(1);
+	}
+
+	/** Test stand-in for the {@link PackageCoverage} projection. */
+	private record Pkg(String packageName, long lineCovered, long lineMissed, long files) implements PackageCoverage {
+
+		@Override
+		public String getPackageName() {
+			return this.packageName;
+		}
+
+		@Override
+		public long getLineCovered() {
+			return this.lineCovered;
+		}
+
+		@Override
+		public long getLineMissed() {
+			return this.lineMissed;
+		}
+
+		@Override
+		public long getBranchCovered() {
+			return 0;
+		}
+
+		@Override
+		public long getBranchMissed() {
+			return 0;
+		}
+
+		@Override
+		public long getFiles() {
+			return this.files;
+		}
+
 	}
 
 }

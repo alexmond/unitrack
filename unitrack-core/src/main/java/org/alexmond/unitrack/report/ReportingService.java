@@ -9,6 +9,7 @@ import org.alexmond.unitrack.domain.TestStatus;
 import org.alexmond.unitrack.domain.TestSuiteResult;
 import org.alexmond.unitrack.repository.CoverageFileEntryRepository;
 import org.alexmond.unitrack.repository.CoverageReportRepository;
+import org.alexmond.unitrack.repository.PackageCoverage;
 import org.alexmond.unitrack.repository.ProjectRepository;
 import org.alexmond.unitrack.repository.TestCaseResultRepository;
 import org.alexmond.unitrack.repository.TestRunRepository;
@@ -175,54 +176,61 @@ public class ReportingService {
 
 	/** Per-package line/branch totals for a coverage report, sorted by package name. */
 	public List<CoveragePackage> coveragePackages(Long reportId) {
-		Map<String, int[]> byPackage = new TreeMap<>();
-		for (CoverageFileEntry f : coverageFiles.findByReportIdOrderByLineMissedDescPackageNameAsc(reportId)) {
-			String pkg = (f.getPackageName() == null || f.getPackageName().isBlank()) ? "(default)"
-					: f.getPackageName();
-			int[] a = byPackage.computeIfAbsent(pkg, (k) -> new int[4]);
-			a[0] += f.getLineCovered();
-			a[1] += f.getLineMissed();
-			a[2] += f.getBranchCovered();
-			a[3] += f.getBranchMissed();
+		Map<String, long[]> byPackage = new TreeMap<>();
+		for (PackageCoverage p : coverageFiles.aggregateByPackage(reportId)) {
+			String pkg = (p.getPackageName() == null || p.getPackageName().isBlank()) ? "(default)"
+					: p.getPackageName();
+			byPackage.merge(pkg, sums(p), ReportingService::addSums);
 		}
 		return byPackage.entrySet()
 			.stream()
-			.map((e) -> new CoveragePackage(e.getKey(), e.getValue()[0], e.getValue()[1], e.getValue()[2],
-					e.getValue()[3]))
+			.map((e) -> new CoveragePackage(e.getKey(), (int) e.getValue()[0], (int) e.getValue()[1],
+					(int) e.getValue()[2], (int) e.getValue()[3]))
 			.toList();
 	}
 
 	/**
 	 * Per-module line/branch totals for a coverage report. A multi-module project is
 	 * uploaded flat (no module concept), so the module is derived from the package tree:
-	 * the segment that follows the longest package prefix common to every file (e.g.
+	 * the segment that follows the longest package prefix common to every package (e.g.
 	 * {@code …builder/<module>/…}). Returns at most one entry for a single-module
-	 * project, so callers can hide the view.
+	 * project, so callers can hide the view. Aggregated per package in SQL, not per file.
 	 */
 	public List<ModuleCoverage> moduleCoverage(Long reportId) {
-		List<CoverageFileEntry> files = coverageFiles.findByReportIdOrderByLineMissedDescPackageNameAsc(reportId);
-		if (files.isEmpty()) {
+		List<PackageCoverage> packages = coverageFiles.aggregateByPackage(reportId);
+		if (packages.isEmpty()) {
 			return List.of();
 		}
-		List<String[]> segments = files.stream().map((f) -> splitPackage(f.getPackageName())).toList();
+		List<String[]> segments = packages.stream().map((p) -> splitPackage(p.getPackageName())).toList();
 		int prefix = commonPrefixLength(segments);
-		Map<String, int[]> byModule = new TreeMap<>();
-		for (int i = 0; i < files.size(); i++) {
-			CoverageFileEntry f = files.get(i);
+		Map<String, long[]> byModule = new TreeMap<>();
+		for (int i = 0; i < packages.size(); i++) {
+			PackageCoverage p = packages.get(i);
 			String[] s = segments.get(i);
 			String module = (s.length > prefix) ? s[prefix] : "(root)";
-			int[] a = byModule.computeIfAbsent(module, (k) -> new int[5]);
-			a[0] += f.getLineCovered();
-			a[1] += f.getLineMissed();
-			a[2] += f.getBranchCovered();
-			a[3] += f.getBranchMissed();
-			a[4] += 1;
+			long[] a = byModule.computeIfAbsent(module, (k) -> new long[5]);
+			a[0] += p.getLineCovered();
+			a[1] += p.getLineMissed();
+			a[2] += p.getBranchCovered();
+			a[3] += p.getBranchMissed();
+			a[4] += p.getFiles();
 		}
 		return byModule.entrySet()
 			.stream()
-			.map((e) -> new ModuleCoverage(e.getKey(), e.getValue()[0], e.getValue()[1], e.getValue()[2],
-					e.getValue()[3], e.getValue()[4]))
+			.map((e) -> new ModuleCoverage(e.getKey(), (int) e.getValue()[0], (int) e.getValue()[1],
+					(int) e.getValue()[2], (int) e.getValue()[3], (int) e.getValue()[4]))
 			.toList();
+	}
+
+	private static long[] sums(PackageCoverage p) {
+		return new long[] { p.getLineCovered(), p.getLineMissed(), p.getBranchCovered(), p.getBranchMissed() };
+	}
+
+	private static long[] addSums(long[] a, long[] b) {
+		for (int i = 0; i < a.length; i++) {
+			a[i] += b[i];
+		}
+		return a;
 	}
 
 	private static String[] splitPackage(String pkg) {
