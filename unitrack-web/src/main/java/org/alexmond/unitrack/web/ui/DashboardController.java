@@ -97,6 +97,21 @@ public class DashboardController {
 
 	private final ShareLinkService shareLinks;
 
+	private final io.micrometer.observation.ObservationRegistry observationRegistry;
+
+	/**
+	 * Times one section of a page render as a child observation ({@code unitrack.page}
+	 * with {@code page}/{@code section} tags) so the read-path breakdown is visible in
+	 * metrics — the dashboard pages fan out across many services and we need to see which
+	 * dominate (#280).
+	 */
+	private <T> T timed(String page, String section, java.util.function.Supplier<T> work) {
+		return io.micrometer.observation.Observation.createNotStarted("unitrack.page", this.observationRegistry)
+			.lowCardinalityKeyValue("page", page)
+			.lowCardinalityKeyValue("section", section)
+			.observe(work);
+	}
+
 	@GetMapping("/")
 	public String index(Model model) {
 		String user = access.currentUsername();
@@ -178,27 +193,34 @@ public class DashboardController {
 	public String run(@PathVariable Long id, Model model) {
 		TestRun run = access.requireReadRun(id);
 		model.addAttribute("run", run);
-		model.addAttribute("gate", qualityGate.evaluate(id).orElse(null));
-		model.addAttribute("regression", regression.diff(id).orElse(null));
-		model.addAttribute("perfRegression", perfRegression.diff(id).orElse(null));
-		model.addAttribute("suites", reporting.suitesFor(id));
-		List<TestCaseResult> failures = reporting.failedCasesFor(id);
+		model.addAttribute("gate", timed("run", "gate", () -> qualityGate.evaluate(id).orElse(null)));
+		model.addAttribute("regression", timed("run", "regression", () -> regression.diff(id).orElse(null)));
+		model.addAttribute("perfRegression",
+				timed("run", "perfRegression", () -> perfRegression.diff(id).orElse(null)));
+		model.addAttribute("suites", timed("run", "suites", () -> reporting.suitesFor(id)));
+		List<TestCaseResult> failures = timed("run", "failedCases", () -> reporting.failedCasesFor(id));
 		model.addAttribute("failures", failures);
-		model.addAttribute("categories", triage.categoryByCaseId(run.getProject().getId(), failures));
-		model.addAttribute("owners", ownership.ownerByCaseId(run.getProject().getId(), failures));
-		model.addAttribute("blame", blame.blameByCaseId(run, failures));
+		model.addAttribute("categories",
+				timed("run", "triage", () -> triage.categoryByCaseId(run.getProject().getId(), failures)));
+		model.addAttribute("owners",
+				timed("run", "owners", () -> ownership.ownerByCaseId(run.getProject().getId(), failures)));
+		model.addAttribute("blame", timed("run", "blame", () -> blame.blameByCaseId(run, failures)));
 
-		Optional<CoverageReport> coverage = reporting.coverageFor(id);
+		Optional<CoverageReport> coverage = timed("run", "coverage", () -> reporting.coverageFor(id));
 		model.addAttribute("coverage", coverage.orElse(null));
-		List<?> files = coverage.map((c) -> reporting.coverageFiles(c.getId(), COVERAGE_FILE_LIMIT)).orElse(List.of());
+		List<?> files = timed("run", "coverageFiles",
+				() -> coverage.map((c) -> reporting.coverageFiles(c.getId(), COVERAGE_FILE_LIMIT)).orElse(List.of()));
 		model.addAttribute("coverageFiles", files);
-		model.addAttribute("modules", coverage.map((c) -> reporting.moduleCoverage(c.getId())).orElse(List.of()));
-		model.addAttribute("coverageDiff", coverageDiff.diff(id).orElse(null));
-		model.addAttribute("slowest", performance.slowestInRun(id, SLOWEST_IN_RUN_LIMIT));
+		model.addAttribute("modules", timed("run", "modules",
+				() -> coverage.map((c) -> reporting.moduleCoverage(c.getId())).orElse(List.of())));
+		model.addAttribute("coverageDiff", timed("run", "coverageDiff", () -> coverageDiff.diff(id).orElse(null)));
+		model.addAttribute("slowest",
+				timed("run", "slowest", () -> performance.slowestInRun(id, SLOWEST_IN_RUN_LIMIT)));
 		String username = access.currentUsername();
 		boolean canShare = username != null && membership.canWrite(username, run.getProject().getId());
 		model.addAttribute("canShare", canShare);
-		model.addAttribute("shareLinks", canShare ? shareLinks.listForRun(id) : List.of());
+		model.addAttribute("shareLinks",
+				timed("run", "shareLinks", () -> canShare ? shareLinks.listForRun(id) : List.of()));
 		return "run";
 	}
 
