@@ -83,6 +83,7 @@ public class IngestService {
 		else {
 			run = new TestRun(project, blankToNull(meta.branch()), meta.flag(), blankToNull(meta.commit()),
 					blankToNull(meta.buildUrl()), blankToNull(meta.ciProvider()));
+			run.setBuildName(blankToNull(meta.buildName()));
 			run.setRunKey(runKey);
 			run.setBaseBranch(blankToNull(meta.baseBranch()));
 			run.setPrNumber(meta.prNumber());

@@ -65,6 +65,10 @@ class UploadCommand implements Callable<Integer> {
 	@Option(names = "--build", description = "CI build URL (deep link to the job).")
 	String buildUrl;
 
+	@Option(names = "--build-name",
+			description = "Friendly build identifier (e.g. CI run number); shown as 'build #N'.")
+	String buildName;
+
 	@Option(names = "--repo", description = "Repository URL.")
 	String repoUrl;
 
@@ -338,6 +342,7 @@ class UploadCommand implements Callable<Integer> {
 		fields.put("branch", coalesce(this.branch, ci.branch()));
 		fields.put("commit", coalesce(this.commit, ci.commit()));
 		fields.put("buildUrl", coalesce(this.buildUrl, ci.buildUrl()));
+		fields.put("buildName", coalesce(this.buildName, ci.buildName()));
 		fields.put("repoUrl", coalesce(this.repoUrl, ci.repoUrl()));
 		fields.put("flag", this.flag);
 		fields.put("runKey", coalesce(this.runKey, ci.runKey()));

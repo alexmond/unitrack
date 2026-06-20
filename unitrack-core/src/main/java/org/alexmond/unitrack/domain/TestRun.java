@@ -43,6 +43,14 @@ public class TestRun {
 	@Column(name = "build_url")
 	private String buildUrl;
 
+	/**
+	 * Friendly build identifier from the CI run (e.g. GitHub's run number), shown as
+	 * "build #N".
+	 */
+	@Setter
+	@Column(name = "build_name")
+	private String buildName;
+
 	@Column(name = "ci_provider")
 	private String ciProvider;
 

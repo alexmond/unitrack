@@ -6,11 +6,13 @@ package org.alexmond.unitrack.ingest;
  * builds.
  */
 public record IngestRequest(String project, String repoUrl, String branch, String flag, String commit, String buildUrl,
-		String ciProvider, String runKey, String baseBranch, Integer prNumber) {
+		String buildName, String ciProvider, String runKey, String baseBranch, Integer prNumber) {
 
-	/** Backward-compatible constructor for ordinary (non-PR) builds. */
+	/**
+	 * Backward-compatible constructor for ordinary (non-PR) builds without a build name.
+	 */
 	public IngestRequest(String project, String repoUrl, String branch, String flag, String commit, String buildUrl,
 			String ciProvider, String runKey) {
-		this(project, repoUrl, branch, flag, commit, buildUrl, ciProvider, runKey, null, null);
+		this(project, repoUrl, branch, flag, commit, buildUrl, null, ciProvider, runKey, null, null);
 	}
 }

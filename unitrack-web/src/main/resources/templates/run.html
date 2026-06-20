@@ -26,7 +26,10 @@
         <code class="mono" th:text="${run.shortSha} ?: '—'">abc1234</code> ·
         <span th:text="${#temporals.format(run.createdAt, 'yyyy-MM-dd HH:mm')}">date</span>
         <span th:if="${run.uploads > 1}" class="muted" th:text="'· merged from ' + ${run.uploads} + ' uploads'"></span>
-        <a th:if="${run.buildUrl != null}" th:href="${run.buildUrl}">· build</a>
+        <a th:if="${run.buildUrl != null}" th:href="${run.buildUrl}"
+           th:text="${run.buildName != null} ? '· build #' + ${run.buildName} : '· build'">· build</a>
+        <span th:if="${run.buildUrl == null and run.buildName != null}" class="muted"
+              th:text="'· build #' + ${run.buildName}"></span>
     </p>
 
     <details class="share" th:if="${canShare}" th:open="${newShareUrl != null}">
