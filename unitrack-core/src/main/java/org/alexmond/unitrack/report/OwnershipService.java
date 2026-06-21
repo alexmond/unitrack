@@ -95,6 +95,26 @@ public class OwnershipService {
 		return scores;
 	}
 
+	/**
+	 * Cross-project owner accountability: each owner's failing + flaky counts summed over
+	 * the given projects (typically the ones the caller may read), sorted failing then
+	 * flaky descending — the global "who carries the failure/flaky debt" board.
+	 */
+	public List<OwnerScore> globalScorecard(List<Long> projectIds) {
+		Map<String, long[]> agg = new LinkedHashMap<>();
+		for (Long projectId : projectIds) {
+			for (OwnerScore s : scorecard(projectId)) {
+				long[] a = agg.computeIfAbsent(s.owner(), (k) -> new long[2]);
+				a[0] += s.failing();
+				a[1] += s.flaky();
+			}
+		}
+		List<OwnerScore> scores = new ArrayList<>();
+		agg.forEach((owner, counts) -> scores.add(new OwnerScore(owner, counts[0], counts[1])));
+		scores.sort(Comparator.comparingLong(OwnerScore::failing).thenComparingLong(OwnerScore::flaky).reversed());
+		return scores;
+	}
+
 	private static String ownerFor(String className, List<TestOwnerRule> ruleList) {
 		if (className == null) {
 			return null;
