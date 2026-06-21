@@ -115,6 +115,25 @@ public class OwnershipService {
 		return scores;
 	}
 
+	/**
+	 * Groups regressed (newly-failing) tests by their owner — for routing failure
+	 * notifications. Tests no rule matches (unassigned) are omitted, since there is no
+	 * one to route them to.
+	 */
+	public Map<String, List<String>> failuresByOwner(Long projectId,
+			List<TestRegressionResult.RegressedTest> failures) {
+		List<TestOwnerRule> ruleList = rules.findByProjectIdOrderByPriorityAscIdAsc(projectId);
+		Map<String, List<String>> byOwner = new LinkedHashMap<>();
+		for (TestRegressionResult.RegressedTest f : failures) {
+			String owner = ownerFor(f.className(), ruleList);
+			if (owner != null) {
+				byOwner.computeIfAbsent(owner, (k) -> new ArrayList<>())
+					.add(((f.className() != null) ? f.className() + "." : "") + f.name());
+			}
+		}
+		return byOwner;
+	}
+
 	private static String ownerFor(String className, List<TestOwnerRule> ruleList) {
 		if (className == null) {
 			return null;

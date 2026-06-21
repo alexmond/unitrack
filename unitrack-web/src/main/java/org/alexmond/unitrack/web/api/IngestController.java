@@ -77,6 +77,8 @@ public class IngestController {
 
 	private final GateFailureNotifier gateFailureNotifier;
 
+	private final org.alexmond.unitrack.web.notify.OwnerFailureNotifier ownerFailureNotifier;
+
 	private final AlertEventPublisher alertEvents;
 
 	private final LiveEventService liveEvents;
@@ -178,6 +180,7 @@ public class IngestController {
 		gitLab.publishStatus(run, gate, delta);
 		gitLab.publishMrNote(run, gate, delta, newFailures);
 		gateFailureNotifier.notifyIfFailed(run, gate);
+		ownerFailureNotifier.notifyOwners(run);
 		alertEvents.publishForRun(run, gate);
 		liveEvents.publish(run.getProject(), RunUpdate.of(run));
 	}
