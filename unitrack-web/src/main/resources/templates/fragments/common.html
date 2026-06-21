@@ -11,6 +11,7 @@
     <nav>
         <a th:href="@{/}">Projects</a>
         <a th:href="@{/status}">Status</a>
+        <a th:href="@{/owners}">Owners</a>
         <a th:if="${isAdmin}" th:href="@{/ops}">Ops</a>
         <a th:if="${isAdmin}" th:href="@{/audit}">Audit</a>
         <a th:if="${currentUser != null}" th:href="@{/profile}" th:text="${currentUser}">user</a>
