@@ -154,6 +154,7 @@ public class DashboardController {
 		model.addAttribute("trendLabels", toJson(labels(trend.stream().map(TestRun::getShortSha).toList())));
 		model.addAttribute("trendPassRate", toJson(trend.stream().map((r) -> round(r.passRate())).toList()));
 		model.addAttribute("trendCoverage", toJson(trend.stream().map(TestRun::getLineCoveragePct).toList()));
+		model.addAttribute("trendTests", toJson(trend.stream().map(TestRun::getTotalTests).toList()));
 		model.addAttribute("pullRequests", pullRequests.list(id));
 		model.addAttribute("uploadSnippet", uploadSnippet(project.getName()));
 		return "project";
