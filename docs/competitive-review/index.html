@@ -96,6 +96,42 @@
     code { background: var(--surface2); padding: 0.05rem 0.35rem; border-radius: 4px; font-size: 0.88em; }
     ol.checklist, ol { padding-left: 1.3rem; }
     .legend { font-size: 0.82rem; color: var(--muted); }
+    .gallery {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1rem; margin-top: 1rem;
+    }
+    figure { margin: 0; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    figure img { display: block; width: 100%; height: auto; }
+    figcaption { padding: 0.5rem 0.75rem; font-size: 0.78rem; color: var(--muted); border-top: 1px solid var(--border); }
+    figcaption strong { color: var(--text); font-weight: 600; }
+    .gallery figure[data-zoomable] { cursor: zoom-in; }
+    .gallery figure[data-zoomable]:hover { border-color: var(--accent); }
+    body.lightbox-open { overflow: hidden; }
+    .lightbox { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; }
+    .lightbox[hidden] { display: none !important; }
+    .lightbox-backdrop { position: absolute; inset: 0; background: rgba(5,8,14,0.92); backdrop-filter: blur(6px); }
+    .lightbox-panel { position: relative; z-index: 1; width: min(96vw, 1400px); height: min(94vh, 900px); display: flex; flex-direction: column; gap: 0.75rem; }
+    .lightbox-header { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+    .lightbox-app { flex: 1; font-size: 0.95rem; font-weight: 600; color: var(--text); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .lightbox-counter { font-size: 0.82rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .lightbox-btn { border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: 8px; padding: 0.45rem 0.85rem; font-size: 0.85rem; cursor: pointer; font-family: inherit; }
+    .lightbox-btn:hover { background: var(--surface2); border-color: var(--accent); }
+    .lightbox-stage { flex: 1; min-height: 0; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 0.5rem; }
+    .lightbox-nav { width: 2.75rem; height: 2.75rem; border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: 999px; font-size: 1.75rem; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0 0 0.1rem; }
+    .lightbox-nav:hover:not(:disabled) { background: var(--surface2); border-color: var(--accent); color: var(--accent); }
+    .lightbox-nav:disabled { opacity: 0.25; cursor: default; }
+    .lightbox-media-wrap { min-width: 0; min-height: 0; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.65rem; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 0.75rem; overflow: hidden; }
+    .lightbox-media-wrap img { max-width: 100%; max-height: calc(94vh - 8rem); width: auto; height: auto; object-fit: contain; border-radius: 6px; }
+    .lightbox-caption { margin: 0; font-size: 0.82rem; color: var(--muted); text-align: center; max-width: 100%; line-height: 1.4; }
+    .lightbox-caption strong { color: var(--text); }
+    @media (max-width: 700px) {
+      .lightbox-stage { grid-template-columns: 1fr; grid-template-rows: 1fr auto; }
+      .lightbox-nav { width: 2.25rem; height: 2.25rem; font-size: 1.4rem; }
+      .lightbox-prev, .lightbox-next { grid-row: 2; }
+      .lightbox-prev { justify-self: start; }
+      .lightbox-next { justify-self: end; }
+      .lightbox-media-wrap { grid-row: 1; }
+    }
     @media (max-width: 820px) {
       .layout { grid-template-columns: 1fr; }
       nav { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
@@ -108,6 +144,7 @@
   <nav>
     <h2>Review</h2>
     <a href="#summary">Summary</a>
+    <a href="#unitrack-ui">UniTrack UI</a>
     <a href="#verdict">Positioning verdict</a>
     <a href="#landscape">Category landscape</a>
     <a href="#matrix">Feature matrix</a>
@@ -154,6 +191,37 @@
           The only <strong>self-hosted, free, single-deploy</strong> tool that merges test history + coverage +
           flaky management <em>and</em> ships an AI-native MCP surface. No direct OSS peer occupies all four.
         </div>
+      </div>
+    </section>
+
+    <section id="unitrack-ui" class="tool-section">
+      <header>
+        <h3>UniTrack today — the product under review</h3>
+        <span class="meta">Self-hosted · live screenshots · click any shot for fullscreen</span>
+      </header>
+      <p class="meta">What the matrix below is comparing against: one self-hosted app covering board,
+        trends, coverage, failures and flaky management.</p>
+      <div class="gallery">
+        <figure>
+          <img src="../../doc/images/app/01-dashboard.png" alt="UniTrack project board" loading="lazy">
+          <figcaption><strong>Project board</strong> — health-at-a-glance across all projects (pass rate, coverage, status)</figcaption>
+        </figure>
+        <figure>
+          <img src="../../doc/images/app/02-project-trends.png" alt="UniTrack project trends" loading="lazy">
+          <figcaption><strong>Project trends</strong> — pass rate, coverage and test-count over time (single-flag series)</figcaption>
+        </figure>
+        <figure>
+          <img src="../../doc/images/app/04-run-failed.png" alt="UniTrack failed run detail" loading="lazy">
+          <figcaption><strong>Run detail</strong> — a failed run with failures, suites and coverage for that build</figcaption>
+        </figure>
+        <figure>
+          <img src="../../doc/images/app/05-flaky.png" alt="UniTrack flaky tests" loading="lazy">
+          <figcaption><strong>Flaky tests</strong> — detection + quarantine the SaaS rivals charge for</figcaption>
+        </figure>
+        <figure>
+          <img src="../../doc/images/app/03-performance.png" alt="UniTrack performance trends" loading="lazy">
+          <figcaption><strong>Performance</strong> — test duration trends &amp; slowest tests</figcaption>
+        </figure>
       </div>
     </section>
 
@@ -296,6 +364,14 @@
         <div class="win"><strong>UniTrack wins</strong> Free + truly self-hosted, unified with test history &amp; quarantine, MCP surface, JVM-native gate.</div>
         <div class="lose"><strong>Codecov wins</strong> Deeper coverage visualizations, mature PR comment UX, larger ecosystem &amp; integrations.</div>
       </div>
+      <div class="gallery">
+        <figure><img src="../../doc/images/codecov-coverage.jpg" alt="Codecov coverage report" loading="lazy"><figcaption><strong>Coverage report</strong> — patch + holistic coverage</figcaption></figure>
+        <figure><img src="../../doc/images/codecov-flags.png" alt="Codecov flags" loading="lazy"><figcaption><strong>Coverage flags</strong> — frontend/backend split (UniTrack parallel)</figcaption></figure>
+        <figure><img src="../../doc/images/codecov-components.png" alt="Codecov components" loading="lazy"><figcaption><strong>Components</strong> — component-filtered coverage</figcaption></figure>
+        <figure><img src="../../doc/images/codecov-test-analytics.jpg" alt="Codecov test analytics" loading="lazy"><figcaption><strong>Test Analytics</strong> — flaky detection encroaching on our turf</figcaption></figure>
+        <figure><img src="../../doc/images/codecov-source-coverage.png" alt="Codecov source coverage" loading="lazy"><figcaption><strong>Source overlay</strong> — line-level coverage</figcaption></figure>
+        <figure><img src="../../doc/images/codecov-github-checks.png" alt="Codecov GitHub checks" loading="lazy"><figcaption><strong>PR checks</strong> — line-by-line coverage check</figcaption></figure>
+      </div>
     </section>
 
     <section id="sonarqube" class="tool-section">
@@ -313,6 +389,10 @@
         <div class="lose"><strong>SonarQube wins</strong> Static analysis, security hotspots, brand recognition, already-installed footprint.</div>
       </div>
       <p class="meta">Positioning: <strong>complement, not replace</strong> — "Sonar watches your code, UniTrack watches your tests." Avoid head-on quality-gate framing.</p>
+      <div class="gallery">
+        <figure><img src="../../doc/images/sonarcloud-overview.png" alt="SonarQube project overview" loading="lazy"><figcaption><strong>Project health</strong> — Quality Gate Passed, coverage %, ratings</figcaption></figure>
+        <figure><img src="../../doc/images/sonarqube-tokens.png" alt="SonarQube tokens" loading="lazy"><figcaption><strong>API tokens</strong> — generate/expiry/revoke (UniTrack parallel)</figcaption></figure>
+      </div>
     </section>
 
     <section id="allure" class="tool-section">
@@ -328,6 +408,14 @@
       <div class="winlose">
         <div class="win"><strong>UniTrack wins</strong> Free server with persistent history, coverage, flaky + gates in one — TestOps capability without the license.</div>
         <div class="lose"><strong>Allure wins</strong> Richer single-run report aesthetics, test-case management, established adoption &amp; step/attachment detail.</div>
+      </div>
+      <div class="gallery">
+        <figure><img src="../../doc/images/allure-report-overview.png" alt="Allure Report overview" loading="lazy"><figcaption><strong>Overview dashboard</strong> — pass donut, trend, suites, categories</figcaption></figure>
+        <figure><img src="../../doc/images/allure-report-graphs.png" alt="Allure Report graphs" loading="lazy"><figcaption><strong>Trend graphs</strong> — status/severity/duration/retries</figcaption></figure>
+        <figure><img src="../../doc/images/allure-report-suites.png" alt="Allure Report suites" loading="lazy"><figcaption><strong>Suites tree</strong> — per-suite pass/fail</figcaption></figure>
+        <figure><img src="../../doc/images/allure-report-categories.png" alt="Allure Report categories" loading="lazy"><figcaption><strong>Defect categories</strong> — parallel to triage rules / clusters</figcaption></figure>
+        <figure><img src="../../doc/images/allure-testops-dashboard.png" alt="Allure TestOps dashboard" loading="lazy"><figcaption><strong>TestOps (paid)</strong> — configurable widget dashboard</figcaption></figure>
+        <figure><img src="../../doc/images/allure-testops-project.png" alt="Allure TestOps project" loading="lazy"><figcaption><strong>TestOps project</strong> — test cases / launches / defects nav</figcaption></figure>
       </div>
     </section>
 
@@ -346,6 +434,12 @@
         <div class="lose"><strong>ReportPortal wins</strong> Mature ML failure-classification, broader framework integrations, bigger community.</div>
       </div>
       <p class="meta">Watch item: their ML triage is ahead of UniTrack's rule-based clustering — an AI-failure-analysis epic would directly answer it.</p>
+      <div class="gallery">
+        <figure><img src="../../doc/images/reportportal-dashboard-widgets.png" alt="ReportPortal widget dashboard" loading="lazy"><figcaption><strong>Configurable widgets</strong> — launch stats, growth + failed-case trends</figcaption></figure>
+        <figure><img src="../../doc/images/reportportal-launches.png" alt="ReportPortal launches" loading="lazy"><figcaption><strong>Launches</strong> — pass/fail + Product/Auto/System defect donuts</figcaption></figure>
+        <figure><img src="../../doc/images/reportportal-api-keys.png" alt="ReportPortal API keys" loading="lazy"><figcaption><strong>API keys + profile</strong> — UniTrack parallel</figcaption></figure>
+        <figure><img src="../../doc/images/reportportal-login.png" alt="ReportPortal login" loading="lazy"><figcaption><strong>Login</strong> — GitHub OAuth + local (our OAuth gap, #210)</figcaption></figure>
+      </div>
     </section>
 
     <section id="datadog" class="tool-section">
@@ -361,6 +455,11 @@
       <div class="winlose">
         <div class="win"><strong>UniTrack wins</strong> Self-hosted, free, no data egress, coverage included, AI/MCP. The anti-SaaS choice.</div>
         <div class="lose"><strong>Datadog wins</strong> Test impact analysis, real-time scale, APM correlation, polish &amp; enterprise support.</div>
+      </div>
+      <div class="gallery">
+        <figure><img src="../../doc/images/datadog-flaky-management.png" alt="Datadog flaky management" loading="lazy"><figcaption><strong>Flaky management</strong> — flaky-tests dashboard</figcaption></figure>
+        <figure><img src="../../doc/images/datadog-flaky-policies.png" alt="Datadog flaky policies" loading="lazy"><figcaption><strong>Policies</strong> — auto-quarantine config (our gap)</figcaption></figure>
+        <figure><img src="../../doc/images/datadog-notifications.png" alt="Datadog notifications" loading="lazy"><figcaption><strong>Notifications</strong> — flaky alert settings</figcaption></figure>
       </div>
     </section>
 
@@ -378,6 +477,12 @@
         <div class="win"><strong>UniTrack wins</strong> Self-hosted + free, flaky <em>plus</em> coverage + gates + history in one, MCP surface.</div>
         <div class="lose"><strong>Trunk wins</strong> Sharper flaky-only UX, quarantine automation maturity, merge-queue ecosystem.</div>
       </div>
+      <div class="gallery">
+        <figure><img src="../../doc/images/trunk-quarantine.png" alt="Trunk quarantine" loading="lazy"><figcaption><strong>Quarantine</strong> — quarantined flaky tests (UniTrack parallel)</figcaption></figure>
+        <figure><img src="../../doc/images/trunk-group-failures.png" alt="Trunk grouped failures" loading="lazy"><figcaption><strong>AI grouping</strong> — related failures (vs our clustering)</figcaption></figure>
+        <figure><img src="../../doc/images/trunk-status-history.png" alt="Trunk status history" loading="lazy"><figcaption><strong>Status history</strong> — per-test flake history</figcaption></figure>
+        <figure><img src="../../doc/images/trunk-github-comment.png" alt="Trunk PR comment" loading="lazy"><figcaption><strong>PR comment</strong> — flaky results in the PR</figcaption></figure>
+      </div>
     </section>
 
     <section id="adjacent" class="tool-section">
@@ -392,6 +497,9 @@
           <tr><td>Grafana + Prometheus</td><td>Custom dashboards</td><td>DIY alternative teams build; UniTrack is the turnkey version</td></tr>
         </tbody>
       </table>
+      <div class="gallery">
+        <figure><img src="../../doc/images/coveralls-report.png" alt="Coveralls coverage report" loading="lazy"><figcaption><strong>Coveralls</strong> — coverage % badge, build history, lines-covered trend</figcaption></figure>
+      </div>
     </section>
 
     <section>
@@ -406,5 +514,148 @@
     </section>
   </main>
 </div>
+
+<div id="lightbox" class="lightbox" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="lightbox-app">
+  <div class="lightbox-backdrop" data-lightbox-close></div>
+  <div class="lightbox-panel">
+    <header class="lightbox-header">
+      <button type="button" class="lightbox-btn lightbox-back" id="lightbox-back">← Back to review</button>
+      <span class="lightbox-app" id="lightbox-app"></span>
+      <span class="lightbox-counter" id="lightbox-counter"></span>
+    </header>
+    <div class="lightbox-stage">
+      <button type="button" class="lightbox-nav lightbox-prev" id="lightbox-prev" aria-label="Previous screenshot">‹</button>
+      <div class="lightbox-media-wrap">
+        <img id="lightbox-img" alt="" hidden>
+        <p class="lightbox-caption" id="lightbox-caption"></p>
+      </div>
+      <button type="button" class="lightbox-nav lightbox-next" id="lightbox-next" aria-label="Next screenshot">›</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const lightbox = document.getElementById('lightbox');
+  const lbImg = document.getElementById('lightbox-img');
+  const lbCaption = document.getElementById('lightbox-caption');
+  const lbApp = document.getElementById('lightbox-app');
+  const lbCounter = document.getElementById('lightbox-counter');
+  const lbPrev = document.getElementById('lightbox-prev');
+  const lbNext = document.getElementById('lightbox-next');
+  const lbBack = document.getElementById('lightbox-back');
+
+  let currentGroup = null;
+  let index = 0;
+  let scrollY = 0;
+  let returnFocus = null;
+
+  function captionHtml(fc) { return fc ? fc.innerHTML.trim() : ''; }
+  function captionText(fc) { return fc ? fc.textContent.trim() : ''; }
+
+  function buildSlides() {
+    const groups = [];
+    document.querySelectorAll('.tool-section').forEach(function (section) {
+      const appName = (section.querySelector('header h3') || {}).textContent || 'Screenshots';
+      const items = [];
+      section.querySelectorAll('.gallery figure').forEach(function (figure) {
+        const img = figure.querySelector('img');
+        const fc = figure.querySelector('figcaption');
+        if (img) {
+          items.push({ src: img.currentSrc || img.src, alt: img.alt || '',
+            caption: captionHtml(fc), captionText: captionText(fc), figure: figure });
+        }
+      });
+      if (items.length) {
+        groups.push({ section: section, appName: appName.trim(), items: items });
+        items.forEach(function (item) {
+          item.figure.dataset.zoomable = 'true';
+          item.figure.setAttribute('tabindex', '0');
+          item.figure.setAttribute('role', 'button');
+          item.figure.setAttribute('aria-label', 'View fullscreen: ' + (item.captionText || item.alt || 'screenshot'));
+        });
+      }
+    });
+    return groups;
+  }
+
+  const groups = buildSlides();
+
+  function groupForFigure(figure) {
+    for (let g = 0; g < groups.length; g++) {
+      const idx = groups[g].items.findIndex(function (item) { return item.figure === figure; });
+      if (idx !== -1) return { group: groups[g], index: idx };
+    }
+    return null;
+  }
+
+  function render() {
+    const group = currentGroup;
+    const item = group.items[index];
+    lbApp.textContent = group.appName;
+    lbCounter.textContent = (index + 1) + ' / ' + group.items.length;
+    lbCaption.innerHTML = item.caption;
+    lbPrev.disabled = index <= 0;
+    lbNext.disabled = index >= group.items.length - 1;
+    lbImg.hidden = false;
+    lbImg.src = item.src;
+    lbImg.alt = item.alt;
+  }
+
+  function open(figure) {
+    const hit = groupForFigure(figure);
+    if (!hit) return;
+    returnFocus = figure;
+    scrollY = window.scrollY;
+    currentGroup = hit.group;
+    index = hit.index;
+    render();
+    lightbox.hidden = false;
+    lightbox.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('lightbox-open');
+    lbBack.focus();
+  }
+
+  function close() {
+    lightbox.hidden = true;
+    lightbox.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('lightbox-open');
+    window.scrollTo(0, scrollY);
+    if (returnFocus) returnFocus.focus();
+  }
+
+  function step(delta) {
+    const max = currentGroup.items.length - 1;
+    const next = index + delta;
+    if (next < 0 || next > max) return;
+    index = next;
+    render();
+  }
+
+  groups.forEach(function (group) {
+    group.items.forEach(function (item) {
+      item.figure.addEventListener('click', function (e) {
+        if (e.target.closest('a')) return;
+        open(item.figure);
+      });
+      item.figure.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(item.figure); }
+      });
+    });
+  });
+
+  lbBack.addEventListener('click', close);
+  lightbox.querySelector('[data-lightbox-close]').addEventListener('click', close);
+  lbPrev.addEventListener('click', function () { step(-1); });
+  lbNext.addEventListener('click', function () { step(1); });
+
+  document.addEventListener('keydown', function (e) {
+    if (lightbox.hidden) return;
+    if (e.key === 'Escape') close();
+    if (e.key === 'ArrowLeft') step(-1);
+    if (e.key === 'ArrowRight') step(1);
+  });
+})();
+</script>
 </body>
 </html>
