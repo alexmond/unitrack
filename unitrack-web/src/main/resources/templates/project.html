@@ -223,6 +223,7 @@
     const labels = JSON.parse(/*[[${trendLabels}]]*/ '[]');
     const passRate = JSON.parse(/*[[${trendPassRate}]]*/ '[]');
     const coverage = JSON.parse(/*[[${trendCoverage}]]*/ '[]');
+    const tests = JSON.parse(/*[[${trendTests}]]*/ '[]');
     let trendChartInstance;
     if (labels.length > 0 && window.Chart) {
         const css = getComputedStyle(document.documentElement);
@@ -237,11 +238,16 @@
                     { label: 'Pass rate %', data: passRate, borderColor: '#2ea043',
                       backgroundColor: 'rgba(46,160,67,.15)', tension: .25, spanGaps: true, fill: true },
                     { label: 'Line coverage %', data: coverage, borderColor: '#4493f8',
-                      backgroundColor: 'rgba(68,147,248,.12)', tension: .25, spanGaps: true, fill: true }
+                      backgroundColor: 'rgba(68,147,248,.12)', tension: .25, spanGaps: true, fill: true },
+                    { label: 'Tests', data: tests, borderColor: '#d29922', backgroundColor: 'rgba(210,153,34,.10)',
+                      tension: .25, spanGaps: true, fill: false, yAxisID: 'y1' }
                 ]
             },
             options: {
-                scales: { y: { min: 0, max: 100, ticks: { color: muted }, grid: { color: grid } },
+                scales: { y: { min: 0, max: 100, position: 'left', title: { display: true, text: '%', color: muted },
+                               ticks: { color: muted }, grid: { color: grid } },
+                          y1: { min: 0, position: 'right', title: { display: true, text: 'tests', color: muted },
+                                ticks: { color: muted, precision: 0 }, grid: { drawOnChartArea: false } },
                           x: { ticks: { color: muted }, grid: { color: grid } } },
                 plugins: { legend: { labels: { color: text } } }
             }
@@ -316,6 +322,7 @@
                 d.labels.push(u.shortSha || String(u.runId));
                 d.datasets[0].data.push(Number(u.passRatePct.toFixed ? u.passRatePct.toFixed(1) : u.passRatePct));
                 d.datasets[1].data.push(u.lineCoveragePct == null ? null : Number(u.lineCoveragePct));
+                d.datasets[2].data.push(u.totalTests == null ? null : Number(u.totalTests));
                 while (d.labels.length > TREND_MAX) {
                     d.labels.shift();
                     d.datasets.forEach(function (ds) { ds.data.shift(); });
