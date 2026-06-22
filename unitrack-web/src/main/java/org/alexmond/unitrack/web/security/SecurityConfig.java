@@ -43,7 +43,13 @@ public class SecurityConfig {
 		http.csrf(AbstractHttpConfigurer::disable)
 			.addFilterBefore(apiTokenAuthFilter, UsernamePasswordAuthenticationFilter.class)
 			.authorizeHttpRequests((auth) -> {
-				auth.requestMatchers("/login", "/signup", "/status", "/css/**", "/actuator/**", "/error").permitAll();
+				// Static assets are public — otherwise, in closed mode, the login page
+				// can't load
+				// its CSS/JS (unstyled form) and the blocked /js/live.js fetch becomes
+				// the saved
+				// post-login redirect target.
+				auth.requestMatchers("/css/**", "/js/**", "/webjars/**", "/favicon.ico").permitAll();
+				auth.requestMatchers("/login", "/signup", "/status", "/actuator/**", "/error").permitAll();
 				// Badges are public assets (READMEs fetch them anonymously); the
 				// controller
 				// still 404s a private project so it can't be probed.
