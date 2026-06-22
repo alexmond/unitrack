@@ -30,6 +30,16 @@ ingress:
   annotations:
     traefik.ingress.kubernetes.io/router.entrypoints: websecure
 
+# Public exposure: an in-cluster Cloudflare Tunnel connector dials the unitrack Service
+# directly (no Traefik, no Host rewrite — the app sees the real public Host). Serves
+# https://unitrack.alexmond.org. The connector token lives in Secret `unitrack-cloudflared`
+# (created out-of-band, NOT committed — see infra/unitrack.md). MUST stay in this file: it's
+# off by default in the chart, so omitting it here makes every `helm upgrade` delete the
+# connector and break the public host with Cloudflare 530s.
+cloudflared:
+  enabled: true
+  tokenSecret: unitrack-cloudflared
+
 app:
   # Closed mode for external exposure: UI requires login, API requires a token. Pair with a
   # blanket gate (Cloudflare Access) on the UI and a service-token/bypass policy on /api so CI
