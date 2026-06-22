@@ -55,6 +55,12 @@ public class DashboardController {
 
 	private static final int TREND_LIMIT = 30;
 
+	/**
+	 * Trends chart one flag — the default/rollup series — so split-by-module flags don't
+	 * interleave.
+	 */
+	private static final String TREND_FLAG = "default";
+
 	private static final int COVERAGE_FILE_LIMIT = 200;
 
 	private static final int SLOWEST_IN_RUN_LIMIT = 10;
@@ -141,7 +147,7 @@ public class DashboardController {
 		List<String> branches = branchSummaries.stream().map(BranchSummary::branch).toList();
 		String selectedBranch = resolveBranch(id, branch, branches);
 		List<TestRun> runs = reporting.recentRuns(id, selectedBranch, RUN_LIST_LIMIT);
-		List<TestRun> trend = reporting.trendRuns(id, selectedBranch, TREND_LIMIT);
+		List<TestRun> trend = reporting.trendRuns(id, selectedBranch, TREND_FLAG, TREND_LIMIT);
 
 		model.addAttribute("project", project);
 		model.addAttribute("branches", branches);
@@ -170,7 +176,7 @@ public class DashboardController {
 			model.addAttribute("run", c.getRun());
 			model.addAttribute("packages", reporting.coveragePackages(c.getId()));
 			model.addAttribute("worstFiles", reporting.coverageFiles(c.getId(), COVERAGE_FILE_LIMIT));
-			List<TestRun> trend = reporting.trendRuns(id, TREND_LIMIT);
+			List<TestRun> trend = reporting.trendRuns(id, null, TREND_FLAG, TREND_LIMIT);
 			model.addAttribute("trendLabels", toJson(labels(trend.stream().map(TestRun::getShortSha).toList())));
 			model.addAttribute("trendCoverage", toJson(trend.stream().map(TestRun::getLineCoveragePct).toList()));
 		});

@@ -100,6 +100,19 @@ public class ReportingService {
 		return recentRuns(projectId, branch, limit).reversed();
 	}
 
+	/**
+	 * Trend (oldest first) for one flag — so a multi-flag project (split-by-module: a
+	 * rollup plus per-module flags) charts a single coherent series instead of
+	 * interleaving flags. Branch is optional (null/blank = all branches).
+	 */
+	public List<TestRun> trendRuns(Long projectId, String branch, String flag, int limit) {
+		PageRequest page = PageRequest.ofSize(limit);
+		List<TestRun> recent = (branch == null || branch.isBlank())
+				? runs.findByProjectIdAndFlagOrderByCreatedAtDesc(projectId, flag, page)
+				: runs.findByProjectIdAndBranchAndFlagOrderByCreatedAtDesc(projectId, branch, flag, page);
+		return recent.reversed();
+	}
+
 	public Optional<TestRun> findRun(Long id) {
 		return runs.findById(id);
 	}

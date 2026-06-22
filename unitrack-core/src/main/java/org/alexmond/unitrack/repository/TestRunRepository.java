@@ -33,6 +33,18 @@ public interface TestRunRepository extends JpaRepository<TestRun, Long> {
 	/** Recent runs on a single branch, newest first — for branch-scoped Overview. */
 	List<TestRun> findByProjectIdAndBranchOrderByCreatedAtDesc(Long projectId, String branch, Pageable pageable);
 
+	/**
+	 * Recent runs of one flag, newest first — for a single-flag trend (split-by-module
+	 * rollup).
+	 */
+	List<TestRun> findByProjectIdAndFlagOrderByCreatedAtDesc(Long projectId, String flag, Pageable pageable);
+
+	/**
+	 * Recent runs of one branch + flag, newest first — branch-scoped single-flag trend.
+	 */
+	List<TestRun> findByProjectIdAndBranchAndFlagOrderByCreatedAtDesc(Long projectId, String branch, String flag,
+			Pageable pageable);
+
 	long countByProjectId(Long projectId);
 
 	long countByProjectIdAndBranch(Long projectId, String branch);
