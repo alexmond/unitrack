@@ -152,7 +152,7 @@ the rollout and runs `helm test` -- the Kubernetes counterpart to `scripts/deplo
 scripts/deploy-k8s.sh --registry nas1.home.int:5000 --namespace unitrack
 ----
 
-For the home k3s cluster (Zot registry, Traefik ingress at `unitrack.k8s.home.int`, node-local
+For the home k3s cluster (Zot registry, Traefik ingress at `unitrack.lab.alexmond.org`, node-local
 DB volume), `deploy/helm/unitrack/values-homelab.yaml` captures those overrides and is picked up
 by the helper automatically.
 

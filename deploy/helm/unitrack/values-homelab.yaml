@@ -22,9 +22,10 @@ imagePullSecrets:
 ingress:
   enabled: true
   className: traefik
-  host: unitrack.k8s.home.int
-  # Traefik on this cluster serves the *.home.int wildcard cert as its default certificate,
-  # so we enable TLS without naming a per-host Secret.
+  host: unitrack.lab.alexmond.org
+  # Migrated 2026-06-22 from unitrack.k8s.home.int. Traefik's default TLSStore now serves a real
+  # Let's Encrypt wildcard cert (*.lab.alexmond.org, via cert-manager + Cloudflare DNS-01 — see
+  # infra/bin/cert-manager/), so TLS works with no per-host Secret and no client-side trust install.
   tls: true
   annotations:
     traefik.ingress.kubernetes.io/router.entrypoints: websecure
@@ -37,7 +38,7 @@ app:
     openMode: false
     requireIngestToken: true
   notifications:
-    baseUrl: https://unitrack.k8s.home.int
+    baseUrl: https://unitrack.lab.alexmond.org
 
 # Set a known admin password at install (don't commit it), e.g.:
 #   helm upgrade --install ... --set secret.adminPassword="$UNITRACK_ADMIN_PASSWORD"

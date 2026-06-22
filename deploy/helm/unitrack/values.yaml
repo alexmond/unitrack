@@ -59,7 +59,8 @@ ingress:
   pathType: Prefix
   tls: false
   # Only needed when terminating TLS with a per-host Secret. On the home cluster Traefik
-  # serves the wildcard *.home.int cert by default, so leave this empty there.
+  # serves a real Let's Encrypt wildcard (*.lab.alexmond.org) as its default cert, so leave
+  # this empty there.
   tlsSecretName: ""
 
 # JVM heap is sized from the container memory limit by the buildpack, so set a real limit.
