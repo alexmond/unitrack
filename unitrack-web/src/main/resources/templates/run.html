@@ -11,8 +11,7 @@
     </p>
     <h1>
         Run #<span th:text="${run.id}">1</span>
-        <span class="badge" th:classappend="${run.status == 'PASSED'} ? 'pass' : 'fail'"
-              th:text="${run.status}">PASSED</span>
+        <span th:replace="~{fragments/components :: statusPill(${run.status})}"></span>
         <a th:if="${run.prNumber != null}" class="badge"
            style="background:rgba(68,147,248,.15);color:var(--blue);text-decoration:none"
            th:href="@{/projects/{id}/pr/{pr}(id=${run.project.id},pr=${run.prNumber})}"
@@ -79,8 +78,7 @@
          th:classappend="${gate.passed()} ? 'gate-pass' : 'gate-fail'">
         <div class="gate-head">
             Quality gate
-            <span class="badge" th:classappend="${gate.passed()} ? 'pass' : 'fail'"
-                  th:text="${gate.status()}">PASSED</span>
+            <span th:replace="~{fragments/components :: statusPill(${gate.status()})}"></span>
         </div>
         <ul class="gate-rules">
             <li th:each="r : ${gate.rules()}">

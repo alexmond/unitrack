@@ -37,8 +37,7 @@
         </div>
         <div>
             <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-                <span class="badge" th:classappend="${r.status == 'PASSED'} ? 'pass' : 'fail'"
-                      th:text="${r.status}">PASSED</span>
+                <span th:replace="~{fragments/components :: statusPill(${r.status})}"></span>
                 <span class="muted" th:text="${r.passed} + '/' + ${r.totalTests} + ' passed'">0/0</span>
                 <span class="muted pct" th:if="${r.lineCoveragePct != null}"
                       th:text="'cov ' + ${#numbers.formatDecimal(r.lineCoveragePct,1,1)} + '%'">cov</span>
@@ -102,8 +101,7 @@
                     th:text="${f.lineCoveragePct() != null} ? ${#numbers.formatDecimal(f.lineCoveragePct(),1,1)} + '%' : '—'">—</td>
                 <td><a th:href="@{/runs/{id}(id=${f.lastRunId()})}"
                        th:text="${#temporals.format(f.lastRunAt(), 'MMM dd HH:mm')}">date</a></td>
-                <td><span class="badge" th:classappend="${f.lastStatus() == 'PASSED'} ? 'pass' : 'fail'"
-                          th:text="${f.lastStatus()}">PASSED</span></td>
+                <td><span th:replace="~{fragments/components :: statusPill(${f.lastStatus()})}"></span></td>
             </tr>
             </tbody>
         </table>
@@ -121,8 +119,7 @@
                 <td><a th:href="@{/projects/{id}(id=${project.id},branch=${b.branch()})}"
                        th:text="${b.branch()}">main</a>
                     <span class="badge tag" th:if="${b.defaultBranch()}">default</span></td>
-                <td><span class="badge" th:classappend="${b.lastStatus() == 'PASSED'} ? 'pass' : 'fail'"
-                          th:text="${b.lastStatus()}">PASSED</span></td>
+                <td><span th:replace="~{fragments/components :: statusPill(${b.lastStatus()})}"></span></td>
                 <td class="num pct" th:text="${#numbers.formatDecimal(b.passRate(),1,1)} + '%'">100%</td>
                 <td class="num pct"
                     th:text="${b.lineCoveragePct() != null} ? ${#numbers.formatDecimal(b.lineCoveragePct(),1,1)} + '%' : '—'">—</td>
@@ -147,8 +144,7 @@
                        th:text="'#' + ${p.number()}">#1</a></td>
                 <td><code class="mono" th:text="${p.headBranch()} ?: '—'">feature/x</code>
                     <span class="muted" th:if="${p.baseBranch() != null}" th:text="'→ ' + ${p.baseBranch()}">→ main</span></td>
-                <td><span class="badge" th:classappend="${p.lastStatus() == 'PASSED'} ? 'pass' : 'fail'"
-                          th:text="${p.lastStatus()}">PASSED</span></td>
+                <td><span th:replace="~{fragments/components :: statusPill(${p.lastStatus()})}"></span></td>
                 <td class="num pct"
                     th:text="${p.lastCoveragePct() != null} ? ${#numbers.formatDecimal(p.lastCoveragePct(),1,1)} + '%' : '—'">—</td>
                 <td class="num" th:text="${p.runCount()}">0</td>
@@ -186,8 +182,7 @@
             <td th:text="${r.branch} ?: '—'">main</td>
             <td><code class="mono" th:text="${r.flag}">default</code></td>
             <td><code class="mono" th:text="${r.shortSha} ?: '—'">abc1234</code></td>
-            <td><span class="badge" th:classappend="${r.status == 'PASSED'} ? 'pass' : 'fail'"
-                      th:text="${r.status}">PASSED</span></td>
+            <td><span th:replace="~{fragments/components :: statusPill(${r.status})}"></span></td>
             <td class="num" th:text="${r.totalTests}">0</td>
             <td class="num" th:text="${r.failed + r.errors}">0</td>
             <td class="num" th:text="${r.skipped}">0</td>
@@ -277,6 +272,15 @@
             return td;
         }
 
+        // Map a run status to its pill modifier (glyph comes from the .pill--* CSS ::before).
+        function pillClass(s) {
+            return s === 'PASSED' ? 'pill--pass'
+                 : s === 'FAILED' ? 'pill--fail'
+                 : s === 'ERROR' ? 'pill--error'
+                 : s === 'SKIPPED' ? 'pill--skip'
+                 : s === 'RUNNING' ? 'pill--running' : 'pill--pending';
+        }
+
         document.addEventListener('unitrack:run', function (e) {
             const u = e.detail;
             if (!u || u.projectId !== projectId) { return; }
@@ -300,10 +304,10 @@
                 tr.appendChild(monoCell(u.shortSha || '—'));
 
                 const statusTd = document.createElement('td');
-                const badge = document.createElement('span');
-                badge.className = 'badge ' + (passed ? 'pass' : 'fail');
-                badge.textContent = u.status;
-                statusTd.appendChild(badge);
+                const pill = document.createElement('span');
+                pill.className = 'pill ' + pillClass(u.status);
+                pill.textContent = u.status;
+                statusTd.appendChild(pill);
                 tr.appendChild(statusTd);
 
                 tr.appendChild(cell(String(u.totalTests), 'num'));

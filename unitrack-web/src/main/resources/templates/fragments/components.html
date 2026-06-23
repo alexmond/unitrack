@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<!-- Reusable presentation fragments. Keep these markup-only (no controller coupling) so any
+     page can include them. CSS lives in static/css/app.css (.pill / .badge). -->
+<body>
+
+<!--
+  statusPill(status): a glyph + tinted status pill. Accepts a run/test status as a String or
+  enum (PASSED / FAILED / ERROR / SKIPPED / RUNNING; anything else → neutral "pending"). The
+  glyph makes state readable without colour. Usage:
+    <span th:replace="~{fragments/components :: statusPill(${run.status})}"></span>
+-->
+<span th:fragment="statusPill(status)" class="pill"
+      th:with="s=${status == null ? 'UNKNOWN' : status.toString()}"
+      th:classappend="${s == 'PASSED' ? 'pill--pass'
+                     : (s == 'FAILED' ? 'pill--fail'
+                     : (s == 'ERROR' ? 'pill--error'
+                     : (s == 'SKIPPED' ? 'pill--skip'
+                     : (s == 'RUNNING' ? 'pill--running' : 'pill--pending'))))}"
+      th:text="${s}">PASSED</span>
+
+</body>
+</html>

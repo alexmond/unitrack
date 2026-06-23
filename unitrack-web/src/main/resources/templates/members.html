@@ -3,7 +3,7 @@
 <head><title th:text="'UniTrack — ' + ${project.name} + ' members'">UniTrack</title></head>
 <body>
 
-<main class="container" layout:fragment="content">
+<main class="container container--narrow" layout:fragment="content">
     <p class="crumbs">
         <a th:href="@{/}">Projects</a> /
         <a th:href="@{/projects/{id}(id=${project.id})}" th:text="${project.name}">project</a> /

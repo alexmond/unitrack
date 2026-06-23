@@ -13,6 +13,20 @@
     --code-bg: #0b0f14;
     --code-text: #d6dee7;
     --radius: 10px;
+    --faint: #6b7886;
+    /* --- design-system scale (ported from builder's redesign, polish pass) ---
+       NB: deliberately NOT wrapped in @layer — Bootstrap loads unlayered before app.css, and
+       layered rules lose to unlayered ones, which would let Bootstrap override the theme. */
+    --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 24px; --sp-6: 32px; --sp-7: 48px;
+    --fs-xs: .75rem; --fs-sm: .8125rem; --fs-md: .9375rem; --fs-lg: 1.0625rem; --fs-xl: 1.375rem; --fs-2xl: 1.6rem;
+    --fw-medium: 500; --fw-semibold: 600; --fw-bold: 700;
+    --r-sm: 6px; --r-md: 8px; --r-lg: 10px; --r-pill: 999px;
+    --el-1: 0 1px 2px rgb(0 0 0 / .35); --el-2: 0 2px 10px rgb(0 0 0 / .40);
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+    --content-max: 1600px;
+    /* status-hue aliases so pills/gates/bars read from one source */
+    --c-pass: var(--green); --c-fail: var(--red); --c-skip: var(--amber);
+    --c-running: var(--blue); --c-pending: var(--faint);
 }
 
 :root[data-theme="light"] {
@@ -30,6 +44,7 @@
     /* keep code/stacktrace blocks dark for contrast in both themes */
     --code-bg: #0b0f14;
     --code-text: #d6dee7;
+    --faint: #7a828b;
 }
 
 /* --- Bootstrap bridge: Bootstrap's --bs-* derive from the app tokens, so app.css stays the
@@ -171,11 +186,14 @@ a:hover { text-decoration: underline; }
     background: var(--border);
 }
 
-.container { max-width: 1100px; margin: 0 auto; padding: 24px; }
+/* Full-width shell: content fills the viewport (capped on ultra-wide screens), no narrow
+   centered column. Long-form/forms opt into .container--narrow so prose lines stay readable. */
+.container { max-width: var(--content-max); margin: 0 auto; padding: 16px 32px; }
+.container--narrow { max-width: 920px; }
 
 .footer {
     display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-    max-width: 1100px; margin: 24px auto 0; padding: 16px 24px;
+    max-width: var(--content-max); margin: 24px auto 0; padding: 16px 32px;
     border-top: 1px solid var(--border); color: var(--muted); font-size: 13px;
 }
 .footer .brand { font-weight: 700; color: var(--text); }
@@ -208,19 +226,54 @@ h2 { font-size: 17px; margin: 28px 0 12px; }
 .table { background: var(--panel); border-radius: var(--radius); overflow: hidden; margin-bottom: 0; }
 .table thead tr th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .03em; }
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+/* numeric data cells in monospace for column alignment (headers stay in the label font) */
+td.num { font-family: var(--font-mono); font-size: var(--fs-sm); }
 
+/* Tinted chip with a hue-matched border (color-mix derives the tint per theme, so light
+   mode reads correctly too — replaces the hard-coded rgba fills). */
 .badge {
+    --_h: var(--c-pending);
     display: inline-block;
     padding: 2px 9px;
-    border-radius: 999px;
-    font-size: 12px;
-    font-weight: 600;
+    border-radius: var(--r-pill);
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-semibold);
+    background: color-mix(in oklab, var(--_h) 15%, var(--panel));
+    color: color-mix(in oklab, var(--_h) 60%, var(--text));
+    border: 1px solid color-mix(in oklab, var(--_h) 42%, var(--border));
 }
-.badge.pass { background: rgba(46,160,67,.15); color: var(--green); }
-.badge.fail { background: rgba(229,83,75,.15); color: var(--red); }
-.badge.skip { background: rgba(210,153,34,.15); color: var(--amber); }
-.badge.error { background: rgba(229,83,75,.22); color: var(--red); }
-.badge.tag { background: var(--panel-2); color: var(--muted); box-shadow: inset 0 0 0 1px var(--border); }
+.badge.pass { --_h: var(--c-pass); }
+.badge.fail { --_h: var(--c-fail); }
+.badge.skip { --_h: var(--c-skip); }
+.badge.error { --_h: var(--c-fail); }
+.badge.tag { --_h: var(--muted); font-family: var(--font-mono); }
+
+/* Status pill: the badge treatment plus a leading glyph so state is never colour-only
+   (greyscale- and colour-blind-readable). Use via fragments/components :: statusPill. */
+.pill {
+    --_h: var(--c-pending);
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 9px;
+    border-radius: var(--r-pill);
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-semibold);
+    letter-spacing: .02em;
+    white-space: nowrap;
+    background: color-mix(in oklab, var(--_h) 15%, var(--panel));
+    color: color-mix(in oklab, var(--_h) 60%, var(--text));
+    border: 1px solid color-mix(in oklab, var(--_h) 42%, var(--border));
+}
+.pill::before { font-weight: 700; line-height: 1; }
+.pill--pass    { --_h: var(--c-pass); }    .pill--pass::before    { content: "\2714"; }
+.pill--fail    { --_h: var(--c-fail); }    .pill--fail::before    { content: "\2715"; }
+.pill--error   { --_h: var(--c-fail); }    .pill--error::before   { content: "\26A0"; }
+.pill--skip    { --_h: var(--c-skip); }    .pill--skip::before    { content: "\2934"; }
+.pill--running { --_h: var(--c-running); } .pill--running::before { content: "\25D0"; animation: spin 1.4s linear infinite; }
+.pill--pending { --_h: var(--c-pending); } .pill--pending::before { content: "\25F7"; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .pill--running::before { animation: none; } }
 
 .bar { height: 8px; border-radius: 999px; background: var(--panel-2); box-shadow: inset 0 0 0 1px var(--border); overflow: hidden; min-width: 90px; }
 .bar > span { display: block; height: 100%; background: var(--green); }
@@ -229,7 +282,11 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 
 .pct { font-variant-numeric: tabular-nums; }
 .muted { color: var(--muted); }
-.empty { color: var(--muted); padding: 30px; text-align: center; border: 1px dashed var(--border); border-radius: var(--radius); }
+.empty { color: var(--muted); padding: 30px; text-align: center; border: 1px dashed var(--border);
+    border-radius: var(--radius); background: var(--panel); }
+/* Empty state with a heading + call-to-action (every empty surface gets a next step). */
+.empty h3 { color: var(--text); margin: 0 0 var(--sp-2); }
+.empty p { margin: 0 0 var(--sp-4); }
 
 .chart-wrap { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
 
