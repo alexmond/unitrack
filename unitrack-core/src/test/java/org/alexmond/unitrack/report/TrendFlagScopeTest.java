@@ -30,6 +30,9 @@ class TrendFlagScopeTest {
 	@Autowired
 	private ReportingService reporting;
 
+	@Autowired
+	private PerformanceService performance;
+
 	private List<Supplier<InputStream>> junit() throws Exception {
 		byte[] xml = getClass().getResourceAsStream("/samples/surefire-sample.xml").readAllBytes();
 		return List.of(() -> new ByteArrayInputStream(xml));
@@ -50,6 +53,20 @@ class TrendFlagScopeTest {
 		assertThat(defaultTrend).hasSize(1).allMatch((r) -> "default".equals(r.getFlag()));
 		// Unscoped still sees both flags' runs.
 		assertThat(this.reporting.trendRuns(pid, null, 30)).hasSize(2);
+
+		// The suite-time (performance) trend has the same flag-scope contract — without
+		// it, a
+		// split-by-module project's per-module suite times sawtooth (#280).
+		assertThat(this.performance.suiteTimeTrend(pid, "default", 30)).hasSize(1);
+		assertThat(this.performance.suiteTimeTrend(pid, 30)).hasSize(2);
+		assertThat(this.performance.summary(pid, "default", 25, 30).suiteTimeTrend()).hasSize(1);
+
+		// The per-test timeline too: the same test ran in both flags' runs, so the
+		// unscoped
+		// history double-plots each commit; scoping to the rollup flag gives one point.
+		assertThat(this.performance.testStatusTimeline(pid, "com.example.CalculatorTest", "adds", "default", 30))
+			.hasSize(1);
+		assertThat(this.performance.testStatusTimeline(pid, "com.example.CalculatorTest", "adds", 30)).hasSize(2);
 	}
 
 }

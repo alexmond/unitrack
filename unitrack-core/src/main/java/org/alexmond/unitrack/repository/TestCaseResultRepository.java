@@ -31,6 +31,23 @@ public interface TestCaseResultRepository extends JpaRepository<TestCaseResult, 
 			@Param("name") String name, Pageable pageable);
 
 	/**
+	 * One test's history scoped to a single flag (newest first). A split-by-module
+	 * project runs the same test in its module run AND in the {@code default} rollup, so
+	 * the unscoped history returns two points per commit; scoping to the rollup flag
+	 * gives one coherent series.
+	 */
+	@Query("""
+			select c from TestCaseResult c
+			join fetch c.run r
+			where r.project.id = :projectId and c.className = :className and c.name = :name
+			  and r.flag = :flag
+			order by r.createdAt desc
+			""")
+	List<TestCaseResult> findTestHistoryForFlag(@Param("projectId") Long projectId,
+			@Param("className") String className, @Param("name") String name, @Param("flag") String flag,
+			Pageable pageable);
+
+	/**
 	 * One test's history on a single branch (newest first) — for first-failing-commit
 	 * blame.
 	 */

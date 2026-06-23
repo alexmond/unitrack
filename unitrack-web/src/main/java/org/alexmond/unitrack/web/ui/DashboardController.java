@@ -263,7 +263,7 @@ public class DashboardController {
 	@GetMapping("/projects/{id}/performance")
 	public String performance(@PathVariable Long id, Model model) {
 		Project project = access.requireReadProject(id);
-		PerformanceSummary summary = performance.summary(id, PERF_SLOW_LIMIT, TREND_LIMIT);
+		PerformanceSummary summary = performance.summary(id, TREND_FLAG, PERF_SLOW_LIMIT, TREND_LIMIT);
 		model.addAttribute("project", project);
 		model.addAttribute("slowest", summary.slowestInLatestRun());
 		model.addAttribute("latestRunId", summary.latestRunId());
@@ -277,7 +277,7 @@ public class DashboardController {
 	@GetMapping("/projects/{id}/perf")
 	public String perf(@PathVariable Long id, Model model) {
 		Project project = access.requireReadProject(id);
-		List<PerfTrendPoint> trend = reporting.perfTrend(id, TREND_LIMIT);
+		List<PerfTrendPoint> trend = reporting.perfTrend(id, TREND_FLAG, TREND_LIMIT);
 		model.addAttribute("project", project);
 		model.addAttribute("perfRuns", reporting.recentPerfRuns(id, RUN_LIST_LIMIT));
 		model.addAttribute("hasPerf", !trend.isEmpty());
@@ -302,7 +302,7 @@ public class DashboardController {
 	public String test(@PathVariable Long id, @RequestParam(defaultValue = "") String className,
 			@RequestParam String name, Model model) {
 		Project project = access.requireReadProject(id);
-		List<TestTimelinePoint> timeline = performance.testStatusTimeline(id, className, name, TREND_LIMIT);
+		List<TestTimelinePoint> timeline = performance.testStatusTimeline(id, className, name, TREND_FLAG, TREND_LIMIT);
 		model.addAttribute("project", project);
 		model.addAttribute("className", className);
 		model.addAttribute("name", name);
