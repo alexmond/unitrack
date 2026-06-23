@@ -128,7 +128,21 @@ public class ReportingService {
 
 	/** Performance trend for a project, oldest run first (for charting). */
 	public List<PerfTrendPoint> perfTrend(Long projectId, int limit) {
-		return recentPerfRuns(projectId, limit).reversed().stream().map(PerfTrendPoint::of).toList();
+		return perfTrend(projectId, null, limit);
+	}
+
+	/**
+	 * Performance trend scoped to one flag, oldest run first. {@code PerfRun} carries a
+	 * flag too, so a split-by-module project would interleave per-module load runs into a
+	 * sawtooth (same trap as the suite-time/coverage trends). Pass the rollup flag;
+	 * null/blank charts every run.
+	 */
+	public List<PerfTrendPoint> perfTrend(Long projectId, String flag, int limit) {
+		PageRequest page = PageRequest.ofSize(limit);
+		List<org.alexmond.unitrack.domain.PerfRun> recent = (flag == null || flag.isBlank())
+				? perfRuns.findByProjectIdOrderByCreatedAtDesc(projectId, page)
+				: perfRuns.findByProjectIdAndFlagOrderByCreatedAtDesc(projectId, flag, page);
+		return recent.reversed().stream().map(PerfTrendPoint::of).toList();
 	}
 
 	public Optional<Project> findProjectByName(String name) {
