@@ -61,8 +61,9 @@
                 <code class="mono muted" th:if="${h.branch() != null}" th:text="${h.branch()}">main</code>
             </td>
             <td data-live="gate">
-                <span th:if="${h.hasRuns()}" class="badge" th:classappend="${h.gatePassed()} ? 'pass' : 'fail'"
-                      th:text="${h.gateStatus()}">PASSED</span>
+                <th:block th:if="${h.hasRuns()}">
+                    <span th:replace="~{fragments/components :: statusPill(${h.gateStatus()})}"></span>
+                </th:block>
                 <span th:unless="${h.hasRuns()}" class="muted">—</span>
             </td>
             <td class="num pct" data-live="pass"
@@ -104,7 +105,12 @@
                 var passed = u.status === 'PASSED';
                 var gate = row.querySelector('[data-live="gate"]');
                 if (gate) {
-                    gate.innerHTML = '<span class="badge ' + (passed ? 'pass' : 'fail') + '"></span>';
+                    var cls = u.status === 'PASSED' ? 'pill--pass'
+                            : u.status === 'FAILED' ? 'pill--fail'
+                            : u.status === 'ERROR' ? 'pill--error'
+                            : u.status === 'SKIPPED' ? 'pill--skip'
+                            : u.status === 'RUNNING' ? 'pill--running' : 'pill--pending';
+                    gate.innerHTML = '<span class="pill ' + cls + '"></span>';
                     gate.firstChild.textContent = u.status;
                 }
                 var p = row.querySelector('[data-live="pass"]'); if (p) { p.textContent = pct(u.passRatePct); }

@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UniTrack — UI polish mock (design-system, no IA change)</title>
+<!--
+  MOCK ONLY — not wired into the app. Demonstrates the "polish only (1–4)" set ported from
+  builder's redesign (docs/design/ui-redesign.md): a token scale + @layer CSS, glyph status
+  pills, color-mix tints, empty-state CTA, and .num table density. Keeps UniTrack's existing
+  horizontal topbar + subnav (NO sidebar — that was the excluded option 5). Uses UniTrack's
+  real theme colours so it reads as UniTrack, just tighter. Toggle dark/light, top-right.
+-->
+<style>
+@layer tokens, base, components, pages, utilities;
+
+@layer tokens {
+  :root {
+    color-scheme: dark;
+    /* spacing — 4px base (builder) */
+    --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:24px; --sp-6:32px; --sp-7:48px;
+    /* type — 1.2 scale */
+    --fs-xs:.75rem; --fs-sm:.8125rem; --fs-md:.9375rem; --fs-lg:1.0625rem; --fs-xl:1.375rem; --fs-2xl:1.6rem;
+    --fw-medium:500; --fw-semibold:600; --fw-bold:700;
+    --font-sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --font-mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+    /* radius / elevation */
+    --r-sm:6px; --r-md:8px; --r-lg:10px; --r-pill:999px;
+    --el-1:0 1px 2px rgb(0 0 0 / .35); --el-2:0 2px 10px rgb(0 0 0 / .40);
+    /* UniTrack dark palette (unchanged hues) */
+    --bg:#0f1419; --panel:#1a2027; --panel-2:#222a33; --panel-3:#2a333d;
+    --border:#2c343d; --border-strong:#3a4452;
+    --text:#e6edf3; --muted:#99a7b4; --faint:#6b7886;
+    --code-bg:#0b0f14; --code-text:#d6dee7;
+    /* status hues — single source for pills, bars, gates */
+    --green:#2ea043; --red:#e5534b; --amber:#d29922; --blue:#4493f8;
+    --c-pass:var(--green); --c-fail:var(--red); --c-skip:var(--amber);
+    --c-running:var(--blue); --c-pending:var(--faint);
+    /* legacy alias so nothing breaks mid-migration */
+    --radius:var(--r-lg);
+  }
+  [data-theme="light"] {
+    color-scheme: light;
+    --bg:#f6f8fa; --panel:#ffffff; --panel-2:#eef1f4; --panel-3:#e2e7ec;
+    --border:#d6dbe1; --border-strong:#c2c9d1;
+    --text:#1f2328; --muted:#4a5563; --faint:#7a828b;
+    --green:#1a7f37; --red:#cf222e; --amber:#9a6700; --blue:#0969da;
+  }
+}
+
+@layer base {
+  * { box-sizing:border-box; }
+  html,body { margin:0; }
+  body { background:var(--bg); color:var(--text); font:var(--fs-md)/1.5 var(--font-sans);
+    -webkit-font-smoothing:antialiased; min-height:100vh; }
+  a { color:var(--blue); text-decoration:none; } a:hover { text-decoration:underline; }
+  h1,h2,h3 { margin:0; font-weight:var(--fw-semibold); line-height:1.25; }
+  :focus-visible { outline:2px solid var(--blue); outline-offset:2px; }
+}
+
+@layer components {
+  /* ---- status pill: glyph + tint + hue border (never colour-only) — the a11y win ---- */
+  .pill { --_h:var(--c-pending);
+    display:inline-flex; align-items:center; gap:5px; padding:2px 9px;
+    border-radius:var(--r-pill); font-size:var(--fs-xs); font-weight:var(--fw-semibold);
+    letter-spacing:.02em; white-space:nowrap;
+    background:color-mix(in oklab,var(--_h) 15%,var(--panel));
+    color:color-mix(in oklab,var(--_h) 60%,var(--text));
+    border:1px solid color-mix(in oklab,var(--_h) 42%,var(--border)); }
+  .pill::before { font-weight:700; line-height:1; }
+  .pill--pass    { --_h:var(--c-pass); }    .pill--pass::before    { content:"\2714"; }
+  .pill--fail    { --_h:var(--c-fail); }    .pill--fail::before    { content:"\2715"; }
+  .pill--error   { --_h:var(--c-fail); }    .pill--error::before   { content:"\26A0"; }
+  .pill--skip    { --_h:var(--c-skip); }    .pill--skip::before    { content:"\2934"; }
+  .pill--running { --_h:var(--c-running); } .pill--running::before { content:"\25D0"; animation:spin 1.4s linear infinite; }
+  .pill--pending { --_h:var(--c-pending); } .pill--pending::before { content:"\25F7"; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  @media (prefers-reduced-motion:reduce){ .pill--running::before{ animation:none; } }
+
+  /* ---- tag/flag chip (coverage flag, branch, sha) ---- */
+  .tag { display:inline-flex; align-items:center; gap:5px; padding:2px 8px; border-radius:var(--r-pill);
+    font-size:var(--fs-xs); font-weight:var(--fw-medium); background:var(--panel-2); color:var(--muted);
+    border:1px solid var(--border); font-family:var(--font-mono); }
+
+  /* ---- buttons ---- */
+  .btn { display:inline-flex; align-items:center; gap:6px; cursor:pointer;
+    font:var(--fw-medium) var(--fs-sm)/1 var(--font-sans); padding:8px 14px;
+    border-radius:var(--r-sm); border:1px solid var(--border-strong); background:var(--panel-2);
+    color:var(--text); text-decoration:none; }
+  .btn:hover { background:var(--panel-3); text-decoration:none; }
+  .btn--primary { background:var(--blue); color:#06101c; border-color:var(--blue); }
+  .btn--sm { padding:5px 10px; font-size:var(--fs-xs); }
+
+  /* ---- cards / gate ---- */
+  .card { background:var(--panel); border:1px solid var(--border); border-radius:var(--r-md);
+    box-shadow:var(--el-1); padding:var(--sp-4); }
+  .gate { border:1px solid var(--border); border-left:4px solid var(--muted);
+    border-radius:var(--r-md); padding:var(--sp-3) var(--sp-4); background:var(--panel); }
+  .gate--pass { border-left-color:var(--green); background:color-mix(in oklab,var(--green) 6%,var(--panel)); }
+  .gate--fail { border-left-color:var(--red);   background:color-mix(in oklab,var(--red) 6%,var(--panel)); }
+  .gate__head { font-weight:var(--fw-bold); display:flex; align-items:center; gap:10px; }
+
+  /* ---- empty state — every empty surface gets a CTA ---- */
+  .empty-state { text-align:center; color:var(--muted); padding:var(--sp-6) var(--sp-4);
+    border:1px dashed var(--border); border-radius:var(--r-md); background:var(--panel); }
+  .empty-state h3 { color:var(--text); margin-bottom:var(--sp-2); }
+  .empty-state p { margin:0 0 var(--sp-4); }
+}
+
+@layer pages {
+  .topbar { display:flex; align-items:center; gap:var(--sp-3); padding:var(--sp-3) var(--sp-5);
+    background:var(--panel); border-bottom:1px solid var(--border); }
+  .topbar .brand { font-weight:var(--fw-bold); font-size:1.125rem; }
+  .topbar .brand span { color:var(--blue); }
+  .topbar .spacer { flex:1; }
+  .topbar nav a { color:var(--muted); margin-left:var(--sp-4); font-size:var(--fs-sm); }
+  .live-dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-left:var(--sp-2);
+    background:var(--green); box-shadow:0 0 0 0 color-mix(in oklab,var(--green) 50%,transparent);
+    animation:pulse 2.4s ease-out infinite; }
+  @keyframes pulse { 70%{ box-shadow:0 0 0 6px transparent; } }
+  .theme-toggle { background:transparent; border:1px solid var(--border); color:var(--text);
+    border-radius:var(--r-sm); cursor:pointer; padding:5px 9px; font-size:var(--fs-sm); }
+  .theme-toggle:hover { background:var(--panel-2); }
+
+  /* Full-width shell (like builder) — content fills the viewport with padding, no centered
+     column. Long-form/forms opt into .container--narrow so prose lines stay readable. A large
+     cap keeps it sane on ultra-wide monitors. */
+  .container { max-width:var(--content-max,1600px); margin:0 auto; padding:var(--sp-4) var(--sp-6); }
+  .container--narrow { max-width:920px; }
+
+  .subnav { display:flex; flex-wrap:wrap; gap:var(--sp-1); align-items:center;
+    margin:var(--sp-3) 0 var(--sp-5); padding-top:var(--sp-4); border-top:1px solid var(--border); }
+  .subnav a { padding:6px 12px; border-radius:var(--r-pill); border:1px solid transparent;
+    color:var(--muted); font-size:var(--fs-sm); line-height:1; }
+  .subnav a:hover { background:var(--panel-2); color:var(--text); text-decoration:none; }
+  .subnav a.current { background:var(--panel); border-color:var(--border); color:var(--text); font-weight:var(--fw-semibold); }
+
+  h1 { font-size:var(--fs-xl); margin-bottom:var(--sp-1); }
+  h2 { font-size:var(--fs-lg); margin:var(--sp-6) 0 var(--sp-3); }
+  .crumbs { color:var(--muted); font-size:var(--fs-sm); margin-bottom:var(--sp-4); }
+  .crumbs .sep { color:var(--faint); margin:0 6px; }
+
+  /* KPI tiles */
+  .stat-row { display:flex; gap:var(--sp-3); flex-wrap:wrap; margin:var(--sp-4) 0 var(--sp-2); }
+  .stat { background:var(--panel); border:1px solid var(--border); border-radius:var(--r-md);
+    padding:var(--sp-3) var(--sp-4); min-width:130px; box-shadow:var(--el-1); }
+  .stat .label { color:var(--muted); font-size:var(--fs-xs); text-transform:uppercase; letter-spacing:.04em; }
+  .stat .value { font-size:var(--fs-2xl); font-weight:var(--fw-bold); margin-top:var(--sp-1);
+    font-variant-numeric:tabular-nums; }
+  .stat .value.lvl-good { color:var(--green); }
+  .stat .value.lvl-warn { color:var(--amber); }
+  .stat .value.lvl-bad  { color:var(--red); }
+
+  /* coverage donut (unchanged from UniTrack — already good) */
+  .hero { display:flex; align-items:center; gap:var(--sp-5); flex-wrap:wrap; margin:var(--sp-4) 0; }
+  .donut-fig { position:relative; width:104px; height:104px; flex:0 0 auto; }
+  .donut { width:100%; height:100%; border-radius:50%;
+    background:conic-gradient(var(--green) 0 calc(var(--p)*1%),
+      var(--red) calc(var(--p)*1%) calc((var(--p)+var(--f))*1%),
+      var(--amber) calc((var(--p)+var(--f))*1%) 100%);
+    -webkit-mask:radial-gradient(transparent 60%,#000 61%); mask:radial-gradient(transparent 60%,#000 61%); }
+  .donut-center { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .donut-pct { font-size:1.4rem; font-weight:var(--fw-bold); font-variant-numeric:tabular-nums; }
+  .donut-sub { font-size:var(--fs-xs); color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+
+  /* table — sticky head, density, mono numerics, failed-row accent */
+  .table-wrap { overflow-x:auto; border-radius:var(--r-md); border:1px solid var(--border); }
+  table { width:100%; border-collapse:collapse; background:var(--panel); font-size:var(--fs-sm); }
+  thead th { position:sticky; top:0; background:var(--panel-2); color:var(--muted);
+    font-weight:var(--fw-semibold); font-size:var(--fs-xs); text-transform:uppercase; letter-spacing:.03em;
+    text-align:left; padding:var(--sp-2) var(--sp-3); }
+  tbody td { padding:9px var(--sp-3); border-top:1px solid var(--border); }
+  tbody tr:hover td { background:var(--panel-2); }
+  td.num, th.num { text-align:right; font-variant-numeric:tabular-nums; font-family:var(--font-mono); }
+  tr.row-fail td { background:color-mix(in oklab,var(--red) 7%,var(--panel)); }
+  tr.row-fail td:first-child { box-shadow:inset 3px 0 0 var(--red); }
+  .mono { font-family:var(--font-mono); font-size:var(--fs-xs); color:var(--muted); }
+
+  /* coverage bar */
+  .bar { height:8px; border-radius:var(--r-pill); background:var(--panel-2);
+    box-shadow:inset 0 0 0 1px var(--border); overflow:hidden; min-width:90px; display:inline-block; vertical-align:middle; }
+  .bar > span { display:block; height:100%; background:var(--green); }
+  .bar.mid > span { background:var(--amber); } .bar.low > span { background:var(--red); }
+
+  .note { font-size:var(--fs-xs); color:var(--faint); margin-top:var(--sp-2); }
+  .annot { background:color-mix(in oklab,var(--blue) 8%,var(--panel)); border:1px solid color-mix(in oklab,var(--blue) 30%,var(--border));
+    border-radius:var(--r-md); padding:var(--sp-3) var(--sp-4); margin:var(--sp-5) 0; font-size:var(--fs-sm); }
+  .annot b { color:var(--blue); }
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="brand">Uni<span>Track</span></span>
+  <span class="live-dot" title="Live — connected"></span>
+  <span class="spacer"></span>
+  <nav>
+    <a href="#">Projects</a><a href="#">Status</a><a href="#">Owners</a><a href="#">Profile</a>
+  </nav>
+  <button class="theme-toggle" onclick="var r=document.documentElement;r.dataset.theme=r.dataset.theme==='light'?'dark':'light';this.textContent=r.dataset.theme==='light'?'☀':'☾'">☾</button>
+</div>
+
+<div class="container">
+  <div class="annot">
+    <b>Mock — polish + full-width.</b> Same UniTrack colours &amp; horizontal nav; the content is now
+    <b>full-width</b> (edge-to-edge, like builder — capped on ultra-wide screens; forms/prose opt into a
+    narrow column). Plus the design-system layer: a 4px spacing + type scale, <code>@layer</code> CSS,
+    <b>glyph</b> status pills (✓/✕/◐ — not colour alone), <code>color-mix</code> tints, an empty-state CTA,
+    and mono/right-aligned numeric columns.
+  </div>
+
+  <div class="crumbs"><a href="#">Projects</a><span class="sep">›</span><b>builder</b></div>
+  <h1>builder</h1>
+  <div class="mono">main · last run 4m ago · 6 coverage flags</div>
+
+  <div class="subnav">
+    <a class="current" href="#">Overview</a>
+    <a href="#">Coverage</a>
+    <a href="#">Flaky</a>
+    <a href="#">Clusters</a>
+    <a href="#">Performance</a>
+    <a href="#">Triage</a>
+    <a href="#">Settings</a>
+  </div>
+
+  <!-- KPI tiles -->
+  <div class="stat-row">
+    <div class="stat"><div class="label">Pass rate</div><div class="value lvl-good">98.2%</div></div>
+    <div class="stat"><div class="label">Tests</div><div class="value">1,284</div></div>
+    <div class="stat"><div class="label">Line coverage</div><div class="value lvl-warn">31.4%</div></div>
+    <div class="stat"><div class="label">Flaky</div><div class="value lvl-bad">7</div></div>
+  </div>
+
+  <!-- gate + donut -->
+  <div class="hero">
+    <figure class="donut-fig" style="--p:96;--f:3">
+      <div class="donut"></div>
+      <figcaption class="donut-center"><span class="donut-pct">96%</span><span class="donut-sub">pass</span></figcaption>
+    </figure>
+    <div class="gate gate--pass" style="flex:1;min-width:260px">
+      <div class="gate__head"><span class="pill pill--pass">GATE PASS</span> Quality gate passed</div>
+      <div class="note" style="font-size:var(--fs-sm);color:var(--muted);margin-top:6px">
+        Coverage 31.4% ≥ min 30% · no new failures vs <span class="mono">a1b2c3d</span> · 0 regressions.
+      </div>
+    </div>
+  </div>
+
+  <h2>Recent runs</h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Status</th><th>Commit</th><th>Branch</th><th>Flag</th><th class="num">Tests</th><th class="num">Failed</th><th class="num">Coverage</th><th class="num">When</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="pill pill--pass">PASS</span></td>
+          <td><span class="mono">a1b2c3d</span> fix(ui): trend flag scope</td>
+          <td><span class="tag">main</span></td>
+          <td><span class="tag">default</span></td>
+          <td class="num">1284</td><td class="num">0</td>
+          <td class="num"><span class="bar mid" style="width:80px"><span style="width:31%"></span></span> 31.4%</td>
+          <td class="num">4m</td>
+        </tr>
+        <tr class="row-fail">
+          <td><span class="pill pill--fail">FAIL</span></td>
+          <td><span class="mono">9f8e7d6</span> feat(api): batch ingest</td>
+          <td><span class="tag">main</span></td>
+          <td><span class="tag">default</span></td>
+          <td class="num">1284</td><td class="num">12</td>
+          <td class="num"><span class="bar mid" style="width:80px"><span style="width:31%"></span></span> 31.1%</td>
+          <td class="num">22m</td>
+        </tr>
+        <tr>
+          <td><span class="pill pill--running">RUNNING</span></td>
+          <td><span class="mono">c4d5e6f</span> chore: bump deps</td>
+          <td><span class="tag">renovate</span></td>
+          <td><span class="tag">default</span></td>
+          <td class="num">—</td><td class="num">—</td>
+          <td class="num">—</td>
+          <td class="num">now</td>
+        </tr>
+        <tr>
+          <td><span class="pill pill--skip">SKIP</span></td>
+          <td><span class="mono">b3a2c1d</span> docs: readme</td>
+          <td><span class="tag">main</span></td>
+          <td><span class="tag">builder-cli</span></td>
+          <td class="num">312</td><td class="num">0</td>
+          <td class="num"><span class="bar" style="width:80px"><span style="width:78%"></span></span> 77.8%</td>
+          <td class="num">1h</td>
+        </tr>
+        <tr>
+          <td><span class="pill pill--error">ERROR</span></td>
+          <td><span class="mono">e0d9c8b</span> feat: github import</td>
+          <td><span class="tag">main</span></td>
+          <td><span class="tag">builder-github</span></td>
+          <td class="num">88</td><td class="num">88</td>
+          <td class="num"><span class="bar low" style="width:80px"><span style="width:5%"></span></span> 5.1%</td>
+          <td class="num">2h</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Flaky tests</h2>
+  <div class="empty-state">
+    <h3>No flaky tests detected</h3>
+    <p>UniTrack flags tests that pass and fail on the same commit. None in the last 30 days.</p>
+    <a class="btn btn--primary btn--sm" href="#">View detection settings</a>
+  </div>
+
+  <h2>Status-pill reference (the a11y upgrade)</h2>
+  <div style="display:flex;gap:var(--sp-2);flex-wrap:wrap;align-items:center">
+    <span class="pill pill--pass">PASS</span>
+    <span class="pill pill--fail">FAIL</span>
+    <span class="pill pill--error">ERROR</span>
+    <span class="pill pill--skip">SKIP</span>
+    <span class="pill pill--running">RUNNING</span>
+    <span class="pill pill--pending">PENDING</span>
+    <span class="tag">default</span>
+    <span class="tag">main</span>
+  </div>
+  <p class="note">Each carries a glyph, a tinted fill, and a hue-matched border — readable in greyscale and for colour-blind users, unlike the current colour-only badges.</p>
+</div>
+
+</body>
+</html>
