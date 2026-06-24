@@ -21,23 +21,43 @@ public class UniTrackApiClient {
 
 	private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
 
-	/** GET {@code path} (relative to the base URL), returning the full response. */
+	/**
+	 * GET {@code path} (relative to the base URL), returning the full response. Transient
+	 * I/O failures (e.g. an intermittent reverse-proxy connection reset) are retried up
+	 * to {@code maxAttempts} so a one-off blip doesn't fail a task.
+	 */
 	public HttpResponse<String> get(String path) {
-		HttpRequest.Builder request = HttpRequest.newBuilder(URI.create(this.props.getBaseUrl() + path))
+		HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create(this.props.getBaseUrl() + path))
 			.timeout(Duration.ofSeconds(15))
 			.GET();
 		if (this.props.getToken() != null && !this.props.getToken().isBlank()) {
-			request.header("Authorization", "Bearer " + this.props.getToken());
+			builder.header("Authorization", "Bearer " + this.props.getToken());
 		}
+		HttpRequest request = builder.build();
+		IOException last = null;
+		for (int attempt = 1; attempt <= Math.max(1, this.props.getMaxAttempts()); attempt++) {
+			try {
+				return this.http.send(request, HttpResponse.BodyHandlers.ofString());
+			}
+			catch (IOException ex) {
+				last = ex;
+				pause(200L * attempt);
+			}
+			catch (InterruptedException ex) {
+				Thread.currentThread().interrupt();
+				throw new IllegalStateException("GET " + path + " interrupted", ex);
+			}
+		}
+		throw new IllegalStateException("GET " + path + " against " + this.props.getBaseUrl() + " failed after "
+				+ this.props.getMaxAttempts() + " attempts", last);
+	}
+
+	private static void pause(long millis) {
 		try {
-			return this.http.send(request.build(), HttpResponse.BodyHandlers.ofString());
-		}
-		catch (IOException ex) {
-			throw new IllegalStateException("GET " + path + " against " + this.props.getBaseUrl() + " failed", ex);
+			Thread.sleep(millis);
 		}
 		catch (InterruptedException ex) {
 			Thread.currentThread().interrupt();
-			throw new IllegalStateException("GET " + path + " interrupted", ex);
 		}
 	}
 
