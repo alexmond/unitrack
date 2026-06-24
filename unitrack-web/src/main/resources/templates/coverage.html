@@ -50,7 +50,20 @@
             <canvas id="coverageChart" height="80"></canvas>
         </div>
 
-        <h2>By package</h2>
+        <!-- Module filter (multi-module projects): pill row that scopes the package + file
+             tables below to one module. Derived from the package tree (see ReportingService). -->
+        <div th:if="${modules != null and modules.size() > 1}" class="subnav"
+             style="border-top:none;padding-top:0" aria-label="Filter by module">
+            <a th:href="@{/projects/{id}/coverage(id=${project.id})}"
+               th:classappend="${selectedModule == null} ? 'current'">All modules</a>
+            <a th:each="m : ${modules}"
+               th:href="@{/projects/{id}/coverage(id=${project.id},module=${m.name()})}"
+               th:classappend="${selectedModule == m.name()} ? 'current'"
+               th:text="${m.name()}">core</a>
+        </div>
+
+        <h2>By package <span class="muted" th:if="${selectedModule != null}"
+                             th:text="'· module ' + ${selectedModule}">· module core</span></h2>
         <table class="table table-hover align-middle">
             <thead>
             <tr><th>Package</th><th class="num">Line %</th><th>&nbsp;</th>

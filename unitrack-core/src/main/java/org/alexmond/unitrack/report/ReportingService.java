@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.TreeMap;
+import java.util.function.Function;
 
 /** Read-side queries shared by the REST API and the web dashboard. */
 @Service
@@ -192,6 +193,50 @@ public class ReportingService {
 	public List<CoverageFileEntry> coverageFiles(Long reportId, int limit) {
 		List<CoverageFileEntry> all = coverageFiles.findByReportIdOrderByLineMissedDescPackageNameAsc(reportId);
 		return (all.size() > limit) ? all.subList(0, limit) : all;
+	}
+
+	/**
+	 * Worst-covered files within one module (null/blank = all). The module is derived the
+	 * same way {@link #moduleCoverage} derives it — the package segment after the longest
+	 * common prefix — so a module drill-down from the overview lines up exactly.
+	 */
+	public List<CoverageFileEntry> coverageFiles(Long reportId, String module, int limit) {
+		if (module == null || module.isBlank()) {
+			return coverageFiles(reportId, limit);
+		}
+		List<CoverageFileEntry> inModule = filterByModule(
+				coverageFiles.findByReportIdOrderByLineMissedDescPackageNameAsc(reportId), module,
+				CoverageFileEntry::getPackageName);
+		return (inModule.size() > limit) ? inModule.subList(0, limit) : inModule;
+	}
+
+	/** Per-package coverage within one module (null/blank = all packages). */
+	public List<CoveragePackage> coveragePackages(Long reportId, String module) {
+		return filterByModule(coveragePackages(reportId), module, CoveragePackage::packageName);
+	}
+
+	/**
+	 * Keep only the items whose package falls in {@code module}, deriving each item's
+	 * module exactly as {@link #moduleCoverage} does (segment after the common prefix;
+	 * blank / {@code (default)} packages are the {@code (root)} module).
+	 */
+	private static <T> List<T> filterByModule(List<T> items, String module, Function<T, String> packageOf) {
+		if (module == null || module.isBlank() || items.isEmpty()) {
+			return items;
+		}
+		List<String[]> segments = items.stream()
+			.map((i) -> splitPackage("(default)".equals(packageOf.apply(i)) ? null : packageOf.apply(i)))
+			.toList();
+		int prefix = commonPrefixLength(segments);
+		List<T> out = new ArrayList<>();
+		for (int i = 0; i < items.size(); i++) {
+			String[] s = segments.get(i);
+			String mod = (s.length > prefix) ? s[prefix] : "(root)";
+			if (mod.equals(module)) {
+				out.add(items.get(i));
+			}
+		}
+		return out;
 	}
 
 	/**
