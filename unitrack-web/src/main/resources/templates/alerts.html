@@ -62,6 +62,13 @@
     </table>
 
     <h2>Add channel</h2>
+    <p class="muted">
+        <strong>EMAIL</strong> delivers to the address in <em>Target</em>. The webhook-style channels
+        — <strong>SLACK, TEAMS, DISCORD, MATTERMOST, ROCKETCHAT, GOOGLECHAT</strong>, and the generic
+        <strong>WEBHOOK</strong> — take that service's incoming-webhook URL in <em>Secret</em>.
+        <span class="muted">For <strong>TEAMS</strong>, paste a Power Automate
+        <em>Workflows</em> webhook URL — Microsoft retired the legacy Office&nbsp;365 connector webhooks.</span>
+    </p>
     <form method="post" th:action="@{/projects/{id}/alerts(id=${project.id})}"
           class="d-flex flex-wrap gap-2 align-items-center">
         <select name="type" class="form-select" style="width:auto" aria-label="Type">

@@ -44,6 +44,29 @@ class Notify4jAlertSinkTest {
 	}
 
 	@Test
+	void mapsTheWebhookStyleChannels() {
+		// Every endpoint-style kind wraps its pasted https webhook into
+		// <scheme>://host/path.
+		assertThat(toUrl(AlertChannelType.TEAMS, "https://x.webhook.office.com/workflows/abc"))
+			.isEqualTo("teams://x.webhook.office.com/workflows/abc");
+		assertThat(toUrl(AlertChannelType.DISCORD, "https://discord.com/api/webhooks/1/tok"))
+			.isEqualTo("discord://discord.com/api/webhooks/1/tok");
+		assertThat(toUrl(AlertChannelType.MATTERMOST, "https://mm.example.com/hooks/xyz"))
+			.isEqualTo("mattermost://mm.example.com/hooks/xyz");
+		assertThat(toUrl(AlertChannelType.ROCKETCHAT, "https://rc.example.com/hooks/xyz"))
+			.isEqualTo("rocketchat://rc.example.com/hooks/xyz");
+		assertThat(toUrl(AlertChannelType.GOOGLECHAT, "https://chat.googleapis.com/v1/spaces/A/messages?key=k"))
+			.isEqualTo("googlechat://chat.googleapis.com/v1/spaces/A/messages?key=k");
+		// http endpoints use the +http transport form.
+		assertThat(toUrl(AlertChannelType.MATTERMOST, "http://mm.internal/hooks/xyz"))
+			.isEqualTo("mattermost+http://mm.internal/hooks/xyz");
+	}
+
+	private static String toUrl(AlertChannelType type, String secret) {
+		return Notify4jAlertSink.toUrl(new Resolved(9L, type, "ch", null, secret, Set.of()));
+	}
+
+	@Test
 	void sendsThroughNotify4jWithKindAsRouteTag() {
 		given(this.channels.resolveEnabled(5L)).willReturn(List.of(new Resolved(1L, AlertChannelType.SLACK, "#b", null,
 				"https://hooks.slack.com/services/T/B/X", Set.of("GATE_FAILED"))));

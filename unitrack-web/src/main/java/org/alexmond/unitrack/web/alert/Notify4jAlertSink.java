@@ -77,16 +77,32 @@ public class Notify4jAlertSink implements AlertSink {
 	 * routing slice).
 	 */
 	static String toUrl(AlertChannelService.Resolved channel) {
+		String scheme = scheme(channel.type());
+		if (scheme == null) {
+			return null;
+		}
 		String tags = String.join(",", channel.tags()).toLowerCase(Locale.ROOT);
-		if (channel.type() == AlertChannelType.SLACK) {
-			return wrap("slack", channel.secret(), tags);
-		}
-		if (channel.type() == AlertChannelType.WEBHOOK) {
-			String endpoint = (channel.secret() != null && !channel.secret().isBlank()) ? channel.secret()
-					: channel.target();
-			return wrap("webhook", endpoint, tags);
-		}
-		return null;
+		String endpoint = (channel.secret() != null && !channel.secret().isBlank()) ? channel.secret()
+				: channel.target();
+		return wrap(scheme, endpoint, tags);
+	}
+
+	/**
+	 * The notify4j URL scheme for an endpoint-style channel (one that wraps a pasted
+	 * incoming-webhook URL), or {@code null} for kinds notify4j doesn't deliver per-URL
+	 * (EMAIL is config-based, handled by the existing mail path).
+	 */
+	private static String scheme(AlertChannelType type) {
+		return switch (type) {
+			case SLACK -> "slack";
+			case TEAMS -> "teams";
+			case DISCORD -> "discord";
+			case MATTERMOST -> "mattermost";
+			case ROCKETCHAT -> "rocketchat";
+			case GOOGLECHAT -> "googlechat";
+			case WEBHOOK -> "webhook";
+			case EMAIL -> null;
+		};
 	}
 
 	/**
