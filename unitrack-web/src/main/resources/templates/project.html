@@ -243,9 +243,10 @@
 <script th:src="@{/webjars/chart.js/4.4.1/dist/chart.umd.js}"></script>
 <script th:inline="javascript">
     const labels = JSON.parse(/*[[${trendLabels}]]*/ '[]');
-    const passRate = JSON.parse(/*[[${trendPassRate}]]*/ '[]');
+    const passed = JSON.parse(/*[[${trendPassed}]]*/ '[]');
+    const failed = JSON.parse(/*[[${trendFailed}]]*/ '[]');
+    const skipped = JSON.parse(/*[[${trendSkipped}]]*/ '[]');
     const coverage = JSON.parse(/*[[${trendCoverage}]]*/ '[]');
-    const tests = JSON.parse(/*[[${trendTests}]]*/ '[]');
     let trendChartInstance;
     if (labels.length > 0 && window.Chart) {
         const css = getComputedStyle(document.documentElement);
@@ -256,20 +257,27 @@
             type: 'line',
             data: {
                 labels: labels,
+                // Stacked test counts (Passed+Failed+Skipped = total, the stack height) on the left
+                // axis — like Allure/ReportPortal — so you read both the total and the failing band.
+                // Line coverage % overlays on the right axis.
                 datasets: [
-                    { label: 'Pass rate %', data: passRate, borderColor: '#2ea043',
-                      backgroundColor: 'rgba(46,160,67,.15)', tension: .25, spanGaps: true, fill: true },
+                    { label: 'Passed', data: passed, borderColor: '#2ea043',
+                      backgroundColor: 'rgba(46,160,67,.45)', fill: true, tension: .2, yAxisID: 'y' },
+                    { label: 'Failed', data: failed, borderColor: '#e5534b',
+                      backgroundColor: 'rgba(229,83,75,.55)', fill: true, tension: .2, yAxisID: 'y' },
+                    { label: 'Skipped', data: skipped, borderColor: '#d29922',
+                      backgroundColor: 'rgba(210,153,34,.45)', fill: true, tension: .2, yAxisID: 'y' },
                     { label: 'Line coverage %', data: coverage, borderColor: '#4493f8',
-                      backgroundColor: 'rgba(68,147,248,.12)', tension: .25, spanGaps: true, fill: true },
-                    { label: 'Tests', data: tests, borderColor: '#d29922', backgroundColor: 'rgba(210,153,34,.10)',
-                      tension: .25, spanGaps: true, fill: false, yAxisID: 'y1' }
+                      backgroundColor: 'transparent', fill: false, tension: .25, spanGaps: true, yAxisID: 'y1' }
                 ]
             },
             options: {
-                scales: { y: { min: 0, max: 100, position: 'left', title: { display: true, text: '%', color: muted },
-                               ticks: { color: muted }, grid: { color: grid } },
-                          y1: { min: 0, position: 'right', title: { display: true, text: 'tests', color: muted },
-                                ticks: { color: muted, precision: 0 }, grid: { drawOnChartArea: false } },
+                scales: { y: { min: 0, stacked: true, position: 'left',
+                               title: { display: true, text: 'tests', color: muted },
+                               ticks: { color: muted, precision: 0 }, grid: { color: grid } },
+                          y1: { min: 0, max: 100, position: 'right',
+                                title: { display: true, text: 'coverage %', color: muted },
+                                ticks: { color: muted }, grid: { drawOnChartArea: false } },
                           x: { ticks: { color: muted }, grid: { color: grid } } },
                 plugins: { legend: { labels: { color: text } } }
             }
@@ -351,9 +359,11 @@
             if (trendChartInstance) {
                 const d = trendChartInstance.data;
                 d.labels.push(u.shortSha || String(u.runId));
-                d.datasets[0].data.push(Number(u.passRatePct.toFixed ? u.passRatePct.toFixed(1) : u.passRatePct));
-                d.datasets[1].data.push(u.lineCoveragePct == null ? null : Number(u.lineCoveragePct));
-                d.datasets[2].data.push(u.totalTests == null ? null : Number(u.totalTests));
+                // Passed = total − failed − skipped (the live payload's `failed` already folds in errors).
+                d.datasets[0].data.push(u.totalTests == null ? null : (u.totalTests - u.failed - u.skipped));
+                d.datasets[1].data.push(u.failed == null ? null : Number(u.failed));
+                d.datasets[2].data.push(u.skipped == null ? null : Number(u.skipped));
+                d.datasets[3].data.push(u.lineCoveragePct == null ? null : Number(u.lineCoveragePct));
                 while (d.labels.length > TREND_MAX) {
                     d.labels.shift();
                     d.datasets.forEach(function (ds) { ds.data.shift(); });

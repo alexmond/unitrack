@@ -160,9 +160,10 @@ public class DashboardController {
 		model.addAttribute("modules",
 				reporting.latestCoverage(id).map((c) -> reporting.moduleCoverage(c.getId())).orElse(List.of()));
 		model.addAttribute("trendLabels", toJson(labels(trend.stream().map(TestRun::getShortSha).toList())));
-		model.addAttribute("trendPassRate", toJson(trend.stream().map((r) -> round(r.passRate())).toList()));
+		model.addAttribute("trendPassed", toJson(trend.stream().map(TestRun::getPassed).toList()));
+		model.addAttribute("trendFailed", toJson(trend.stream().map((r) -> r.getFailed() + r.getErrors()).toList()));
+		model.addAttribute("trendSkipped", toJson(trend.stream().map(TestRun::getSkipped).toList()));
 		model.addAttribute("trendCoverage", toJson(trend.stream().map(TestRun::getLineCoveragePct).toList()));
-		model.addAttribute("trendTests", toJson(trend.stream().map(TestRun::getTotalTests).toList()));
 		model.addAttribute("pullRequests", pullRequests.list(id));
 		model.addAttribute("uploadSnippet", uploadSnippet(project.getName()));
 		return "project";
