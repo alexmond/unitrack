@@ -21,6 +21,13 @@
 .test-timeline a.pass { background: rgba(46,160,67,.25); border-color: var(--green); }
 .test-timeline a.fail { background: rgba(229,83,75,.25); border-color: var(--red); }
 .test-timeline a.skip { background: rgba(210,153,34,.2); border-color: var(--amber); }
+.timeline-legend { display: flex; flex-wrap: wrap; gap: 14px; align-items: center;
+    font-size: 12px; color: var(--muted); margin: 6px 0 10px; }
+.timeline-legend .sq { display: inline-block; width: 12px; height: 12px; border-radius: 3px;
+    vertical-align: middle; margin-right: 5px; }
+.timeline-legend .sq.pass { background: rgba(46,160,67,.25); border: 1px solid var(--green); }
+.timeline-legend .sq.fail { background: rgba(229,83,75,.25); border: 1px solid var(--red); }
+.timeline-legend .sq.skip { background: rgba(210,153,34,.2); border: 1px solid var(--amber); }
 .test-blame {
     background: var(--panel);
     border: 1px solid var(--border);
@@ -62,7 +69,13 @@ h1 code.mono {
     </div>
 
     <!-- Status timeline strip -->
-    <h2>Status timeline <span class="muted">(oldest left)</span></h2>
+    <h2>Status timeline <span class="muted">(one square = one run, oldest left)</span></h2>
+    <div class="timeline-legend" th:unless="${timeline.isEmpty()}">
+        <span><i class="sq pass"></i> Passed</span>
+        <span><i class="sq fail"></i> Failed / Error</span>
+        <span><i class="sq skip"></i> Skipped</span>
+        <span class="muted">— hover a square for the commit &amp; status, or click to open that run</span>
+    </div>
     <div th:if="${timeline.isEmpty()}" class="empty" id="test-timeline">No history for this test.</div>
     <div th:unless="${timeline.isEmpty()}" class="test-timeline" id="test-timeline">
         <a th:each="pt : ${timeline}"
