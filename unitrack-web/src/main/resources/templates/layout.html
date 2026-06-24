@@ -19,7 +19,18 @@
             var root = document.documentElement;
             window.__charts = window.__charts || [];
             // Pages create charts via window.__chart(el, cfg) so they're registered for re-tinting.
-            window.__chart = function (el, cfg) { var c = new Chart(el, cfg); window.__charts.push(c); return c; };
+            window.__chart = function (el, cfg) {
+                // Hover anywhere along a trend line to read the values for that commit (index mode),
+                // instead of having to land exactly on a point. Applies to every chart.
+                Chart.defaults.interaction.mode = 'index';
+                Chart.defaults.interaction.intersect = false;
+                Chart.defaults.plugins.tooltip.position = 'nearest';
+                Chart.defaults.elements.point.hoverRadius = 5;
+                Chart.defaults.elements.point.hitRadius = 8;
+                var c = new Chart(el, cfg);
+                window.__charts.push(c);
+                return c;
+            };
             function icon(t) {
                 var b = document.getElementById('theme-toggle');
                 if (b) { b.textContent = (t === 'light' ? '☾' : '☀'); }
