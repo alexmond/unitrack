@@ -153,6 +153,8 @@ public class DashboardController {
 		model.addAttribute("branches", branches);
 		model.addAttribute("selectedBranch", selectedBranch);
 		model.addAttribute("branchSummaries", branchSummaries);
+		model.addAttribute("hiddenBranchCount",
+				branchSummaries.stream().filter((b) -> !b.shown() && !b.branch().equals(selectedBranch)).count());
 		model.addAttribute("runs", runs);
 		model.addAttribute("flags", reporting.flagSummaries(id));
 		model.addAttribute("modules",

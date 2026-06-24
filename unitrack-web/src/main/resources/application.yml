@@ -93,6 +93,12 @@ unitrack:
     enabled: ${UNITRACK_NOTIFICATIONS_ENABLED:false}
     from-address: ${UNITRACK_MAIL_FROM:unitrack@localhost}
     base-url: ${UNITRACK_BASE_URL:http://localhost:8080}
+  # Which branches the Overview picker surfaces by default. Ephemeral PR/feature branches
+  # (deleted after merge) otherwise pile up forever, since branches come from run history.
+  # Patterns are globs (* = any chars) — adjust to your naming convention.
+  branches:
+    protected-patterns: ${UNITRACK_BRANCHES_PROTECTED:main,master,develop,trunk,release/*,hotfix/*}
+    active-days: ${UNITRACK_BRANCHES_ACTIVE_DAYS:30}
   # Per-project alert-channel delivery (notify4j). Async keeps a slow Slack/webhook off the
   # ingest thread; transient 5xx/429/IO failures retry. Per-channel delivery counters
   # (notify4j.notifications{channel,outcome}) surface in /actuator/prometheus.
