@@ -341,6 +341,7 @@
             </activation>
             <modules>
                 <module>unitrack-web</module>
+                <module>unitrack-it</module>
             </modules>
         </profile>
 

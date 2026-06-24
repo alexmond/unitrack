@@ -1,0 +1,5 @@
+# In-LAN deploy (real Let's Encrypt cert). Closed-mode: set UNITRACK_IT_TOKEN for /api/** calls.
+unitrack:
+  it:
+    base-url: https://unitrack.lab.alexmond.org
+    token: ${UNITRACK_IT_TOKEN:}
