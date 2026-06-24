@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.alexmond</groupId>
+        <artifactId>unitrack-parent</artifactId>
+        <version>0.2.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>unitrack-it</artifactId>
+    <name>UniTrack Integration Tasks</name>
+    <description>
+        Spring-backed, on-demand operational/verification tasks (screenshots, API smoke, health
+        sweeps) that run against any environment selected by a Spring config profile. Replaces
+        ad-hoc shell scripts; not published to Maven Central.
+    </description>
+
+    <properties>
+        <!-- Task tests are tagged "it" and excluded by default, so a normal `verify` only compiles
+             this module (no browser / live target needed). Run the tasks by clearing this on the
+             command line (a CLI -D always wins and, unlike a -P profile, doesn't deactivate the
+             reactor's activeByDefault `default` profile that lists this module):
+               mvn -pl unitrack-it test -Dunitrack.it.excluded-groups= \
+                   -Dspring.profiles.active=lab [-Dtest=SmokeTasks] -->
+        <unitrack.it.excluded-groups>it</unitrack.it.excluded-groups>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter</artifactId>
+        </dependency>
+        <!-- Headless-browser page capture. Driver resolved by Selenium Manager; tasks self-skip
+             when no browser is present. Version managed by the Spring Boot BOM. -->
+        <dependency>
+            <groupId>org.seleniumhq.selenium</groupId>
+            <artifactId>selenium-java</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <excludedGroups>${unitrack.it.excluded-groups}</excludedGroups>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

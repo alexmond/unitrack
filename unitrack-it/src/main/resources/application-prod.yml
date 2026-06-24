@@ -1,0 +1,5 @@
+# Public deploy (via the in-cluster Cloudflare Tunnel). Closed-mode: set UNITRACK_IT_TOKEN.
+unitrack:
+  it:
+    base-url: https://unitrack.alexmond.org
+    token: ${UNITRACK_IT_TOKEN:}

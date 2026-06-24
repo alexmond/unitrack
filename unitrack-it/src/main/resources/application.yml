@@ -1,0 +1,12 @@
+# Default (local) target. Run a UniTrack locally first (docker-compose / spring-boot:run), then:
+#   mvn -pl unitrack-it -Pit test -Dtest=SmokeTasks
+# Switch environments with -Dspring.profiles.active=lab|prod (see application-lab.yml / -prod.yml).
+spring:
+  main:
+    # The tasks drive a REMOTE instance over HTTP — this context is not itself a web server.
+    web-application-type: none
+
+unitrack:
+  it:
+    base-url: http://localhost:8080
+    screenshot-dir: target/screenshots
