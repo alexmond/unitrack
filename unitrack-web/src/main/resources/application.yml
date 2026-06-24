@@ -93,6 +93,16 @@ unitrack:
     enabled: ${UNITRACK_NOTIFICATIONS_ENABLED:false}
     from-address: ${UNITRACK_MAIL_FROM:unitrack@localhost}
     base-url: ${UNITRACK_BASE_URL:http://localhost:8080}
+  # Per-project alert-channel delivery (notify4j). Async keeps a slow Slack/webhook off the
+  # ingest thread; transient 5xx/429/IO failures retry. Per-channel delivery counters
+  # (notify4j.notifications{channel,outcome}) surface in /actuator/prometheus.
+  alerts:
+    delivery:
+      pool-size: ${UNITRACK_ALERTS_POOL_SIZE:4}
+      connect-timeout: 5s
+      read-timeout: 10s
+      max-attempts: 3      # 1 disables retry
+      retry-backoff: 500ms
 
 # To actually deliver mail, configure an SMTP server, e.g.:
 #   spring.mail.host: smtp.example.com
