@@ -387,6 +387,13 @@ details.output pre {
 .table tbody tr.row-fail td { background: rgba(229, 83, 75, .07); }
 .table tbody tr.row-fail td:first-child { box-shadow: inset 3px 0 0 var(--red); }
 
+/* Branches list: ephemeral/merged branches collapse until "Show all"; the branch currently
+   filtering the page is highlighted so selecting one is an obvious, visible change. */
+.table tbody tr.branch-hidden { display: none; }
+.table tbody tr.branch-hidden.revealed { display: table-row; }
+.table tbody tr.branch-current td { background: color-mix(in oklab, var(--blue) 9%, var(--panel)); }
+.table tbody tr.branch-current td:first-child { box-shadow: inset 3px 0 0 var(--blue); }
+
 /* Threshold-coloured KPI values (coverage tiles). */
 .stat .value.lvl-good { color: var(--green); }
 .stat .value.lvl-warn { color: var(--amber); }

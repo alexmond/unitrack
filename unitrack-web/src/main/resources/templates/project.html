@@ -20,8 +20,11 @@
         <label for="branchSel"><i class="bi bi-signpost-split" aria-hidden="true"></i> Branch</label>
         <select id="branchSel" name="branch" onchange="this.form.submit()">
             <option value="" th:selected="${selectedBranch == null}">All branches</option>
-            <option th:each="b : ${branches}" th:value="${b}" th:text="${b}"
-                    th:selected="${b == selectedBranch}">main</option>
+            <!-- Only surface long-lived/active branches by default; keep the selected one even
+                 if it's a collapsed ephemeral branch (see unitrack.branches.* config). -->
+            <option th:each="bs : ${branchSummaries}" th:if="${bs.shown() or bs.branch() == selectedBranch}"
+                    th:value="${bs.branch()}" th:text="${bs.branch()}"
+                    th:selected="${bs.branch() == selectedBranch}">main</option>
         </select>
     </form>
 
@@ -116,7 +119,10 @@
                 <th class="num">Coverage</th><th class="num">Runs</th><th>Last seen</th></tr>
             </thead>
             <tbody>
-            <tr th:each="b : ${branchSummaries}" th:classappend="${b.lastStatus() != 'PASSED'} ? 'row-fail'">
+            <tr th:each="b : ${branchSummaries}"
+                th:classappend="${(b.lastStatus() != 'PASSED' ? 'row-fail ' : '')
+                               + (b.branch() == selectedBranch ? 'branch-current ' : '')
+                               + (!b.shown() and b.branch() != selectedBranch ? 'branch-hidden' : '')}">
                 <td><a th:href="@{/projects/{id}(id=${project.id},branch=${b.branch()})}"
                        th:text="${b.branch()}">main</a>
                     <span class="badge tag" th:if="${b.defaultBranch()}">default</span></td>
@@ -130,6 +136,11 @@
             </tr>
             </tbody>
         </table>
+        <!-- Ephemeral/merged branches collapse by default; reveal on demand. -->
+        <button type="button" class="btn btn-sm btn-secondary" id="showAllBranches"
+                th:if="${hiddenBranchCount > 0}"
+                th:attr="data-show=|Show all (${hiddenBranchCount} hidden)|"
+                th:text="|Show all (${hiddenBranchCount} hidden)|">Show all</button>
     </div>
 
     <div th:if="${!pullRequests.isEmpty()}">
@@ -213,6 +224,21 @@
     </form>
 </main>
 <th:block layout:fragment="scripts">
+
+<script>
+    // Reveal/hide the collapsed ephemeral branches (the "Show all (N hidden)" button).
+    (function () {
+        var btn = document.getElementById('showAllBranches');
+        if (!btn) { return; }
+        btn.addEventListener('click', function () {
+            var nowShown = btn.classList.toggle('on');
+            document.querySelectorAll('tr.branch-hidden').forEach(function (r) {
+                r.classList.toggle('revealed', nowShown);
+            });
+            btn.textContent = nowShown ? 'Hide merged/inactive' : btn.getAttribute('data-show');
+        });
+    })();
+</script>
 
 <script th:src="@{/webjars/chart.js/4.4.1/dist/chart.umd.js}"></script>
 <script th:inline="javascript">
