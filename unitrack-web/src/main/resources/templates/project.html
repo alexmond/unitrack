@@ -79,7 +79,8 @@
             </thead>
             <tbody>
             <tr th:each="m : ${modules}">
-                <td><code class="mono" th:text="${m.name()}">core</code></td>
+                <td><a th:href="@{/projects/{id}/coverage(id=${project.id},module=${m.name()})}"><code
+                        class="mono" th:text="${m.name()}">core</code></a></td>
                 <td class="num pct" th:text="${#numbers.formatDecimal(m.linePct(),1,1)} + '%'">0%</td>
                 <td class="num muted" th:text="${m.lineCovered()} + '/' + ${m.lineTotal()}">0/0</td>
                 <td class="num muted" th:text="${m.files()}">0</td>

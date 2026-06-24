@@ -69,6 +69,20 @@ class ModuleCoverageTest {
 	}
 
 	@Test
+	void coveragePackagesScopeToOneModule() {
+		given(coverageFiles.aggregateByPackage(1L))
+			.willReturn(List.of(pkg("org/alexmond/builder/api", 10, 90), pkg("org/alexmond/builder/api/sub", 5, 5),
+					pkg("org/alexmond/builder/core", 80, 20), pkg("org/alexmond/builder/web", 0, 50)));
+
+		// A module drill-down keeps only that module's packages (same derivation as the
+		// list).
+		assertThat(reporting.coveragePackages(1L, "api")).extracting(CoveragePackage::packageName)
+			.containsExactly("org/alexmond/builder/api", "org/alexmond/builder/api/sub");
+		// null/blank module = unfiltered.
+		assertThat(reporting.coveragePackages(1L, null)).hasSize(4);
+	}
+
+	@Test
 	void singleModuleCollapsesToOneEntrySoTheViewCanHide() {
 		// Files in one package collapse to a single aggregate row → one (root) module.
 		given(coverageFiles.aggregateByPackage(2L)).willReturn(List.of(new Pkg("com/example/app", 3, 1, 2)));
