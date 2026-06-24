@@ -26,4 +26,10 @@ public class ItProperties {
 	/** Directory screenshots are written to. */
 	private Path screenshotDir = Path.of("target", "screenshots");
 
+	/**
+	 * Total attempts per request; transient I/O failures (e.g. a proxy reset) are
+	 * retried.
+	 */
+	private int maxAttempts = 3;
+
 }
