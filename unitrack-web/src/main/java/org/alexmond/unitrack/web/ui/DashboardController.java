@@ -9,6 +9,7 @@ import org.alexmond.unitrack.report.BranchService;
 import org.alexmond.unitrack.report.BranchSummary;
 import org.alexmond.unitrack.report.CoverageDiffService;
 import org.alexmond.unitrack.report.DurationPoint;
+import org.alexmond.unitrack.report.FailureCluster;
 import org.alexmond.unitrack.report.FailureClusteringService;
 import org.alexmond.unitrack.report.TestTimelinePoint;
 import org.alexmond.unitrack.report.PerfRegressionService;
@@ -211,7 +212,13 @@ public class DashboardController {
 	public String clusters(@PathVariable Long id, Model model) {
 		Project project = access.requireReadProject(id);
 		model.addAttribute("project", project);
-		model.addAttribute("clusters", clustering.cluster(id));
+		// A real cluster spans >1 distinct test (shared root cause). A signature hit by a
+		// single
+		// test is just that test failing repeatedly — list those separately as recurring
+		// failures.
+		List<FailureCluster> all = clustering.cluster(id);
+		model.addAttribute("clusters", all.stream().filter((c) -> c.distinctTests() > 1).toList());
+		model.addAttribute("recurringFailures", all.stream().filter((c) -> c.distinctTests() == 1).toList());
 		return "clusters";
 	}
 

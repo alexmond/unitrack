@@ -13,28 +13,55 @@
     <nav th:replace="~{fragments/common :: subnav(${project.id}, 'clusters')}"></nav>
     <p class="muted">Recent failures grouped by a normalized signature (type, message, top stack frame) — most frequent first.</p>
 
-    <div th:if="${clusters.isEmpty()}" class="empty">No recent failures to cluster. 🎉</div>
+    <div th:if="${clusters.isEmpty() and recurringFailures.isEmpty()}" class="empty">No recent failures to cluster. 🎉</div>
 
-    <div th:each="c : ${clusters}" class="cluster">
-        <details class="failure">
-            <summary>
-                <span class="badge fail" th:text="${c.occurrences()} + '×'">3×</span>
-                <code class="mono" th:text="${c.failureType()} ?: 'failure'">java.lang.AssertionError</code>
-                <span class="muted" th:if="${c.sampleMessage() != null}" th:text="' — ' + ${c.sampleMessage()}"></span>
-                <span class="muted" th:text="' · ' + ${c.distinctTests()} + ' test(s)'"></span>
-            </summary>
-            <div class="cluster-body">
-                <div class="muted" th:if="${c.lastSeen() != null}"
-                     th:text="'Last seen ' + ${#temporals.format(c.lastSeen(), 'yyyy-MM-dd HH:mm')}">last seen</div>
-                <ul>
-                    <li th:each="t : ${c.tests()}"><code class="mono" th:text="${t}">Test#method</code></li>
-                </ul>
-                <details>
-                    <summary class="muted">signature</summary>
-                    <pre th:text="${c.signature()}">sig</pre>
-                </details>
-            </div>
-        </details>
+    <!-- Genuine clusters: one signature shared by more than one test (a likely common root cause). -->
+    <div th:unless="${clusters.isEmpty()}">
+        <h2>Clusters <span class="muted">(same signature across multiple tests)</span></h2>
+        <div th:each="c : ${clusters}" class="cluster">
+            <details class="failure">
+                <summary>
+                    <span class="badge fail" th:text="${c.occurrences()} + '×'">3×</span>
+                    <code class="mono" th:text="${c.failureType()} ?: 'failure'">java.lang.AssertionError</code>
+                    <span class="muted" th:if="${c.sampleMessage() != null}" th:text="' — ' + ${c.sampleMessage()}"></span>
+                    <span class="muted" th:text="' · ' + ${c.distinctTests()} + ' tests'"></span>
+                </summary>
+                <div class="cluster-body">
+                    <div class="muted" th:if="${c.lastSeen() != null}"
+                         th:text="'Last seen ' + ${#temporals.format(c.lastSeen(), 'yyyy-MM-dd HH:mm')}">last seen</div>
+                    <ul>
+                        <li th:each="t : ${c.tests()}"><code class="mono" th:text="${t}">Test#method</code></li>
+                    </ul>
+                    <details>
+                        <summary class="muted">signature</summary>
+                        <pre th:text="${c.signature()}">sig</pre>
+                    </details>
+                </div>
+            </details>
+        </div>
+    </div>
+
+    <!-- A single test failing repeatedly isn't a cluster — list those separately. -->
+    <div th:unless="${recurringFailures.isEmpty()}">
+        <h2>Recurring failures <span class="muted">(a single test failing repeatedly — not a cluster)</span></h2>
+        <div th:each="c : ${recurringFailures}" class="cluster">
+            <details class="failure">
+                <summary>
+                    <span class="badge fail" th:text="${c.occurrences()} + '×'">3×</span>
+                    <code class="mono" th:text="${c.failureType()} ?: 'failure'">java.lang.AssertionError</code>
+                    <span class="muted" th:if="${c.sampleMessage() != null}" th:text="' — ' + ${c.sampleMessage()}"></span>
+                    <span class="muted" th:text="' · ' + ${c.tests()[0]}"></span>
+                </summary>
+                <div class="cluster-body">
+                    <div class="muted" th:if="${c.lastSeen() != null}"
+                         th:text="'Last seen ' + ${#temporals.format(c.lastSeen(), 'yyyy-MM-dd HH:mm')}">last seen</div>
+                    <details>
+                        <summary class="muted">signature</summary>
+                        <pre th:text="${c.signature()}">sig</pre>
+                    </details>
+                </div>
+            </details>
+        </div>
     </div>
 </main>
 </body>
