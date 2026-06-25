@@ -3,7 +3,7 @@
 <head><title th:text="'UniTrack — Profile'">UniTrack</title></head>
 <body>
 
-<main class="container container--narrow" layout:fragment="content">
+<main class="container" layout:fragment="content">
     <h1>Profile</h1>
     <div th:if="${msg}" class="muted" th:text="${msg}">ok</div>
     <div th:if="${error}" style="color:var(--red)" th:text="${error}">err</div>

@@ -18,6 +18,13 @@
            th:text="'PR #' + ${run.prNumber} + (${run.baseBranch != null} ? ' → ' + ${run.baseBranch} : '')">PR #1 → main</a>
         <a class="badge" style="background:var(--panel);border:1px solid var(--border);text-decoration:none"
            th:href="@{/runs/{id}/export(id=${run.id})}" title="Self-contained HTML — print or save as PDF">Export ↗</a>
+        <form th:if="${canDelete}" method="post" th:action="@{/runs/{id}/delete(id=${run.id})}"
+              style="display:inline"
+              onsubmit="return confirm('Delete this run and all its data (tests, coverage, share links)? This cannot be undone.');">
+            <button type="submit" class="badge"
+                    style="background:rgba(229,83,75,.15);color:var(--red);border:1px solid rgba(229,83,75,.4);cursor:pointer;font:inherit"
+                    title="Permanently delete this run (e.g. a bad upload that skews trends)">Delete run</button>
+        </form>
     </h1>
     <p class="muted">
         <span th:text="${run.branch} ?: 'no branch'">main</span> ·

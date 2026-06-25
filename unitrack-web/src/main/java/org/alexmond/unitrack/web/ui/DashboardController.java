@@ -250,6 +250,7 @@ public class DashboardController {
 		String username = access.currentUsername();
 		boolean canShare = username != null && membership.canWrite(username, projectId);
 		model.addAttribute("canShare", canShare);
+		model.addAttribute("canDelete", canShare);
 		model.addAttribute("shareLinks",
 				timed("run", "shareLinks", () -> canShare ? shareLinks.listForRun(id) : List.of()));
 

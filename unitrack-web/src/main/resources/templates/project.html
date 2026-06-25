@@ -254,32 +254,30 @@
         const text = css.getPropertyValue('--text').trim() || '#e6edf3';
         const grid = css.getPropertyValue('--border').trim() || '#2c343d';
         trendChartInstance = window.__chart(document.getElementById('trendChart'), {
-            type: 'bar',
+            type: 'line',
             data: {
                 labels: labels,
-                // Stacked BARS of test counts (Passed+Failed+Skipped = total, the bar height) on the
-                // left axis — like ReportPortal's launch-stats bars — so the total, the failing band,
-                // and (crucially) the overlaid coverage line all stay readable even when all-passing.
+                // Lines (no fill) for each series, so you can read growth/trend per series without a
+                // solid area blocking the view: test counts on the left axis, coverage % on the right.
                 datasets: [
-                    { label: 'Passed', data: passed, backgroundColor: 'rgba(46,160,67,.55)',
-                      stack: 'tests', yAxisID: 'y', order: 3 },
-                    { label: 'Failed', data: failed, backgroundColor: 'rgba(229,83,75,.85)',
-                      stack: 'tests', yAxisID: 'y', order: 3 },
-                    { label: 'Skipped', data: skipped, backgroundColor: 'rgba(210,153,34,.7)',
-                      stack: 'tests', yAxisID: 'y', order: 3 },
-                    { type: 'line', label: 'Line coverage %', data: coverage, borderColor: '#4493f8',
-                      backgroundColor: 'transparent', borderWidth: 2, fill: false, tension: .25,
-                      spanGaps: true, pointRadius: 2, yAxisID: 'y1', order: 1 }
+                    { label: 'Passed', data: passed, borderColor: '#2ea043', backgroundColor: 'transparent',
+                      fill: false, tension: .25, spanGaps: true, pointRadius: 2, borderWidth: 2, yAxisID: 'y' },
+                    { label: 'Failed', data: failed, borderColor: '#e5534b', backgroundColor: 'transparent',
+                      fill: false, tension: .25, spanGaps: true, pointRadius: 2, borderWidth: 2, yAxisID: 'y' },
+                    { label: 'Skipped', data: skipped, borderColor: '#d29922', backgroundColor: 'transparent',
+                      fill: false, tension: .25, spanGaps: true, pointRadius: 2, borderWidth: 2, yAxisID: 'y' },
+                    { label: 'Line coverage %', data: coverage, borderColor: '#4493f8',
+                      backgroundColor: 'transparent', fill: false, tension: .25, spanGaps: true,
+                      pointRadius: 2, borderWidth: 2, borderDash: [5, 3], yAxisID: 'y1' }
                 ]
             },
             options: {
-                scales: { y: { min: 0, stacked: true, position: 'left',
-                               title: { display: true, text: 'tests', color: muted },
+                scales: { y: { min: 0, position: 'left', title: { display: true, text: 'tests', color: muted },
                                ticks: { color: muted, precision: 0 }, grid: { color: grid } },
                           y1: { min: 0, max: 100, position: 'right',
                                 title: { display: true, text: 'coverage %', color: muted },
                                 ticks: { color: muted }, grid: { drawOnChartArea: false } },
-                          x: { stacked: true, ticks: { color: muted }, grid: { color: grid } } },
+                          x: { ticks: { color: muted }, grid: { color: grid } } },
                 plugins: { legend: { labels: { color: text } } }
             }
         });

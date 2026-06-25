@@ -2,12 +2,21 @@ package org.alexmond.unitrack.repository;
 
 import org.alexmond.unitrack.domain.CoverageFileEntry;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 
 public interface CoverageFileEntryRepository extends JpaRepository<CoverageFileEntry, Long> {
+
+	/**
+	 * Bulk-delete a run's coverage file entries (via its report) — for hard run deletion.
+	 */
+	@Modifying
+	@Query("delete from CoverageFileEntry f where f.report.id in "
+			+ "(select r.id from CoverageReport r where r.run.id = :runId)")
+	void deleteByRunId(@Param("runId") Long runId);
 
 	List<CoverageFileEntry> findByReportIdOrderByLineMissedDescPackageNameAsc(Long reportId);
 
