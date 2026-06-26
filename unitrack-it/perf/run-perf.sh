@@ -50,8 +50,11 @@ ENVV=(BASE_URL="$BASE" UNITRACK_USER="$USER_" UNITRACK_PASS="$PASS_" \
       PROJECT_ID="$PROJECT_ID" RUN_ID="$RUN_ID" VUS="$VUS" DURATION="$DURATION")
 
 echo "==> load test: $BASE  (vus=$VUS duration=$DURATION project=${PROJECT_ID:-none} run=${RUN_ID:-none})"
+# k6 exits non-zero when a threshold is crossed — capture it but DON'T abort, so a slow run still
+# gets its summary recorded/uploaded (that's the data we want most). Re-surface the code at the end.
+K6_RC=0
 if command -v k6 >/dev/null 2>&1; then
-	env "${ENVV[@]}" SUMMARY_OUT="$OUT" k6 run "$DIR/ui-load.js"
+	env "${ENVV[@]}" SUMMARY_OUT="$OUT" k6 run "$DIR/ui-load.js" || K6_RC=$?
 else
 	CLI="$(command -v podman || command -v docker || true)"
 	[[ -n "$CLI" ]] || { echo "!! need k6, or podman/docker for the grafana/k6 container" >&2; exit 1; }
@@ -62,16 +65,18 @@ else
 	RUNFLAGS=(--rm --network=host --user "$(id -u):$(id -g)")
 	[[ "$CLI" == *podman ]] && RUNFLAGS+=(--userns=keep-id)
 	"$CLI" run "${RUNFLAGS[@]}" "${ENVFLAGS[@]}" -e SUMMARY_OUT=/perf/summary.json -v "$DIR":/perf:Z \
-		docker.io/grafana/k6 run /perf/ui-load.js
+		docker.io/grafana/k6 run /perf/ui-load.js || K6_RC=$?
 fi
+[[ "$K6_RC" -ne 0 ]] && echo "   (k6 exited $K6_RC — likely a crossed threshold; continuing to record the result)"
 
 echo "==> summary: $OUT"
 [[ -f "$OUT" ]] || { echo "!! k6 produced no summary (run failed?)" >&2; exit 1; }
 
 if [[ "$UPLOAD" -eq 1 ]]; then
 	echo "==> uploading perf run to $BASE (project=$UPLOAD_PROJECT)"
-	"$ROOT/scripts/unitrack-upload.sh" \
+	bash "$ROOT/scripts/unitrack-upload.sh" \
 		--url "$BASE" --project "$UPLOAD_PROJECT" --branch perf \
 		${TOKEN:+--token "$TOKEN"} --perf "$OUT"
 fi
 echo "==> done."
+exit "$K6_RC"   # non-zero if k6 crossed a threshold (after the result was recorded/uploaded)

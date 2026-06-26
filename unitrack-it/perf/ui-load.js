@@ -1,6 +1,6 @@
 // k6 UI load test for UniTrack — hammers the render-heavy dashboard pages so a paired jvmlens
 // monitor (or just k6's own percentiles) shows how they hold up under concurrency. The end-of-test
-// summary (k6 run --summary-export=summary.json) feeds UniTrack's own perf-ingest (dogfood).
+// summary (handleSummary -> summary.json) feeds UniTrack's own perf-ingest (dogfood).
 //
 // Config (env): BASE_URL, UNITRACK_USER + UNITRACK_PASS (form login for closed mode),
 //               PROJECT_ID, RUN_ID, VUS, DURATION.
@@ -27,27 +27,33 @@ export const options = {
 	},
 };
 
-// Spring Security form login (closed mode). k6 keeps a per-VU cookie jar, so the JSESSIONID from
-// here rides along on the page GETs below. CSRF is a hidden field Spring renders into the form.
-function login() {
+// Log in ONCE (Spring Security form login: CSRF hidden field + creds) and hand the resulting
+// JSESSIONID to every VU. This avoids paying bcrypt on every iteration AND survives k6 resetting
+// its per-VU cookie jar between iterations (which otherwise drops the session -> pages 302 /login).
+export function setup() {
+	if (!USER) {
+		return {};
+	}
 	const page = http.get(`${BASE}/login`);
 	const m = page.body && page.body.match(/name="_csrf"[^>]*value="([^"]+)"/);
 	const res = http.post(`${BASE}/login`, { username: USER, password: PASS, _csrf: m ? m[1] : '' });
 	check(res, { 'login succeeded': (r) => !r.url.endsWith('/login?error') });
+	const jar = http.cookieJar().cookiesForURL(`${BASE}/`);
+	const sid = (jar.JSESSIONID && jar.JSESSIONID[0]) || null;
+	if (USER && !sid) {
+		console.warn('login yielded no JSESSIONID — pages will redirect to /login');
+	}
+	return { sid };
 }
 
-// module scope = per-VU in k6, so each VU logs in once and reuses its session across iterations.
-let loggedIn = false;
-
-export default function () {
-	if (USER && !loggedIn) {
-		login();
-		loggedIn = true;
+export default function (data) {
+	// Re-assert the shared session at the top of each iteration (the jar is per-iteration in k6).
+	if (data && data.sid) {
+		http.cookieJar().set(BASE, 'JSESSIONID', data.sid);
 	}
 
 	const pages = [
-		['home', `${BASE}/`],
-		['projects', `${BASE}/projects`],
+		['home', `${BASE}/`], // the dashboard board (there is no /projects list route)
 	];
 	if (PROJECT_ID) {
 		pages.push(['project', `${BASE}/projects/${PROJECT_ID}`]);
