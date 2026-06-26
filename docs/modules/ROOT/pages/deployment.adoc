@@ -58,7 +58,7 @@ stack and health-checks it -- handy when the build host and the deploy host diff
 
 [source,bash]
 ----
-scripts/deploy-remote.sh --host root@192.168.100.132 --stack h2 --port 8081
+scripts/deploy-remote.sh --host root@docker-host.example.com --stack h2 --port 8081
 ----
 
 [cols="2,3"]
@@ -90,10 +90,10 @@ Two ways to build:
 
 [source,bash]
 ----
-podman login nas1.home.int:5000
+podman login registry.example.com:5000
 ./mvnw -pl unitrack-web -am package -DskipTests
-podman build -t nas1.home.int:5000/unitrack:0.1.0-SNAPSHOT -f deploy/Containerfile unitrack-web/target
-podman push --tls-verify=false nas1.home.int:5000/unitrack:0.1.0-SNAPSHOT
+podman build -t registry.example.com:5000/unitrack:0.1.0-SNAPSHOT -f deploy/Containerfile unitrack-web/target
+podman push --tls-verify=false registry.example.com:5000/unitrack:0.1.0-SNAPSHOT
 ----
 
 *Cloud Native Buildpacks:* the `docker` Maven profile builds a layered image without a
@@ -101,9 +101,9 @@ Dockerfile, but needs a real Docker daemon (it fails under rootless Podman):
 
 [source,bash]
 ----
-docker login nas1.home.int:5000
+docker login registry.example.com:5000
 ./mvnw -Pdocker -pl unitrack-web -am package \
-  -Ddocker.image.name=nas1.home.int:5000/unitrack:0.1.0-SNAPSHOT \
+  -Ddocker.image.name=registry.example.com:5000/unitrack:0.1.0-SNAPSHOT \
   -Ddocker.publish=true
 ----
 
@@ -117,7 +117,7 @@ For GHCR, use `…/unitrack:<tag>` under `ghcr.io/<owner>` and log in to `ghcr.i
 ----
 helm upgrade --install unitrack deploy/helm/unitrack \
   -n unitrack --create-namespace \
-  --set image.repository=nas1.home.int:5000/unitrack \
+  --set image.repository=registry.example.com:5000/unitrack \
   --set image.tag=0.1.0-SNAPSHOT
 ----
 
@@ -149,12 +149,11 @@ the rollout and runs `helm test` -- the Kubernetes counterpart to `scripts/deplo
 
 [source,bash]
 ----
-scripts/deploy-k8s.sh --registry nas1.home.int:5000 --namespace unitrack
+scripts/deploy-k8s.sh --registry registry.example.com:5000 --namespace unitrack
 ----
 
-For the home k3s cluster (Zot registry, Traefik ingress at `unitrack.lab.alexmond.org`, node-local
-DB volume), `deploy/helm/unitrack/values-homelab.yaml` captures those overrides and is picked up
-by the helper automatically.
+For a specific cluster (private registry, ingress host, storage class), capture those overrides in
+your own values file and pass it with `--values my-values.yaml`.
 
 == Health & metrics
 

@@ -264,7 +264,7 @@ heap from the limit rather than total host RAM.
 To build locally and ship to a remote Docker host over SSH (no registry):
 
 ```bash
-scripts/deploy-remote.sh --host root@192.168.100.132 --stack h2 --port 8081
+scripts/deploy-remote.sh --host root@docker-host.example.com --stack h2 --port 8081
 ```
 
 ### Code quality

@@ -13,7 +13,7 @@ Not published to Maven Central (it lives in the `default` reactor profile, which
 | Profile | Target | File |
 |---|---|---|
 | _(default)_ | `http://localhost:8080` (a locally-running instance) | `application.yml` |
-| `lab` | `https://unitrack.lab.alexmond.org` | `application-lab.yml` |
+| `lab` | `$UNITRACK_IT_BASE_URL` (your private/in-LAN instance) | `application-lab.yml` |
 | `prod` | `https://unitrack.alexmond.org` | `application-prod.yml` |
 
 Closed-mode instances need a token for `/api/**` — set `UNITRACK_IT_TOKEN`.

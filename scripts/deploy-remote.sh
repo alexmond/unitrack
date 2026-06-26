@@ -7,7 +7,7 @@
 #
 # Usage:
 #   scripts/deploy-remote.sh [options]
-#     --host USER@HOST   remote docker host over SSH   (default: root@192.168.100.132)
+#     --host USER@HOST   remote docker host over SSH   (required, e.g. root@docker-host.example.com)
 #     --stack h2|postgres                              (default: h2)
 #     --port N           host port to publish          (default: 8081)
 #     --project NAME     compose project name          (default: unitrack)
@@ -19,7 +19,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-HOST=root@192.168.100.132
+HOST=""
 STACK=h2
 PORT=8081
 PROJECT=unitrack
@@ -37,6 +37,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+[[ -n "$HOST" ]] || { echo "!! --host USER@HOST is required (e.g. root@docker-host.example.com)" >&2; exit 2; }
 COMPOSE="deploy/compose.${STACK}.yaml"
 [[ -f "$COMPOSE" ]] || { echo "No compose file: $COMPOSE" >&2; exit 1; }
 HOST_ADDR="${HOST#*@}"

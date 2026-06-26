@@ -77,8 +77,8 @@ Recurring lint rules that bite: **SpringTernary** wants `(a != b) ? x : y` (pare
 
 - **Docker Compose**: `deploy/compose.postgres.yaml` (prod-like) / `compose.h2.yaml` (demo);
   `scripts/deploy-remote.sh` builds on a remote Docker host over SSH.
-- **Kubernetes**: Helm chart `deploy/helm/unitrack` (toggleable bundled Postgres; `values-homelab.yaml`
-  targets the k3s cluster); `scripts/deploy-k8s.sh` builds + `helm upgrade --install` + verifies.
+- **Kubernetes**: Helm chart `deploy/helm/unitrack` (toggleable bundled Postgres; pass env-specific
+  overrides via `--values`); `scripts/deploy-k8s.sh` builds + `helm upgrade --install` + verifies.
 - **Image**: built by buildpacks via the `docker` Maven profile
   (`./mvnw -Pdocker -pl unitrack-web -am package -Ddocker.image.name=… -Ddocker.publish=true`).
 

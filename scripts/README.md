@@ -49,7 +49,7 @@ then both run against the remote daemon. The image itself is built by **Cloud Na
 Buildpacks (Paketo)** via `-Pdocker` — there is no Dockerfile.
 
 ```bash
-scripts/deploy-remote.sh                                   # h2 stack → root@192.168.100.132:8081
+scripts/deploy-remote.sh                                   # h2 stack → root@docker-host.example.com:8081
 scripts/deploy-remote.sh --host user@host --stack postgres --port 8080
 scripts/deploy-remote.sh --no-build                        # reuse the image already on the host
 ```
@@ -69,14 +69,14 @@ works under rootless Podman) or `--builder buildpacks` (Spring Boot `-Pdocker`, 
 Docker daemon).
 
 ```bash
-scripts/deploy-k8s.sh                                      # podman build → nas1.home.int:5000 → ns unitrack
+scripts/deploy-k8s.sh                                      # podman build → registry.example.com:5000 → ns unitrack
 scripts/deploy-k8s.sh --registry ghcr.io/alexmond --tag 0.1.0
 scripts/deploy-k8s.sh --builder buildpacks                 # use the buildpacks image instead
 scripts/deploy-k8s.sh --no-build                           # reuse the image already in the registry
 ```
 
-Tag defaults to the Maven project version; `deploy/helm/unitrack/values-homelab.yaml` is applied
-automatically when present.
+Tag defaults to the Maven project version; pass env-specific overrides with
+`--values my-values.yaml`.
 
 ## CI helpers (dependency-free)
 

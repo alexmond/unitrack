@@ -1,6 +1,6 @@
 # Default values for the unitrack chart.
-# These are sane, portable defaults. For the home k3s cluster (Zot registry, Traefik
-# ingress, local-path DB volume) use the example overrides in values-homelab.yaml.
+# These are sane, portable defaults. For a specific cluster (private registry, ingress host,
+# storage class) supply your own overrides file: `helm upgrade ... -f my-values.yaml`.
 
 replicaCount: 1
 
@@ -12,7 +12,7 @@ image:
   tag: ""
   pullPolicy: IfNotPresent
 
-# Pull secrets for a private registry, e.g. [{ name: zot-regcred }].
+# Pull secrets for a private registry, e.g. [{ name: regcred }].
 imagePullSecrets: []
 
 nameOverride: ""
@@ -59,7 +59,7 @@ ingress:
   pathType: Prefix
   tls: false
   # Only needed when terminating TLS with a per-host Secret. On the home cluster Traefik
-  # serves a real Let's Encrypt wildcard (*.lab.alexmond.org) as its default cert, so leave
+  # serves a real Let's Encrypt wildcard (*.example.com) as its default cert, so leave
   # this empty there.
   tlsSecretName: ""
 

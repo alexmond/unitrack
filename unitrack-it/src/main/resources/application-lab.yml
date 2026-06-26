@@ -1,5 +1,6 @@
-# In-LAN deploy (real Let's Encrypt cert). Closed-mode: set UNITRACK_IT_TOKEN for /api/** calls.
+# In-LAN / private deploy (e.g. behind a real cert). Set UNITRACK_IT_BASE_URL to your instance;
+# closed-mode targets also need UNITRACK_IT_TOKEN for /api/** calls.
 unitrack:
   it:
-    base-url: https://unitrack.lab.alexmond.org
+    base-url: ${UNITRACK_IT_BASE_URL:http://localhost:8080}
     token: ${UNITRACK_IT_TOKEN:}
