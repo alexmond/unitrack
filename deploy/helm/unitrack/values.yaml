@@ -129,6 +129,18 @@ extraEnv: []
 #  - name: SPRING_MAIL_HOST
 #    value: smtp.example.com
 
+# Optional in-process jvmlens monitor (the sibling profiling tool): the agent appends a
+# CPU/memory/wait/SQL/HTTP/Micrometer sample to a history file each interval; `jvmlens trend`
+# digests it over days. The agent jar is baked into the image by scripts/deploy-k8s.sh; enabling
+# this sets JAVA_TOOL_OPTIONS and mounts a restart-surviving history PVC at /agent. Needs a
+# writable mount — set podSecurityContext.fsGroup to the app uid (1001).
+jvmlens:
+  enabled: false
+  args: "out=/agent/unitrack.md,history=/agent/unitrack.jsonl,interval=300,db,web,micrometer"
+  persistence:
+    size: 256Mi
+    storageClass: ""
+
 # ---------------------------------------------------------------------------------------
 # Application configuration (maps to UniTrack's UNITRACK_* env contract).
 # ---------------------------------------------------------------------------------------

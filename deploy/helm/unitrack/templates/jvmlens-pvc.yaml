@@ -1,0 +1,19 @@
+{{- if .Values.jvmlens.enabled }}
+# Restart-surviving store for the jvmlens monitor's history file, so a pod restart (every deploy)
+# doesn't reset the multi-day series. Read by `jvmlens trend`.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "unitrack.fullname" . }}-jvmlens
+  labels:
+    {{- include "unitrack.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  {{- with .Values.jvmlens.persistence.storageClass }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.jvmlens.persistence.size | quote }}
+{{- end }}

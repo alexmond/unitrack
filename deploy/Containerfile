@@ -10,6 +10,9 @@ FROM docker.io/library/eclipse-temurin:21-jre
 
 WORKDIR /app
 COPY unitrack.jar /app/unitrack.jar
+# jvmlens monitor agent (staged into the build context by scripts/deploy-k8s.sh). Inert unless the
+# chart sets JAVA_TOOL_OPTIONS=-javaagent:/app/jvmlens-agent.jar=… (jvmlens.enabled).
+COPY jvmlens-agent.jar /app/jvmlens-agent.jar
 
 # Run as a non-root user (the Helm chart sets runAsNonRoot).
 RUN useradd --uid 1001 --system --create-home --shell /usr/sbin/nologin app
