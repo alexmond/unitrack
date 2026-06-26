@@ -101,6 +101,27 @@ Recurring lint rules that bite: **SpringTernary** wants `(a != b) ? x : y` (pare
   (`<classifier>exec</classifier>` on spring-boot-maven-plugin) — don't publish the fat jar as the
   primary artifact.
 
+## Profiling (jvmlens)
+
+Optional JVM profiling via the sibling **jvmlens** (`~/IdeaProjects/jvmlens`; not a build dep) —
+turns a JFR into a ~400-token, source-attributed summary. Jars: `jvmlens-cli/target/jvmlens.jar`
+(CLI/`trend`) + `jvmlens-agent/target/jvmlens-agent.jar`, or pull github.com/alexmond/jvmlens
+`latest`. Always scope with `-a org.alexmond.unitrack`.
+
+- **Dev one-shot (hot paths / allocations).** Profile under *steady-state* load, not a single
+  render (else you profile Spring startup). Cleanest: a throwaway `@SpringBootTest` that ingests a
+  few runs then renders `controller.run`/`controller.project` in a ~25s loop (**not** `@Transactional`,
+  so the async page sections see committed data), run with
+  `-DargLine="-XX:StartFlightRecording=filename=run.jfr,dumponexit=true,settings=profile"`, then
+  `java -jar jvmlens.jar analyze run.jfr -a org.alexmond.unitrack` (`-r cpu|memory|locks`;
+  `analyze -b before after` to diff a fix; `--assert` for a CI gate). NB: under the H2 test DB the
+  allocation is dominated by H2's SQL parser (`Token$IdentifierToken`) — test-only; the
+  query-VOLUME signal (e.g. the per-branch N+1 in `BranchService.summarize`, issue #314) is real on
+  Postgres too.
+- **Long-running monitor (prod, k3s).** This is **infra** — route through a Forgejo ticket (infra
+  #24), not a project session. In-process agent with `history=…,interval=300,db,web,micrometer` on a
+  restart-surviving volume, then `jvmlens trend`.
+
 ## Docs
 
 Antora component under `docs/` (AsciiDoc); per-feature pages in `docs/modules/ROOT/pages/`.
