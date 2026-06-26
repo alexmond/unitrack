@@ -108,6 +108,10 @@ spec:
             {{- with .Values.extraEnv }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
+            {{- if .Values.jvmlens.enabled }}
+            - name: JAVA_TOOL_OPTIONS
+              value: "-javaagent:/app/jvmlens-agent.jar={{ .Values.jvmlens.args }}"
+            {{- end }}
           startupProbe:
             httpGet:
               path: {{ .Values.probes.startup.path }}
@@ -128,6 +132,17 @@ spec:
             failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+          {{- if .Values.jvmlens.enabled }}
+          volumeMounts:
+            - name: jvmlens-history
+              mountPath: /agent
+          {{- end }}
+      {{- if .Values.jvmlens.enabled }}
+      volumes:
+        - name: jvmlens-history
+          persistentVolumeClaim:
+            claimName: {{ include "unitrack.fullname" . }}-jvmlens
+      {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

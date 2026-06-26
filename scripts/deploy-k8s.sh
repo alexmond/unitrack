@@ -70,6 +70,14 @@ if [[ "$BUILD" -eq 1 ]]; then
       [[ -n "$CONTAINER_CLI" ]] || { echo "!! need podman or docker for --builder podman" >&2; exit 1; }
       echo "==> Building jar..."
       ./mvnw -q -pl unitrack-web -am -DskipTests package
+      # Stage the jvmlens monitor agent into the build context (baked into the image; loaded only
+      # when the chart sets JAVA_TOOL_OPTIONS via jvmlens.enabled). Prefer the local sibling build.
+      if [[ -f "$HOME/IdeaProjects/jvmlens/jvmlens-agent/target/jvmlens-agent.jar" ]]; then
+        cp "$HOME/IdeaProjects/jvmlens/jvmlens-agent/target/jvmlens-agent.jar" unitrack-web/target/jvmlens-agent.jar
+      else
+        curl -fsSL -o unitrack-web/target/jvmlens-agent.jar \
+          https://github.com/alexmond/jvmlens/releases/download/latest/jvmlens-agent.jar
+      fi
       echo "==> Building image $IMAGE via $CONTAINER_CLI + deploy/Containerfile..."
       "$CONTAINER_CLI" build -t "$IMAGE" -f deploy/Containerfile unitrack-web/target
       if [[ "$PUBLISH" -eq 1 ]]; then
