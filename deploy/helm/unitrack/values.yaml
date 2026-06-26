@@ -136,7 +136,12 @@ extraEnv: []
 # writable mount — set podSecurityContext.fsGroup to the app uid (1001).
 jvmlens:
   enabled: false
-  args: "out=/agent/unitrack.md,history=/agent/unitrack.jsonl,interval=300,db,web,micrometer"
+  # JFR-only (CPU/memory/wait/GC + always-on external-I/O/VT-pin/deadlock) — no bytecode
+  # instrumentation. The instrument dimensions (db,web,messaging,cache) use ByteBuddy, which
+  # conflicts with a host app's own ByteBuddy (Hibernate entity enhancement) until jvmlens#68 is
+  # fixed; add them back here once it is. (The agent jar is also stripped of its broken
+  # multi-release net/bytebuddy entries by deploy-k8s.sh — required even in JFR-only mode.)
+  args: "out=/agent/unitrack.md,history=/agent/unitrack.jsonl,interval=300"
   persistence:
     size: 256Mi
     storageClass: ""
