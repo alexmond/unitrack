@@ -78,6 +78,11 @@ if [[ "$BUILD" -eq 1 ]]; then
         curl -fsSL -o unitrack-web/target/jvmlens-agent.jar \
           https://github.com/alexmond/jvmlens/releases/download/latest/jvmlens-agent.jar
       fi
+      # Workaround for a jvmlens shade gap (jvmlens#NN): the relocation missed the multi-release
+      # META-INF/versions/*/net/bytebuddy copies, which on JDK 9+ win and poison the host app's own
+      # ByteBuddy (Hibernate's entity proxies) -> NoClassDefFoundError "wrong name". Drop them so the
+      # base shaded classes load. Remove once jvmlens relocates the versioned entries.
+      zip -q -d unitrack-web/target/jvmlens-agent.jar 'META-INF/versions/*/net/bytebuddy/*' >/dev/null 2>&1 || true
       echo "==> Building image $IMAGE via $CONTAINER_CLI + deploy/Containerfile..."
       "$CONTAINER_CLI" build -t "$IMAGE" -f deploy/Containerfile unitrack-web/target
       if [[ "$PUBLISH" -eq 1 ]]; then
