@@ -14,9 +14,9 @@ The `docker` Maven profile builds the image with Cloud Native Buildpacks (no Doc
 
 ```bash
 # Publish to a registry the cluster can reach (example: the home Zot registry).
-docker login nas1.home.int:5000          # alexm / <password>
+docker login registry.example.com:5000          # alexm / <password>
 ./mvnw -Pdocker -pl unitrack-web -am package \
-  -Ddocker.image.name=nas1.home.int:5000/unitrack:0.1.0-SNAPSHOT \
+  -Ddocker.image.name=registry.example.com:5000/unitrack:0.1.0-SNAPSHOT \
   -Ddocker.publish=true
 ```
 
@@ -29,7 +29,7 @@ Bundled PostgreSQL (default — good for evaluation and homelab):
 ```bash
 helm upgrade --install unitrack deploy/helm/unitrack \
   -n unitrack --create-namespace \
-  --set image.repository=nas1.home.int:5000/unitrack \
+  --set image.repository=registry.example.com:5000/unitrack \
   --set image.tag=0.1.0-SNAPSHOT
 ```
 
@@ -45,11 +45,12 @@ helm upgrade --install unitrack deploy/helm/unitrack \
   --set externalDatabase.existingSecretPasswordKey=password
 ```
 
-Home k3s cluster: use the ready-made overrides:
+Cluster-specific overrides (private registry, ingress host, storage class): capture them in your
+own values file and pass it with `-f`:
 
 ```bash
 helm upgrade --install unitrack deploy/helm/unitrack \
-  -n unitrack --create-namespace -f deploy/helm/unitrack/values-homelab.yaml
+  -n unitrack --create-namespace -f my-values.yaml
 ```
 
 ## 3. Verify

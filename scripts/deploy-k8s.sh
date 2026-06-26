@@ -5,11 +5,11 @@
 #
 # Usage:
 #   scripts/deploy-k8s.sh [options]
-#     --registry HOST[:PORT]  image registry              (default: nas1.home.int:5000)
+#     --registry HOST[:PORT]  image registry              (default: localhost:5000)
 #     --tag TAG               image tag                   (default: project version from Maven)
 #     --release NAME          Helm release name           (default: unitrack)
 #     --namespace NS          target namespace            (default: unitrack)
-#     --values FILE           extra Helm values file      (default: deploy/helm/unitrack/values-homelab.yaml if present)
+#     --values FILE           extra Helm values file      (default: none — pass your env overrides)
 #     --builder podman|buildpacks  how to build the image (default: podman)
 #     --no-build              skip the build (reuse the image already in the registry)
 #     --no-push              build the image but don't publish (for a local/in-cluster daemon)
@@ -26,7 +26,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-REGISTRY=nas1.home.int:5000
+REGISTRY=localhost:5000
 TAG=""
 RELEASE=unitrack
 NAMESPACE=unitrack
@@ -54,10 +54,6 @@ if [[ -z "$TAG" ]]; then
   TAG="$(./mvnw -q help:evaluate -Dexpression=project.version -DforceStdout -pl . 2>/dev/null | tail -1)"
 fi
 IMAGE="${REGISTRY}/unitrack:${TAG}"
-
-if [[ -z "$VALUES" && -f deploy/helm/unitrack/values-homelab.yaml ]]; then
-  VALUES=deploy/helm/unitrack/values-homelab.yaml
-fi
 
 # Pick the container CLI for the podman builder (podman preferred, docker fallback).
 CONTAINER_CLI="$(command -v podman || command -v docker || true)"
