@@ -135,7 +135,7 @@ public class DashboardController {
 	@GetMapping("/")
 	public String index(Model model) {
 		String user = access.currentUsername();
-		List<ProjectHealth> board = projectHealth.board((p) -> membership.canRead(user, p));
+		List<ProjectHealth> board = projectHealth.board(membership.readableBy(user));
 		model.addAttribute("board", board);
 		model.addAttribute("summary", ProjectHealthService.summarize(board));
 		return "index";

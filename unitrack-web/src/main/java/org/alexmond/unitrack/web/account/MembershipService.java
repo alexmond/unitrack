@@ -1,6 +1,9 @@
 package org.alexmond.unitrack.web.account;
 
 import java.util.List;
+import java.util.Set;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 import lombok.RequiredArgsConstructor;
 import org.alexmond.unitrack.domain.Project;
@@ -82,7 +85,26 @@ public class MembershipService {
 
 	/** Filters a list of projects down to the ones the user may read. */
 	public List<Project> readable(String username, List<Project> projects) {
-		return projects.stream().filter((p) -> canRead(username, p)).toList();
+		return projects.stream().filter(readableBy(username)).toList();
+	}
+
+	/**
+	 * Builds a reusable read-access predicate for one principal, loading the user and ALL
+	 * their memberships once up front — so checking a whole list (e.g. the board) costs
+	 * two queries instead of two per project (the old N+1: {@code findByUsername} +
+	 * {@code findByProjectIdAndUserId} per row). PUBLIC projects are readable by anyone;
+	 * PRIVATE ones only by members (any role covers READ) and global admins.
+	 */
+	public Predicate<Project> readableBy(String username) {
+		User user = (username != null) ? this.users.findByUsername(username).orElse(null) : null;
+		if (user != null && user.getRole() == Role.ADMIN) {
+			return (project) -> true;
+		}
+		Set<Long> memberOf = (user != null) ? this.memberships.findByUserId(user.getId())
+			.stream()
+			.map(ProjectMembership::getProjectId)
+			.collect(Collectors.toSet()) : Set.of();
+		return (project) -> project.getVisibility() == Visibility.PUBLIC || memberOf.contains(project.getId());
 	}
 
 	private boolean hasRole(String username, Long projectId, ProjectRole minimum) {
