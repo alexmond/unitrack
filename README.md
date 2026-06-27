@@ -4,10 +4,11 @@
 [![tests](https://unitrack.alexmond.org/badge/36/pass.svg)](https://unitrack.alexmond.org/projects/36)
 [![flaky](https://unitrack.alexmond.org/badge/36/flaky.svg)](https://unitrack.alexmond.org/projects/36)
 
-A self-hosted server for tracking and reporting **JUnit test execution** and **JaCoCo code
-coverage** over time — think Allure Report meets Codecov, for the JVM. CI uploads Surefire/JUnit
-XML and JaCoCo XML after each build; UniTrack stores every run keyed by project/branch/commit and
-renders trends, failures, and per-file coverage on a dashboard.
+A self-hosted, **language-agnostic** server for tracking and reporting **test execution** and
+**code coverage** over time — think Allure Report meets Codecov, for *any* stack (JVM, .NET, Go,
+Node, Python, …). CI uploads test results (Surefire/JUnit XML), coverage (JaCoCo, Cobertura,
+LCOV, OpenCover) and perf (JMeter, k6, JMH) after each build; UniTrack stores every run keyed by
+project/branch/commit and renders trends, failures, and per-file coverage on a dashboard.
 
 Built with **Spring Boot 4** and **Java 21**, as a multi-module Maven project (`org.alexmond`).
 

@@ -1,10 +1,10 @@
-= UniTrack -- JUnit & Coverage Tracking Server
+= UniTrack -- Test & Coverage Tracking Server
 
-UniTrack is a self-hosted server that tracks and reports on JUnit test execution and
-JaCoCo code coverage over time. Think *Allure-meets-Codecov for the JVM*: push your
-build's test results and coverage reports after every run, and UniTrack stores them,
-charts the trends, flags flaky tests, enforces quality gates, and surfaces failures on
-your pull requests.
+UniTrack is a self-hosted, language-agnostic server that tracks and reports on test
+execution and code coverage over time. Think *Allure-meets-Codecov for any stack* (JVM,
+.NET, Go, Node, Python, ...): push your build's test results and coverage reports after
+every run, and UniTrack stores them, charts the trends, flags flaky tests, enforces
+quality gates, and surfaces failures on your pull requests.
 
 == Key Features
 
