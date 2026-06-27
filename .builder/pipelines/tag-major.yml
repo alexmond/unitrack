@@ -1,0 +1,28 @@
+name: Update major action tag
+on:
+  - tag
+  - manual
+variables:
+  RELEASE_TAG: "v0.0.0"
+jobs:
+  retag:
+    image: eclipse-temurin:21-jdk
+    timeout: 10m
+    secrets:
+      - GIT_PUSH_TOKEN
+    steps:
+      - name: checkout
+        run: git clone https://github.com/alexmond/unitrack.git .
+      - name: move-major-tag
+        run: |
+          set -euo pipefail
+          tag="$RELEASE_TAG"
+          major="${tag%%.*}"
+          echo "Pointing ${major} at ${tag}"
+          git config user.name "builder-bot"
+          git config user.email "builder-bot@users.noreply.github.com"
+          git tag -f "${major}" "${tag}"
+          printf 'username=git\npassword=%s\n' "$GIT_PUSH_TOKEN" > .git-creds
+          git config credential.helper "store --file=$(pwd)/.git-creds"
+          git push -f origin "refs/tags/${major}"
+          rm -f .git-creds

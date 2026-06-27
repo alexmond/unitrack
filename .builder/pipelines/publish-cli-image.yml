@@ -1,0 +1,32 @@
+name: Publish CLI image
+on:
+  - tag
+  - manual
+variables:
+  IMAGE: ghcr.io/alexmond/unitrack-uploader
+  IMAGE_TAG: latest
+jobs:
+  image:
+    image: eclipse-temurin:21-jdk
+    timeout: 30m
+    cache:
+      key: m2-unitrack
+      paths:
+        - .m2/repository
+    secrets:
+      - GHCR_USERNAME
+      - GHCR_TOKEN
+    steps:
+      - name: checkout
+        run: git clone https://github.com/alexmond/unitrack.git .
+      - name: build-cli-jar
+        run: ./mvnw -B -pl unitrack-cli -am -DskipTests package -Dmaven.repo.local=.m2/repository
+      - name: docker-login
+        run: echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
+      - name: build-and-push-image
+        run: |
+          docker build --platform linux/amd64 \
+            -f deploy/cli.Containerfile \
+            -t "$IMAGE:$IMAGE_TAG" \
+            unitrack-cli/target
+          docker push "$IMAGE:$IMAGE_TAG"
