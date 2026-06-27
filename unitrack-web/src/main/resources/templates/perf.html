@@ -12,8 +12,12 @@
     <h1 th:text="${project.name} + ' — load tests'">project — load tests</h1>
     <nav th:replace="~{fragments/common :: subnav(${project.id}, 'load')}"></nav>
 
-    <div th:unless="${hasPerf}" class="empty">No performance runs yet. Upload a JMeter JTL with
-        <code class="mono">--perf results.jtl</code>.</div>
+    <div th:unless="${hasPerf}" class="empty">
+        <i class="bi bi-rocket-takeoff empty-icon" aria-hidden="true"></i>
+        <h3>No load tests yet</h3>
+        <p>Upload a JMeter JTL or k6 JSON summary with an ingest (<code class="mono">--perf results.jtl</code>)
+            to chart latency, throughput and errors.</p>
+    </div>
 
     <div th:if="${hasPerf}">
         <h2>Latency <span class="muted">(p50 / p90 / p99, ms)</span></h2>

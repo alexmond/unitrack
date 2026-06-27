@@ -77,7 +77,7 @@ class CoveragePageIntegrationTest {
 
 		mvc.perform(get("/projects/{id}/coverage", projectId))
 			.andExpect(status().isOk())
-			.andExpect(content().string(containsString("No coverage uploaded yet")));
+			.andExpect(content().string(containsString("No coverage yet")));
 	}
 
 	@Test

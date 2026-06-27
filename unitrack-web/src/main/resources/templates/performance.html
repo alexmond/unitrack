@@ -23,7 +23,11 @@
             (latest run <a th:href="@{/runs/{id}(id=${latestRunId})}" th:text="'#' + ${latestRunId}">#0</a>)
         </span>
     </h2>
-    <div th:if="${slowest.isEmpty()}" class="empty">No test timings yet.</div>
+    <div th:if="${slowest.isEmpty()}" class="empty">
+        <i class="bi bi-stopwatch empty-icon" aria-hidden="true"></i>
+        <h3>No test timings yet</h3>
+        <p>Per-test durations appear here once runs are uploaded.</p>
+    </div>
     <table class="table table-hover align-middle" th:unless="${slowest.isEmpty()}">
         <thead>
         <tr><th>Test</th><th>Suite</th><th class="num">Duration</th><th>Status</th><th></th></tr>
