@@ -40,6 +40,22 @@ Broaden what UniTrack can ingest and the signals it derives:
 * *MCP server via Spring AI* -- expose UniTrack's data to AI agents through the Model Context
   Protocol (#54).
 
+== AI analysis (epic #346)
+
+Layer LLM *reasoning* on top of the deterministic signals -- only where it beats heuristics
+(flaky/coverage/clustering stay exact SQL):
+
+* *Failure root-cause + fix direction* and a *run/PR narrative* -- the wedge: turn a failure
+  cluster (stacktrace + test source + diff) into "likely a missing null check in `X` -- look
+  here", and a one-paragraph quality summary posted on the commit/PR.
+* *Flaky diagnosis*, *regression explanation over history* (consumes the broken-since signal),
+  and *coverage-gap prioritisation* follow.
+
+Cost stays negligible: each failure *signature* is analysed once and cached (UniTrack already
+clusters by signature), only failing runs are analysed, the model is tiered, and context is
+prompt-cached -- so cost scales with unique problems, not build volume. Self-host is
+bring-your-own-key; analysis can run in-app or be delegated to the MCP server (#54).
+
 == Contributing
 
 Issues are labelled by area (`ingestion`, `backend`, `frontend`, `perf`, `auth`, `ai`) and
