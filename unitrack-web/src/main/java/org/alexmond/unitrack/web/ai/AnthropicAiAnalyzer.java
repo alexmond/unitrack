@@ -5,28 +5,36 @@ import java.util.stream.Collectors;
 
 import com.anthropic.client.AnthropicClient;
 import com.anthropic.client.okhttp.AnthropicOkHttpClient;
-import com.anthropic.errors.AnthropicException;
 import com.anthropic.models.messages.MessageCreateParams;
-import com.anthropic.models.messages.StructuredMessage;
-import com.fasterxml.jackson.annotation.JsonPropertyDescription;
+import com.anthropic.models.messages.TextBlock;
 import lombok.extern.slf4j.Slf4j;
 import org.alexmond.unitrack.report.FailureCluster;
 import org.springframework.cache.annotation.Cacheable;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
- * In-app failure analysis via the Anthropic Java SDK. One structured-output call per
- * failure signature, cached so a recurring failure is analysed once. Any API/parse
+ * In-app failure analysis via the Anthropic Java SDK. One call per failure signature,
+ * cached so a recurring failure is analysed once. The model is asked for a small JSON
+ * object which we parse with the app's Jackson — we deliberately avoid the SDK's
+ * structured-output helper because it builds a schema via victools jsonschema-generator,
+ * whose version clashes with the one Spring AI (the MCP server) pulls in. Any API/parse
  * failure degrades to empty — AI never breaks the page.
  */
 @Slf4j
 class AnthropicAiAnalyzer implements AiAnalyzer {
 
+	private static final JsonMapper MAPPER = JsonMapper.builder().build();
+
 	private static final String SYSTEM_PROMPT = """
 			You are a senior engineer triaging CI test failures. You are given a failure's exception
 			type, message, normalized signature (type | message | top stack frame), and the affected
-			tests. Give the single most likely root cause and a concrete fix direction (where to look
-			or what to change). Be specific and brief. If the evidence is thin, say so and lower the
-			confidence. Do not invent stack frames or APIs you weren't given.""";
+			tests. Identify the single most likely root cause and a concrete fix direction (where to
+			look or what to change). Be specific and brief. If the evidence is thin, say so and lower
+			the confidence. Do not invent stack frames or APIs you weren't given.
+
+			Respond with ONLY a JSON object, no prose and no markdown fences:
+			{"rootCause": "<1-2 sentences>", "suggestion": "<concrete fix direction>", "confidence": <0.0-1.0>}""";
 
 	private final AnthropicClient client;
 
@@ -43,31 +51,52 @@ class AnthropicAiAnalyzer implements AiAnalyzer {
 	}
 
 	@Override
-	@Cacheable(value = "aiFailureAnalysis", key = "#cluster.signature()",
-			unless = "#result == null || #result.isEmpty()")
+	// Spring unwraps the Optional, so #result is the FailureAnalysis (null when empty) —
+	// only
+	// cache a successful analysis so a transient API failure retries next click.
+	@Cacheable(value = "aiFailureAnalysis", key = "#cluster.signature()", unless = "#result == null")
 	public Optional<FailureAnalysis> analyzeFailure(String projectName, FailureCluster cluster) {
 		try {
 			MessageCreateParams params = MessageCreateParams.builder()
 				.model(this.model)
 				.maxTokens(1024L)
 				.system(SYSTEM_PROMPT)
-				.outputConfig(Diagnosis.class)
 				.addUserMessage(context(projectName, cluster))
 				.build();
-			StructuredMessage<Diagnosis> response = this.client.messages().create(params);
-			Diagnosis d = response.content()
+			String text = this.client.messages()
+				.create(params)
+				.content()
 				.stream()
 				.flatMap((block) -> block.text().stream())
-				.findFirst()
-				.orElseThrow()
-				.text();
-			return Optional
-				.of(new FailureAnalysis(d.rootCause, d.suggestion, confidenceLabel(d.confidence), this.model));
+				.map(TextBlock::text)
+				.collect(Collectors.joining());
+			JsonNode json = MAPPER.readTree(stripFences(text));
+			String rootCause = json.path("rootCause").asString("");
+			if (rootCause.isBlank()) {
+				return Optional.empty();
+			}
+			return Optional.of(new FailureAnalysis(rootCause, json.path("suggestion").asString(""),
+					confidenceLabel(json.path("confidence").asDouble(0.5)), this.model));
 		}
-		catch (AnthropicException | RuntimeException ex) {
+		catch (RuntimeException ex) {
 			log.warn("AI failure analysis unavailable for project '{}' ({})", projectName, ex.getMessage());
 			return Optional.empty();
 		}
+	}
+
+	/**
+	 * Tolerate a model that wraps the JSON in ```json … ``` fences despite instructions.
+	 */
+	private static String stripFences(String text) {
+		String t = text.strip();
+		if (t.startsWith("```")) {
+			int firstNewline = t.indexOf('\n');
+			int lastFence = t.lastIndexOf("```");
+			if (firstNewline > 0 && lastFence > firstNewline) {
+				return t.substring(firstNewline + 1, lastFence).strip();
+			}
+		}
+		return t;
 	}
 
 	private static String context(String projectName, FailureCluster cluster) {
@@ -87,22 +116,6 @@ class AnthropicAiAnalyzer implements AiAnalyzer {
 			return "medium";
 		}
 		return "low";
-	}
-
-	/**
-	 * Structured-output target; static + public fields so the SDK's Jackson can bind it.
-	 */
-	static class Diagnosis {
-
-		@JsonPropertyDescription("The single most likely root cause of the failure, one or two sentences.")
-		public String rootCause;
-
-		@JsonPropertyDescription("A concrete fix direction — where to look or what to change.")
-		public String suggestion;
-
-		@JsonPropertyDescription("Confidence from 0.0 to 1.0 that this diagnosis is correct.")
-		public double confidence;
-
 	}
 
 }

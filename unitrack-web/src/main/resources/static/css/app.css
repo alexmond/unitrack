@@ -460,3 +460,5 @@ details.output pre {
 .ai-conf.conf-low { color: var(--amber); }
 .ai-cause, .ai-fix { margin: 4px 0; color: var(--text); }
 .ai-model { font-size: 11px; margin-top: 4px; }
+.ai-slot { margin: 8px 0; }
+.ai-slot .ai-target { margin-top: 6px; }
