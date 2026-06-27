@@ -52,6 +52,11 @@ spring:
 
 server:
   port: ${PORT:8080}
+  # Public-facing: never leak stack traces / exception messages / binding errors to clients.
+  error:
+    include-stacktrace: never
+    include-message: never
+    include-binding-errors: never
   # Let in-flight ingests finish when the process is told to stop (e.g. a Kubernetes
   # rolling update sends SIGTERM); Spring stops accepting new requests, then drains.
   shutdown: graceful

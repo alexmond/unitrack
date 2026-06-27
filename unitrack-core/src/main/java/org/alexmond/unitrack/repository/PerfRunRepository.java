@@ -10,6 +10,12 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface PerfRunRepository extends JpaRepository<PerfRun, Long> {
 
+	/**
+	 * Whether the project has any perf/load-test runs — used to hide the empty Load tests
+	 * tab.
+	 */
+	boolean existsByProjectId(Long projectId);
+
 	List<PerfRun> findByProjectIdOrderByCreatedAtDesc(Long projectId, Pageable pageable);
 
 	/**
