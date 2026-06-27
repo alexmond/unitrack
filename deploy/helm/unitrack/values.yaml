@@ -136,12 +136,12 @@ extraEnv: []
 # writable mount — set podSecurityContext.fsGroup to the app uid (1001).
 jvmlens:
   enabled: false
-  # JFR-only (CPU/memory/wait/GC + always-on external-I/O/VT-pin/deadlock) — no bytecode
-  # instrumentation. The instrument dimensions (db,web,messaging,cache) use ByteBuddy, which
-  # conflicts with a host app's own ByteBuddy (Hibernate entity enhancement) until jvmlens#68 is
-  # fixed; add them back here once it is. (The agent jar is also stripped of its broken
-  # multi-release net/bytebuddy entries by deploy-k8s.sh — required even in JFR-only mode.)
-  args: "out=/agent/unitrack.md,history=/agent/unitrack.jsonl,interval=300"
+  # Full dimensions: JFR (CPU/memory/wait/GC + always-on external-I/O/VT-pin/deadlock) plus the
+  # ByteBuddy-instrumented db/web/micrometer dimensions (sanitized SQL + N+1, HTTP route shapes,
+  # Micrometer registry). The two jvmlens#68 boot crashes are both fixed: bug #1 (multi-release
+  # ByteBuddy relocation, #69) and bug #2 (SqlSanitizer regex SOE at Hibernate EMF build, #72 —
+  # MAX_SCAN cap). Needs jvmlens >= the #72 build (validated against this app on k3s, jvmlens#70).
+  args: "out=/agent/unitrack.md,history=/agent/unitrack.jsonl,db,web,micrometer,interval=300"
   persistence:
     size: 256Mi
     storageClass: ""
