@@ -4,10 +4,12 @@ Guidance for Claude Code when working in this repository.
 
 ## Project Overview
 
-UniTrack is a self-hosted server for tracking **JUnit test execution** and **code coverage**
-over time (Allure-meets-Codecov for the JVM). CI uploads Surefire/JUnit XML + coverage
-(JaCoCo/Cobertura/LCOV/OpenCover) per project/branch/commit; UniTrack stores every run and
-renders trends, failures, flaky tests, quality gates, and per-file coverage. Built with
+UniTrack is a self-hosted, **language-agnostic** server for tracking **test execution** and
+**code coverage** over time (Allure-meets-Codecov for *any* stack — JVM, .NET, Go, Node,
+Python, …; it is **not** a JVM-targeted tool — broad format support is a first-class goal).
+CI uploads test results (Surefire/JUnit XML), coverage (JaCoCo/Cobertura/LCOV/OpenCover) and
+perf (JMeter/k6/JMH) per project/branch/commit; UniTrack stores every run and renders trends,
+failures, flaky tests, quality gates, and per-file coverage. Built with
 **Spring Boot 4.0.6 / Java 21**, a multi-module Maven build (`org.alexmond:unitrack-parent`,
 version `0.1.0-SNAPSHOT`). Data in **PostgreSQL** via Spring Data JPA, schema by **Flyway**.
 
