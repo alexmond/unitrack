@@ -145,7 +145,7 @@ a:hover { text-decoration: underline; }
 .topbar .brand { font-weight: 700; font-size: 18px; color: var(--text); }
 .topbar .brand span { color: var(--blue); }
 .topbar .spacer { flex: 1; }
-.topbar nav a { color: var(--muted); margin-left: 16px; }
+.topbar nav a { color: var(--muted); margin-left: 16px; display: inline-flex; align-items: center; gap: 6px; }
 
 /* Project section nav — a wrapping row of pills; the current section is a filled pill. */
 .subnav {

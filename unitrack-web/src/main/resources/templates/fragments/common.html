@@ -11,17 +11,18 @@
     <nav>
         <!-- Signed-out visitors get a minimal bar (just Sign in) — the public landing is reached via
              the brand logo; the working nav appears once logged in. -->
-        <a th:if="${currentUser != null}" th:href="@{/}">Projects</a>
-        <a th:if="${currentUser != null}" th:href="@{/status}">Status</a>
-        <a th:if="${currentUser != null}" th:href="@{/owners}">Owners</a>
-        <a th:if="${isAdmin}" th:href="@{/ops}">Ops</a>
-        <a th:if="${isAdmin}" th:href="@{/audit}">Audit</a>
-        <a th:if="${currentUser != null}" th:href="@{/profile}" th:text="${currentUser}">user</a>
-        <a th:if="${currentUser == null}" th:href="@{/login}">Sign in</a>
-        <a th:if="${currentUser == null and signupEnabled}" th:href="@{/signup}">Sign up</a>
+        <a th:if="${currentUser != null}" th:href="@{/}"><i class="bi bi-grid-1x2" aria-hidden="true"></i> Projects</a>
+        <a th:if="${currentUser != null}" th:href="@{/status}"><i class="bi bi-activity" aria-hidden="true"></i> Status</a>
+        <a th:if="${currentUser != null}" th:href="@{/owners}"><i class="bi bi-people" aria-hidden="true"></i> Owners</a>
+        <a th:if="${isAdmin}" th:href="@{/ops}"><i class="bi bi-sliders" aria-hidden="true"></i> Ops</a>
+        <a th:if="${isAdmin}" th:href="@{/audit}"><i class="bi bi-journal-text" aria-hidden="true"></i> Audit</a>
+        <a th:if="${currentUser != null}" th:href="@{/profile}" th:title="'Account — ' + ${currentUser}">
+            <i class="bi bi-person-circle" aria-hidden="true"></i> <span th:text="${currentUser}">user</span></a>
+        <a th:if="${currentUser == null}" th:href="@{/login}"><i class="bi bi-box-arrow-in-right" aria-hidden="true"></i> Sign in</a>
+        <a th:if="${currentUser == null and signupEnabled}" th:href="@{/signup}"><i class="bi bi-person-plus" aria-hidden="true"></i> Sign up</a>
     </nav>
     <form th:if="${currentUser != null}" method="post" th:action="@{/logout}" style="display:inline;margin-left:16px">
-        <button class="theme-toggle" type="submit">Logout</button>
+        <button class="theme-toggle" type="submit"><i class="bi bi-box-arrow-right" aria-hidden="true"></i> Logout</button>
     </form>
     <button id="theme-toggle" class="theme-toggle" type="button"
             aria-label="Toggle light/dark theme" title="Toggle theme"
