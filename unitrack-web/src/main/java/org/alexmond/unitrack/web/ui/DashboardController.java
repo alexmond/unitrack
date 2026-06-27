@@ -29,6 +29,8 @@ import org.alexmond.unitrack.report.ReportingService;
 import org.alexmond.unitrack.report.TestRegressionService;
 import org.alexmond.unitrack.report.TriageService;
 import org.alexmond.unitrack.web.account.MembershipService;
+import org.alexmond.unitrack.web.ai.AiAnalyzer;
+import org.alexmond.unitrack.web.ai.FailureAnalysis;
 import org.alexmond.unitrack.web.account.ProjectAccessService;
 import org.alexmond.unitrack.web.account.ShareLinkService;
 import lombok.RequiredArgsConstructor;
@@ -107,6 +109,8 @@ public class DashboardController {
 	private final MembershipService membership;
 
 	private final ShareLinkService shareLinks;
+
+	private final AiAnalyzer aiAnalyzer;
 
 	private final io.micrometer.observation.ObservationRegistry observationRegistry;
 
@@ -222,7 +226,18 @@ public class DashboardController {
 		// test is just that test failing repeatedly — list those separately as recurring
 		// failures.
 		List<FailureCluster> all = clustering.cluster(id);
-		model.addAttribute("clusters", all.stream().filter((c) -> c.distinctTests() > 1).toList());
+		List<FailureCluster> realClusters = all.stream().filter((c) -> c.distinctTests() > 1).toList();
+		model.addAttribute("clusters", realClusters);
+		// AI root-cause per cluster (cached by signature) when enabled — empty map
+		// otherwise.
+		model.addAttribute("aiEnabled", aiAnalyzer.enabled());
+		Map<String, FailureAnalysis> aiAnalyses = new HashMap<>();
+		if (aiAnalyzer.enabled()) {
+			for (FailureCluster c : realClusters) {
+				aiAnalyzer.analyzeFailure(project.getName(), c).ifPresent((a) -> aiAnalyses.put(c.signature(), a));
+			}
+		}
+		model.addAttribute("aiAnalyses", aiAnalyses);
 		// Recurring failures = a single test failing repeatedly with one signature.
 		// Exclude tests
 		// already flagged flaky (nondeterministic — pass+fail on a commit); those belong

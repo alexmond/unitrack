@@ -100,6 +100,14 @@ info:
     component: unitrack-web
 
 unitrack:
+  # In-app AI failure analysis (#346). Off by default — bring-your-own-key: nothing calls an
+  # LLM unless enabled AND a key is set. Cost-controlled (analysed once per failure signature,
+  # cached). See doc / the clusters page.
+  ai:
+    enabled: ${UNITRACK_AI_ENABLED:false}
+    provider: ${UNITRACK_AI_PROVIDER:anthropic}
+    api-key: ${UNITRACK_AI_API_KEY:}
+    model: ${UNITRACK_AI_MODEL:claude-sonnet-4-6}
   notifications:
     enabled: ${UNITRACK_NOTIFICATIONS_ENABLED:false}
     from-address: ${UNITRACK_MAIL_FROM:unitrack@localhost}
