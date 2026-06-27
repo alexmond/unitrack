@@ -43,6 +43,12 @@ service:
   type: ClusterIP
   port: 8080
 
+# Actuator runs on this internal container port (the probes and any prometheus scrape target it).
+# The Service exposes only service.port, so health/metrics/prometheus are never reachable through
+# the ingress / Cloudflare Tunnel. Set to 8080 to fold actuator back onto the app port (handy for a
+# simple local run; not recommended for a public-facing install).
+managementPort: 9001
+
 ingress:
   enabled: false
   className: ""
