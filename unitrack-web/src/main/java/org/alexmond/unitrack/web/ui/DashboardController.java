@@ -11,6 +11,8 @@ import org.alexmond.unitrack.report.CoverageDiffService;
 import org.alexmond.unitrack.report.DurationPoint;
 import org.alexmond.unitrack.report.FailureCluster;
 import org.alexmond.unitrack.report.FailureClusteringService;
+import org.alexmond.unitrack.report.FlakyTestService;
+import org.alexmond.unitrack.report.FlakyTestView;
 import org.alexmond.unitrack.report.TestTimelinePoint;
 import org.alexmond.unitrack.report.PerfRegressionService;
 import org.alexmond.unitrack.report.PerfRunDetailService;
@@ -73,6 +75,8 @@ public class DashboardController {
 	private final QualityGateService qualityGate;
 
 	private final FailureClusteringService clustering;
+
+	private final FlakyTestService flaky;
 
 	private final TriageService triage;
 
@@ -218,7 +222,18 @@ public class DashboardController {
 		// failures.
 		List<FailureCluster> all = clustering.cluster(id);
 		model.addAttribute("clusters", all.stream().filter((c) -> c.distinctTests() > 1).toList());
-		model.addAttribute("recurringFailures", all.stream().filter((c) -> c.distinctTests() == 1).toList());
+		// Recurring failures = a single test failing repeatedly with one signature.
+		// Exclude tests
+		// already flagged flaky (nondeterministic — pass+fail on a commit); those belong
+		// in the Flaky
+		// tab. What's left here is consistently-failing tests (standing bugs), with no
+		// double-listing.
+		java.util.Set<String> flakyKeys = flaky.listFlaky(id)
+			.stream()
+			.map(FlakyTestView::displayName)
+			.collect(java.util.stream.Collectors.toSet());
+		model.addAttribute("recurringFailures",
+				all.stream().filter((c) -> c.distinctTests() == 1 && !flakyKeys.contains(c.tests().get(0))).toList());
 		return "clusters";
 	}
 
