@@ -45,6 +45,10 @@ public class DemoDataSeeder implements ApplicationRunner {
 
 	private final MembershipService membership;
 
+	private final org.alexmond.unitrack.repository.TestRunRepository testRuns;
+
+	private final org.springframework.jdbc.core.JdbcTemplate jdbc;
+
 	@Override
 	public void run(ApplicationArguments args) {
 		if (!props.isEnabled()) {
@@ -57,6 +61,7 @@ public class DemoDataSeeder implements ApplicationRunner {
 		seedCheckout();
 		seedBilling();
 		seedFrontend();
+		seedRegressed();
 	}
 
 	private void seedCheckout() {
@@ -70,8 +75,18 @@ public class DemoDataSeeder implements ApplicationRunner {
 				new Case("com.checkout.PaymentTest", "charge", false, null, null));
 		ingest(name, repo, "main", "default", "a1c0de1", base, 720, 280, 60, 20);
 
-		List<Case> withFail = withExtra(base, new Case("com.checkout.PaymentTest", "refund", true,
-				"org.opentest4j.AssertionFailedError", "expected: <true> but was: <false>"));
+		// Two distinct tests failing with the SAME signature (type|message|top-frame)
+		// form a
+		// genuine multi-test cluster — drives the Failure clusters page and the
+		// click-to-run
+		// "Analyze with AI" button (which only shows for clusters spanning >1 test).
+		List<Case> withFail = withExtra(base,
+				new Case("com.checkout.PaymentTest", "refund", true, "org.opentest4j.AssertionFailedError",
+						"expected: <true> but was: <false>"),
+				new Case("com.checkout.OrderTest", "placeOrder", true, "java.lang.NullPointerException",
+						"Cannot invoke Cart.total() because cart is null"),
+				new Case("com.checkout.CheckoutFlowTest", "submit", true, "java.lang.NullPointerException",
+						"Cannot invoke Cart.total() because cart is null"));
 		ingest(name, repo, "main", "default", "a2c0de2", withFail, 750, 250, 64, 16);
 
 		// Same commit, flaky: one run fails, the next passes.
@@ -144,6 +159,57 @@ public class DemoDataSeeder implements ApplicationRunner {
 		// PRIVATE, test user has READ only: they can view but not write (shows the role
 		// split).
 		configure(name, Visibility.PRIVATE, ProjectRole.READ);
+	}
+
+	/**
+	 * A project that was healthy, then regressed and stayed broken — its latest run is
+	 * red. Runs are backdated so the board's "broken since · 2w · N runs" rot signal and
+	 * the overview trend's regression-onset annotation have real history to render
+	 * against.
+	 */
+	private void seedRegressed() {
+		String name = "payments-gateway";
+		if (projects.findByName(name).isPresent()) {
+			return;
+		}
+		String repo = "https://github.com/acme/payments-gateway";
+		List<Case> ok = List.of(new Case("com.pay.AuthTest", "authorize", false, null, null),
+				new Case("com.pay.SettleTest", "settle", false, null, null),
+				new Case("com.pay.RefundTest", "refund", false, null, null));
+		// The regression: a connection-pool exhaustion that lands two weeks ago and never
+		// recovers (latest run still red).
+		Case down = new Case("com.pay.SettleTest", "settle", true, "java.lang.IllegalStateException",
+				"connection pool exhausted acquiring a DB connection");
+		ingest(name, repo, "main", "default", "p1aa001", ok, 820, 180, 72, 8);
+		ingest(name, repo, "main", "default", "p2aa002", withExtra(ok, down), 815, 185, 71, 9);
+		ingest(name, repo, "main", "default", "p3aa003", withExtra(ok, down), 808, 192, 70, 10);
+		ingest(name, repo, "main", "default", "p4aa004", withExtra(ok, down), 805, 195, 69, 11);
+		ingest(name, repo, "main", "default", "p5aa005", withExtra(ok, down), 800, 200, 68, 12);
+		// Backdate oldest->newest: healthy run ~20d ago, regression begins ~17d ago (so
+		// the
+		// "broken since" age reads ~2w after the label rounds down), latest = now.
+		backdateRuns(name, new int[] { 20, 17, 11, 5, 0 });
+		configure(name, Visibility.PUBLIC, null);
+	}
+
+	/**
+	 * Rewrites {@code created_at} for a project's runs (oldest first) to the given
+	 * days-ago offsets, so demo history spreads over real calendar time instead of the
+	 * seed instant. Native UPDATE — bypasses the entity default; demo-only.
+	 */
+	private void backdateRuns(String name, int[] daysAgo) {
+		projects.findByName(name).ifPresent((project) -> {
+			List<org.alexmond.unitrack.domain.TestRun> runs = this.testRuns.findByProjectIdOrderByCreatedAtAsc(
+					project.getId(), org.springframework.data.domain.Pageable.unpaged());
+			java.time.Instant now = java.time.Instant.now();
+			for (int i = 0; i < runs.size() && i < daysAgo.length; i++) {
+				java.time.Instant ts = now.minus(java.time.Duration.ofDays(daysAgo[i]))
+					.plus(java.time.Duration.ofHours(i)); // slight intra-day stagger,
+															// stable order
+				this.jdbc.update("UPDATE test_run SET created_at = ? WHERE id = ?", java.sql.Timestamp.from(ts),
+						runs.get(i).getId());
+			}
+		});
 	}
 
 	/**
