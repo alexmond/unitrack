@@ -13,8 +13,10 @@
     <nav th:replace="~{fragments/common :: subnav(${project.id}, 'coverage')}"></nav>
 
     <div th:if="${coverage == null}" class="empty">
-        No coverage uploaded yet. Attach a JaCoCo, Cobertura, LCOV or OpenCover report to an ingest
-        and it will show up here.
+        <i class="bi bi-shield-slash empty-icon" aria-hidden="true"></i>
+        <h3>No coverage yet</h3>
+        <p>Attach a JaCoCo, Cobertura, LCOV or OpenCover report to an ingest and per-file coverage
+            shows up here.</p>
     </div>
 
     <div th:if="${coverage != null}">

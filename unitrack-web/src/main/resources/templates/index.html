@@ -13,9 +13,14 @@
     <p class="crumbs">Health across your repositories — failing gates first.</p>
 
     <div th:if="${board.isEmpty()}" class="empty">
-        No projects yet. Upload results with
-        <code class="mono">POST /api/v1/ingest</code>, or
-        <a th:href="@{/import}">import them from GitHub</a> to get started.
+        <i class="bi bi-folder2-open empty-icon" aria-hidden="true"></i>
+        <h3>No projects yet</h3>
+        <p>Push test results and coverage from your CI to track trends, quality gates, and flaky tests.</p>
+        <div class="empty-actions">
+            <a class="btn btn-primary btn-sm" th:href="@{/import}">
+                <i class="bi bi-github" aria-hidden="true"></i> Import from GitHub</a>
+        </div>
+        <p class="mono muted" style="margin-top:var(--sp-3)">POST /api/v1/ingest</p>
     </div>
 
     <div class="stat-row" th:unless="${board.isEmpty()}">

@@ -282,11 +282,16 @@ td.num { font-family: var(--font-mono); font-size: var(--fs-sm); }
 
 .pct { font-variant-numeric: tabular-nums; }
 .muted { color: var(--muted); }
-.empty { color: var(--muted); padding: 30px; text-align: center; border: 1px dashed var(--border);
+.empty { color: var(--muted); padding: 48px 30px; text-align: center; border: 1px dashed var(--border);
     border-radius: var(--radius); background: var(--panel); }
-/* Empty state with a heading + call-to-action (every empty surface gets a next step). */
+/* Empty state: icon + heading + call-to-action (every empty surface reads as intentional, not broken). */
+.empty .empty-icon { font-size: 2.2rem; line-height: 1; color: var(--muted); opacity: .5; display: block;
+    margin: 0 auto var(--sp-3); }
 .empty h3 { color: var(--text); margin: 0 0 var(--sp-2); }
-.empty p { margin: 0 0 var(--sp-4); }
+.empty p { margin: 0 auto var(--sp-4); max-width: 46ch; }
+.empty p:last-child { margin-bottom: 0; }
+.empty .empty-actions { display: flex; gap: var(--sp-2); justify-content: center; flex-wrap: wrap;
+    margin-top: var(--sp-3); }
 
 .chart-wrap { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
 
