@@ -11,6 +11,33 @@ Built with **Spring Boot 4** and **Java 21**, as a multi-module Maven project (`
 > Allure, Codecov, ReportPortal, SonarQube, Datadog Test Optimization, Trunk, and others, plus the
 > prioritized roadmap of features worth adopting.
 
+## Screenshots
+
+The all-projects dashboard — health across every repo, failing gates first:
+
+![UniTrack dashboard](doc/images/screenshots/01-dashboard.png)
+
+<table>
+<tr>
+<td width="50%"><img src="doc/images/screenshots/02-project.png" alt="Project overview"><br><sub><b>Project overview</b> — gate verdict, pass/fail/coverage trend, coverage by module, recent runs, run compare.</sub></td>
+<td width="50%"><img src="doc/images/screenshots/06-load-tests.png" alt="Load tests"><br><sub><b>Load tests</b> — p50/p90/p99 latency, throughput and error-rate trends from JMeter/k6 runs (here a regression at <code>a4</code> that recovers).</sub></td>
+</tr>
+<tr>
+<td><img src="doc/images/screenshots/03-coverage.png" alt="Coverage"><br><sub><b>Coverage</b> — per-file / per-package line coverage for the latest run.</sub></td>
+<td><img src="doc/images/screenshots/04-flaky.png" alt="Flaky tests"><br><sub><b>Flaky tests</b> — tests that both passed and failed on the same commit, with failure rates.</sub></td>
+</tr>
+<tr>
+<td><img src="doc/images/screenshots/07-clusters.png" alt="Failure clusters"><br><sub><b>Failure clusters</b> — recurring failures grouped by a normalized signature.</sub></td>
+<td><img src="doc/images/screenshots/08-run-detail.png" alt="Run detail"><br><sub><b>Run detail</b> — failures with stacktraces and the quality-gate verdict.</sub></td>
+</tr>
+<tr>
+<td><img src="doc/images/screenshots/05-test-timing.png" alt="Test timing"><br><sub><b>Test timing</b> — suite-time trend and the slowest tests per run.</sub></td>
+<td></td>
+</tr>
+</table>
+
+> Captured from the built-in demo dataset (run locally with `UNITRACK_DEMO_ENABLED=true`).
+
 ## Documentation
 
 Full documentation lives under [`docs/`](docs/) as an [Antora](https://antora.org) component
