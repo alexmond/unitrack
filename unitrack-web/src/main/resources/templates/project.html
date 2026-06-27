@@ -290,6 +290,20 @@
             return (i >= 0 && i < labels.length) ? labels[i] : '';
         }
 
+        // Clamp the time axis to the data range (+ a small pad) so a project with one or two
+        // runs shows a tight window instead of the linear axis auto-ranging across ~a year.
+        // Run mode returns undefined bounds so Chart.js spaces by index.
+        function xBounds() {
+            if (trendMode !== 'time') { return { min: undefined, max: undefined }; }
+            const ts = times.filter(function (t) { return t != null; });
+            if (!ts.length) { return { min: undefined, max: undefined }; }
+            const t0 = Math.min.apply(null, ts), tN = Math.max.apply(null, ts);
+            const span = tN - t0;
+            const pad = span > 0 ? Math.max(span * 0.02, 3600000) : 43200000; // >=1h, or +/-12h for a lone point
+            return { min: t0 - pad, max: tN + pad };
+        }
+        const initBounds = xBounds();
+
         trendChartInstance = window.__chart(document.getElementById('trendChart'), {
             type: 'line',
             data: {
@@ -314,7 +328,7 @@
                           y1: { min: 0, max: 100, position: 'right',
                                 title: { display: true, text: 'coverage %', color: muted },
                                 ticks: { color: muted }, grid: { drawOnChartArea: false } },
-                          x: { type: 'linear', offset: true,
+                          x: { type: 'linear', offset: true, min: initBounds.min, max: initBounds.max,
                                ticks: { color: muted, autoSkip: true, maxRotation: 0, maxTicksLimit: 8,
                                         callback: function (v) { return xTick(v); } },
                                grid: { color: grid } } },
@@ -337,6 +351,9 @@
             d.datasets[1].data = pts(failed);
             d.datasets[2].data = pts(skipped);
             d.datasets[3].data = pts(coverage);
+            const b = xBounds();
+            trendChartInstance.options.scales.x.min = b.min;
+            trendChartInstance.options.scales.x.max = b.max;
             trendChartInstance.update();
         }
         window.__redrawTrend = redrawTrend;
