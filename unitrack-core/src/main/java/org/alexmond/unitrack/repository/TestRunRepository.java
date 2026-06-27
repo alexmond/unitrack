@@ -75,6 +75,29 @@ public interface TestRunRepository extends JpaRepository<TestRun, Long> {
 			""")
 	List<BrokenSince> findBrokenSince();
 
+	/**
+	 * The latest run of every branch of a project in one query — the branches list's
+	 * batch fetch (avoids a per-branch latest-run query). The extra {@code rn} column is
+	 * ignored by the entity mapping.
+	 */
+	@Query(nativeQuery = true, value = """
+			SELECT z.* FROM (
+			    SELECT t.*, ROW_NUMBER() OVER (PARTITION BY t.branch ORDER BY t.created_at DESC, t.id DESC) AS rn
+			    FROM test_run t
+			    WHERE t.project_id = :projectId AND t.branch IS NOT NULL
+			) z
+			WHERE z.rn = 1
+			""")
+	List<TestRun> findLatestRunPerBranch(@Param("projectId") Long projectId);
+
+	/**
+	 * Run count per branch for a project in one query — pairs with
+	 * {@link #findLatestRunPerBranch}.
+	 */
+	@Query("select t.branch as branch, count(t) as cnt from TestRun t "
+			+ "where t.project.id = :projectId and t.branch is not null group by t.branch")
+	List<BranchRunCount> countRunsPerBranch(@Param("projectId") Long projectId);
+
 	List<TestRun> findByProjectIdOrderByCreatedAtAsc(Long projectId, Pageable pageable);
 
 	/** Recent runs on a single branch, newest first — for branch-scoped Overview. */
