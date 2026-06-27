@@ -109,7 +109,7 @@ public class SecurityConfig {
 				.defaultAuthenticationEntryPointFor(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED), apiPaths)
 				.defaultAuthenticationEntryPointFor(new LoginUrlAuthenticationEntryPoint("/login"),
 						AnyRequestMatcher.INSTANCE))
-			.formLogin((form) -> form.loginPage("/login").defaultSuccessUrl("/profile", false).permitAll())
+			.formLogin((form) -> form.loginPage("/login").defaultSuccessUrl("/", false).permitAll())
 			.logout((logout) -> logout.logoutSuccessUrl("/login?logout").permitAll());
 		return http.build();
 	}
