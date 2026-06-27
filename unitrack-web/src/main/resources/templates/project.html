@@ -69,9 +69,13 @@
     </details>
 
     <h2>Trends</h2>
-    <div class="chart-wrap">
+    <div th:if="${runs.isEmpty()}" class="empty">
+        <i class="bi bi-graph-up empty-icon" aria-hidden="true"></i>
+        <h3>No trend data yet</h3>
+        <p>Pass/fail and coverage trends appear here after a couple of runs.</p>
+    </div>
+    <div th:unless="${runs.isEmpty()}" class="chart-wrap">
         <canvas id="trendChart" height="90"></canvas>
-        <p class="muted" th:if="${runs.isEmpty()}">No runs to chart yet.</p>
     </div>
 
     <div th:if="${modules != null and modules.size() > 1}">
