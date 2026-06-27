@@ -60,8 +60,9 @@ public class ProjectHealthService {
 	 * Regressed projects first, the longest-broken (most days red) on top; then the
 	 * existing rank (failing gate, passing, no-runs) and name.
 	 */
-	private static final Comparator<ProjectHealth> BOARD_ORDER = Comparator
-		.comparing((ProjectHealth h) -> !h.isRegressed())
+	// Package-visible so the ordering (the board's headline UX) is unit-testable
+	// directly.
+	static final Comparator<ProjectHealth> BOARD_ORDER = Comparator.comparing((ProjectHealth h) -> !h.isRegressed())
 		.thenComparing(Comparator.comparingLong(ProjectHealth::daysRed).reversed())
 		.thenComparingInt(ProjectHealthService::rank)
 		.thenComparing(ProjectHealth::projectName);

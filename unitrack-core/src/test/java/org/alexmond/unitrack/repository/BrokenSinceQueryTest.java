@@ -76,6 +76,42 @@ class BrokenSinceQueryTest {
 		assertThat(b.getRunsRed()).isEqualTo(2);
 	}
 
+	@Test
+	void countsAFailedRunSharingTheLastGreensTimestamp() {
+		// A green and a failed run at the *exact* same instant (e.g. CI sharding / clock
+		// collision): the failed run is saved second, so it has the higher id and is
+		// "after"
+		// the green by the (created_at, id) tie-break — it must be counted in the streak.
+		Project p = newProject("bs-tie");
+		Instant t = daysAgo(6);
+		run(p, "main", true, t); // green @ t (lower id)
+		run(p, "main", false, t); // failed @ t (higher id) — onset, same instant as green
+		run(p, "main", false, daysAgo(1)); // latest red
+
+		BrokenSince b = brokenFor(p);
+		assertThat(b.getLastGreenAt()).isCloseTo(t, within(2, ChronoUnit.SECONDS));
+		assertThat(b.getRunsRed()).isEqualTo(2); // the same-instant failed run is not
+													// dropped
+	}
+
+	@Test
+	void allSkippedRunCountsAsGreenAndEndsTheStreak() {
+		// Known/pinned behaviour: a run with only skipped tests has status PASSED (no
+		// failures), so it acts as a "green" boundary and resets the broken streak.
+		Project p = newProject("bs-skipped");
+		run(p, "main", false, daysAgo(5));
+		TestRun skip = new TestRun(p, "main", "default", "sha", null, null);
+		skip.applyTotals(0, 0, 0, 4, 100); // all skipped -> status PASSED
+		ReflectionTestUtils.setField(skip, "createdAt", daysAgo(3));
+		runs.save(skip);
+		run(p, "main", false, daysAgo(1)); // latest red
+
+		BrokenSince b = brokenFor(p);
+		assertThat(b.getLastGreenAt()).isCloseTo(daysAgo(3), within(2, ChronoUnit.SECONDS));
+		assertThat(b.getBrokenSince()).isCloseTo(daysAgo(1), within(2, ChronoUnit.SECONDS));
+		assertThat(b.getRunsRed()).isEqualTo(1);
+	}
+
 	private Project newProject(String name) {
 		return projects.save(new Project(name, "https://example.test/" + name));
 	}

@@ -47,13 +47,16 @@ public interface TestRunRepository extends JpaRepository<TestRun, Long> {
 			    FROM latest WHERE rn = 1 AND status = 'FAILED'
 			),
 			grn AS (
-			    SELECT c.project_id, MAX(g.created_at) AS last_green_at
-			    FROM cur c
-			    JOIN test_run g ON g.project_id = c.project_id
-			         AND COALESCE(g.branch, '') = COALESCE(c.branch, '')
-			         AND COALESCE(g.flag, '') = COALESCE(c.flag, '')
-			         AND g.status = 'PASSED' AND g.created_at <= c.latest_at
-			    GROUP BY c.project_id
+			    SELECT project_id, last_green_at, last_green_id FROM (
+			        SELECT c.project_id, g.created_at AS last_green_at, g.id AS last_green_id,
+			               ROW_NUMBER() OVER (PARTITION BY c.project_id
+			                                  ORDER BY g.created_at DESC, g.id DESC) AS grn_rn
+			        FROM cur c
+			        JOIN test_run g ON g.project_id = c.project_id
+			             AND COALESCE(g.branch, '') = COALESCE(c.branch, '')
+			             AND COALESCE(g.flag, '') = COALESCE(c.flag, '')
+			             AND g.status = 'PASSED' AND g.created_at <= c.latest_at
+			    ) gg WHERE grn_rn = 1
 			)
 			SELECT c.project_id AS "projectId",
 			       g.last_green_at AS "lastGreenAt",
@@ -65,7 +68,9 @@ public interface TestRunRepository extends JpaRepository<TestRun, Long> {
 			     AND COALESCE(r.branch, '') = COALESCE(c.branch, '')
 			     AND COALESCE(r.flag, '') = COALESCE(c.flag, '')
 			     AND r.created_at <= c.latest_at
-			     AND (g.last_green_at IS NULL OR r.created_at > g.last_green_at)
+			     AND (g.last_green_at IS NULL
+			          OR r.created_at > g.last_green_at
+			          OR (r.created_at = g.last_green_at AND r.id > g.last_green_id))
 			GROUP BY c.project_id, g.last_green_at
 			""")
 	List<BrokenSince> findBrokenSince();
