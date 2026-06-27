@@ -46,7 +46,10 @@
        th:classappend="${active == 'timing'} ? 'current'"
        th:attr="aria-current=${active == 'timing'} ? 'page' : null">
         <i class="bi bi-stopwatch" aria-hidden="true"></i> Test timing</a>
-    <a th:if="${active == 'load' or @perfRunRepository.existsByProjectId(projectId)}"
+    <!-- Load tests has no data until a perf result is uploaded. Hide the empty tab only from
+         anonymous viewers (public read-only view); a logged-in user always sees it so they can
+         reach the page to push results. -->
+    <a th:if="${currentUser != null or active == 'load' or @perfRunRepository.existsByProjectId(projectId)}"
        th:href="@{/projects/{id}/perf(id=${projectId})}"
        th:classappend="${active == 'load'} ? 'current'"
        th:attr="aria-current=${active == 'load'} ? 'page' : null">
