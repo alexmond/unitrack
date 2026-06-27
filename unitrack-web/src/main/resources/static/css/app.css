@@ -290,6 +290,18 @@ td.num { font-family: var(--font-mono); font-size: var(--fs-sm); }
 
 .chart-wrap { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
 
+/* Trends heading + the Over time / By run x-axis toggle. */
+.trend-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.seg button {
+    appearance: none; border: 0; background: var(--panel); color: var(--muted);
+    font-size: 12.5px; padding: 4px 11px; cursor: pointer; border-left: 1px solid var(--border);
+}
+.seg button:first-child { border-left: 0; }
+.seg button:hover { background: var(--panel-2); color: var(--text); }
+.seg button.active { background: var(--blue); color: #fff; }
+.seg button:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+
 /* Overview branch picker — native select inherits the theme via color-scheme (incl. its caret). */
 .branch-bar { display: flex; align-items: center; gap: 8px; margin: 2px 0 14px; font-size: 13px; color: var(--muted); }
 .branch-bar select {

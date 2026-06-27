@@ -68,7 +68,14 @@
             <code class="mono">java -jar unitrack-cli.jar gate --project ... --commit $SHA</code>.</p>
     </details>
 
-    <h2>Trends</h2>
+    <div class="trend-head">
+        <h2>Trends</h2>
+        <div id="trendModeToggle" class="seg" th:unless="${runs.isEmpty()}" role="group"
+             aria-label="Trend x-axis mode">
+            <button type="button" data-mode="time" class="active">Over time</button>
+            <button type="button" data-mode="run">By run</button>
+        </div>
+    </div>
     <div class="chart-wrap">
         <canvas id="trendChart" height="90"></canvas>
         <p class="muted" th:if="${runs.isEmpty()}">No runs to chart yet.</p>
@@ -243,44 +250,103 @@
 <script th:src="@{/webjars/chart.js/4.4.1/dist/chart.umd.js}"></script>
 <script th:inline="javascript">
     const labels = JSON.parse(/*[[${trendLabels}]]*/ '[]');
+    const times = JSON.parse(/*[[${trendTimes}]]*/ '[]');
     const passed = JSON.parse(/*[[${trendPassed}]]*/ '[]');
     const failed = JSON.parse(/*[[${trendFailed}]]*/ '[]');
     const skipped = JSON.parse(/*[[${trendSkipped}]]*/ '[]');
     const coverage = JSON.parse(/*[[${trendCoverage}]]*/ '[]');
     let trendChartInstance;
+    // 'time' = proportional real-time x-axis (gaps in reporting show up), the honest default;
+    // 'run'  = even spacing per run, for reading what changed run-to-run on bursty projects.
+    let trendMode = 'time';
+
+    function fmtDate(ms) {
+        return new Date(ms).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    }
+    function fmtDateTime(ms) {
+        return new Date(ms).toLocaleString(undefined,
+            { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    }
+    // X position of point i: its timestamp (proportional) in time mode, else its run index.
+    function xAt(i) { return trendMode === 'time' ? times[i] : i; }
+    function pts(arr) { return arr.map(function (v, i) { return { x: xAt(i), y: v }; }); }
+
     if (labels.length > 0 && window.Chart) {
         const css = getComputedStyle(document.documentElement);
         const muted = css.getPropertyValue('--muted').trim() || '#8b98a5';
         const text = css.getPropertyValue('--text').trim() || '#e6edf3';
         const grid = css.getPropertyValue('--border').trim() || '#2c343d';
+
+        // Tick label depends on the mode: a date in time mode, the commit/label in run mode.
+        function xTick(value) {
+            if (trendMode === 'time') { return fmtDate(value); }
+            const i = Math.round(value);
+            return (i >= 0 && i < labels.length) ? labels[i] : '';
+        }
+
         trendChartInstance = window.__chart(document.getElementById('trendChart'), {
             type: 'line',
             data: {
-                labels: labels,
                 // Lines (no fill) for each series, so you can read growth/trend per series without a
                 // solid area blocking the view: test counts on the left axis, coverage % on the right.
                 datasets: [
-                    { label: 'Passed', data: passed, borderColor: '#2ea043', backgroundColor: 'transparent',
+                    { label: 'Passed', data: pts(passed), borderColor: '#2ea043', backgroundColor: 'transparent',
                       fill: false, tension: .25, spanGaps: true, pointRadius: 2, borderWidth: 2, yAxisID: 'y' },
-                    { label: 'Failed', data: failed, borderColor: '#e5534b', backgroundColor: 'transparent',
+                    { label: 'Failed', data: pts(failed), borderColor: '#e5534b', backgroundColor: 'transparent',
                       fill: false, tension: .25, spanGaps: true, pointRadius: 2, borderWidth: 2, yAxisID: 'y' },
-                    { label: 'Skipped', data: skipped, borderColor: '#d29922', backgroundColor: 'transparent',
+                    { label: 'Skipped', data: pts(skipped), borderColor: '#d29922', backgroundColor: 'transparent',
                       fill: false, tension: .25, spanGaps: true, pointRadius: 2, borderWidth: 2, yAxisID: 'y' },
-                    { label: 'Line coverage %', data: coverage, borderColor: '#4493f8',
+                    { label: 'Line coverage %', data: pts(coverage), borderColor: '#4493f8',
                       backgroundColor: 'transparent', fill: false, tension: .25, spanGaps: true,
                       pointRadius: 2, borderWidth: 2, borderDash: [5, 3], yAxisID: 'y1' }
                 ]
             },
             options: {
+                parsing: false, // data is already {x, y}
                 scales: { y: { min: 0, position: 'left', title: { display: true, text: 'tests', color: muted },
                                ticks: { color: muted, precision: 0 }, grid: { color: grid } },
                           y1: { min: 0, max: 100, position: 'right',
                                 title: { display: true, text: 'coverage %', color: muted },
                                 ticks: { color: muted }, grid: { drawOnChartArea: false } },
-                          x: { ticks: { color: muted }, grid: { color: grid } } },
-                plugins: { legend: { labels: { color: text } } }
+                          x: { type: 'linear', offset: true,
+                               ticks: { color: muted, autoSkip: true, maxRotation: 0, maxTicksLimit: 8,
+                                        callback: function (v) { return xTick(v); } },
+                               grid: { color: grid } } },
+                plugins: { legend: { labels: { color: text } },
+                           tooltip: { callbacks: { title: function (items) {
+                               const i = items[0].dataIndex;
+                               const sha = labels[i];
+                               const when = (times[i] != null) ? fmtDateTime(times[i]) : null;
+                               if (!when) { return sha; }
+                               return (sha && sha !== '—') ? (sha + ' · ' + when) : when;
+                           } } } }
             }
         });
+
+        // Rebuilds every series' {x,y} for the current mode (cheap — at most TREND_MAX points).
+        function redrawTrend() {
+            if (!trendChartInstance) { return; }
+            const d = trendChartInstance.data;
+            d.datasets[0].data = pts(passed);
+            d.datasets[1].data = pts(failed);
+            d.datasets[2].data = pts(skipped);
+            d.datasets[3].data = pts(coverage);
+            trendChartInstance.update();
+        }
+        window.__redrawTrend = redrawTrend;
+
+        const toggle = document.getElementById('trendModeToggle');
+        if (toggle) {
+            toggle.addEventListener('click', function (e) {
+                const btn = e.target.closest('button[data-mode]');
+                if (!btn) { return; }
+                trendMode = btn.getAttribute('data-mode');
+                toggle.querySelectorAll('button[data-mode]').forEach(function (b) {
+                    b.classList.toggle('active', b.getAttribute('data-mode') === trendMode);
+                });
+                redrawTrend();
+            });
+        }
     }
 
     // #148: live-prepend a new run to this project's recent-runs table (and nudge the trend).
@@ -356,18 +422,19 @@
             }
 
             if (trendChartInstance) {
-                const d = trendChartInstance.data;
-                d.labels.push(u.shortSha || String(u.runId));
+                // Append to the source arrays, then rebuild for the current mode.
+                labels.push(u.shortSha || String(u.runId));
+                times.push(Date.now());
                 // Passed = total − failed − skipped (the live payload's `failed` already folds in errors).
-                d.datasets[0].data.push(u.totalTests == null ? null : (u.totalTests - u.failed - u.skipped));
-                d.datasets[1].data.push(u.failed == null ? null : Number(u.failed));
-                d.datasets[2].data.push(u.skipped == null ? null : Number(u.skipped));
-                d.datasets[3].data.push(u.lineCoveragePct == null ? null : Number(u.lineCoveragePct));
-                while (d.labels.length > TREND_MAX) {
-                    d.labels.shift();
-                    d.datasets.forEach(function (ds) { ds.data.shift(); });
+                passed.push(u.totalTests == null ? null : (u.totalTests - u.failed - u.skipped));
+                failed.push(u.failed == null ? null : Number(u.failed));
+                skipped.push(u.skipped == null ? null : Number(u.skipped));
+                coverage.push(u.lineCoveragePct == null ? null : Number(u.lineCoveragePct));
+                while (labels.length > TREND_MAX) {
+                    labels.shift(); times.shift();
+                    passed.shift(); failed.shift(); skipped.shift(); coverage.shift();
                 }
-                trendChartInstance.update();
+                if (window.__redrawTrend) { window.__redrawTrend(); }
             }
         });
     })();
