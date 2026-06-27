@@ -13,7 +13,7 @@
     <!-- Live-updates SSE client: maintains the topbar "● live" indicator and re-broadcasts
          run events as the `unitrack:run` DOM event for page scripts. -->
     <script th:src="@{/js/live.js}" defer></script>
-    <!-- Applies the saved theme before paint (no flash); falls back to OS preference. -->
+    <!-- Applies the saved theme before paint (no flash); defaults to dark when none is saved. -->
     <script th:inline="none">
         (function () {
             var root = document.documentElement;
@@ -55,8 +55,9 @@
                 });
             }
             function apply(t) { root.setAttribute('data-theme', t); root.setAttribute('data-bs-theme', t); icon(t); retint(); }
+            // Dark is the default skin; only an explicit user choice (saved) switches to light.
             var saved = localStorage.getItem('theme');
-            apply(saved || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'));
+            apply(saved || 'dark');
             window.__toggleTheme = function () {
                 var t = (root.getAttribute('data-theme') === 'light') ? 'dark' : 'light';
                 localStorage.setItem('theme', t);
