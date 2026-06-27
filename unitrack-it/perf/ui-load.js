@@ -8,7 +8,19 @@
 
 import http from 'k6/http';
 import { check, sleep } from 'k6';
+import { Trend } from 'k6/metrics';
 import { textSummary } from 'https://jslib.k6.io/k6-summary/0.1.0/index.js';
+
+// Per-page latency (k6's default summary aggregates all URLs; these break it down so you can see
+// WHICH page is slow). Declared in init context (required by k6); the second arg marks them as time.
+const PAGE_DUR = {
+	home: new Trend('page_home', true),
+	project: new Trend('page_project', true),
+	coverage: new Trend('page_coverage', true),
+	performance: new Trend('page_performance', true),
+	clusters: new Trend('page_clusters', true),
+	run: new Trend('page_run', true),
+};
 
 const BASE = (__ENV.BASE_URL || 'http://localhost:8080').replace(/\/+$/, '');
 const USER = __ENV.UNITRACK_USER || '';
@@ -66,7 +78,10 @@ export default function (data) {
 	}
 
 	for (const [name, url] of pages) {
-		const r = http.get(url);
+		const r = http.get(url, { tags: { page: name } });
+		if (PAGE_DUR[name]) {
+			PAGE_DUR[name].add(r.timings.duration);
+		}
 		check(r, {
 			[`${name} 200`]: (res) => res.status === 200,
 			// a redirect back to /login means auth lapsed — fail loudly rather than load-test the login page
