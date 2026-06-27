@@ -1,5 +1,9 @@
 # UniTrack
 
+[![coverage](https://unitrack.alexmond.org/badge/36/coverage.svg)](https://unitrack.alexmond.org/projects/36)
+[![tests](https://unitrack.alexmond.org/badge/36/pass.svg)](https://unitrack.alexmond.org/projects/36)
+[![flaky](https://unitrack.alexmond.org/badge/36/flaky.svg)](https://unitrack.alexmond.org/projects/36)
+
 A self-hosted server for tracking and reporting **JUnit test execution** and **JaCoCo code
 coverage** over time — think Allure Report meets Codecov, for the JVM. CI uploads Surefire/JUnit
 XML and JaCoCo XML after each build; UniTrack stores every run keyed by project/branch/commit and
@@ -51,6 +55,21 @@ deployment. The published site is built from a separate documentation playbook r
   (`listProjects`, `getRunDetail`, `getFlakyTests`, `getQualityGate`, …) over SSE, so AI
   assistants like Claude can answer "what's flaky in project X?" straight from UniTrack.
 - **CI integration** — a `curl`-based uploader script and ready-to-copy GitHub Actions workflows.
+
+## Status badges
+
+UniTrack serves live, visibility-aware status badges per project (a private project's badge 404s, so
+it can't be probed) — embed them in a README or PR, Codecov-style. UniTrack tracks itself: the badges
+at the top of this README are its own latest run. Embed yours:
+
+```markdown
+[![coverage](https://<unitrack>/badge/<projectId>/coverage.svg)](https://<unitrack>/projects/<projectId>)
+[![tests](https://<unitrack>/badge/<projectId>/pass.svg)](https://<unitrack>/projects/<projectId>)
+[![flaky](https://<unitrack>/badge/<projectId>/flaky.svg)](https://<unitrack>/projects/<projectId>)
+```
+
+Metrics: `coverage`, `pass` (test pass-rate), `flaky` (flaky count). For custom styling, use the
+shields.io endpoint: `https://img.shields.io/endpoint?url=https://<unitrack>/badge/<projectId>/coverage`.
 
 ## Architecture
 
