@@ -450,3 +450,15 @@ details.output pre {
 .donut-pct { font-size: 23px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text); line-height: 1; }
 .donut-pct.lvl-bad { color: var(--red); }
 .donut-sub { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-top: 3px; }
+
+/* AI root-cause card on the clusters page (subtle, blue-accented; only shown when AI is enabled). */
+.ai-analysis { background: var(--panel-2); border: 1px solid var(--border); border-left: 3px solid var(--blue);
+    border-radius: 8px; padding: 10px 12px; margin: 8px 0; font-size: 13px; }
+.ai-head { display: flex; align-items: center; gap: 6px; color: var(--blue); font-weight: 600; margin-bottom: 4px; }
+.ai-conf { margin-left: auto; font-size: 11px; font-weight: 500; color: var(--muted); }
+.ai-conf.conf-high { color: var(--green); }
+.ai-conf.conf-low { color: var(--amber); }
+.ai-cause, .ai-fix { margin: 4px 0; color: var(--text); }
+.ai-model { font-size: 11px; margin-top: 4px; }
+.ai-slot { margin: 8px 0; }
+.ai-slot .ai-target { margin-top: 6px; }

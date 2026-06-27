@@ -29,6 +29,7 @@ import org.alexmond.unitrack.report.ReportingService;
 import org.alexmond.unitrack.report.TestRegressionService;
 import org.alexmond.unitrack.report.TriageService;
 import org.alexmond.unitrack.web.account.MembershipService;
+import org.alexmond.unitrack.web.ai.AiAnalyzer;
 import org.alexmond.unitrack.web.account.ProjectAccessService;
 import org.alexmond.unitrack.web.account.ShareLinkService;
 import lombok.RequiredArgsConstructor;
@@ -38,6 +39,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
@@ -107,6 +109,8 @@ public class DashboardController {
 	private final MembershipService membership;
 
 	private final ShareLinkService shareLinks;
+
+	private final AiAnalyzer aiAnalyzer;
 
 	private final io.micrometer.observation.ObservationRegistry observationRegistry;
 
@@ -223,6 +227,8 @@ public class DashboardController {
 		// failures.
 		List<FailureCluster> all = clustering.cluster(id);
 		model.addAttribute("clusters", all.stream().filter((c) -> c.distinctTests() > 1).toList());
+		// AI root-cause is click-to-run (see analyzeCluster) — no LLM call on page load.
+		model.addAttribute("aiEnabled", aiAnalyzer.enabled());
 		// Recurring failures = a single test failing repeatedly with one signature.
 		// Exclude tests
 		// already flagged flaky (nondeterministic — pass+fail on a commit); those belong
@@ -236,6 +242,29 @@ public class DashboardController {
 		model.addAttribute("recurringFailures",
 				all.stream().filter((c) -> c.distinctTests() == 1 && !flakyKeys.contains(c.tests().get(0))).toList());
 		return "clusters";
+	}
+
+	/**
+	 * Click-to-run AI root-cause for one cluster (htmx target on the clusters page).
+	 * Returns just the analysis card fragment. Requires a logged-in user — LLM calls cost
+	 * money, so anonymous visitors can't trigger them.
+	 */
+	@PostMapping("/projects/{id}/clusters/analyze")
+	public String analyzeCluster(@PathVariable Long id, @RequestParam int index, Model model) {
+		if (access.currentUsername() == null) {
+			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Sign in to run AI analysis");
+		}
+		Project project = access.requireReadProject(id);
+		List<FailureCluster> realClusters = clustering.cluster(id)
+			.stream()
+			.filter((c) -> c.distinctTests() > 1)
+			.toList();
+		if (index < 0 || index >= realClusters.size()) {
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+		}
+		model.addAttribute("analysis",
+				aiAnalyzer.analyzeFailure(project.getName(), realClusters.get(index)).orElse(null));
+		return "fragments/ai :: card";
 	}
 
 	@GetMapping("/runs/{id}")

@@ -2,6 +2,17 @@ spring:
   application:
     name: unitrack
 
+  # In-app AI failure analysis (#346) via Spring AI's Anthropic ChatClient. **Off by default** —
+  # bring-your-own-key: with no api-key the AiAnalyzer reports disabled and never calls an LLM
+  # (the ChatModel bean is still published with a blank key, which is inert). Cost-controlled:
+  # analysed once per failure signature, cached. Set UNITRACK_AI_API_KEY to enable.
+  ai:
+    anthropic:
+      api-key: ${UNITRACK_AI_API_KEY:}
+      chat:
+        options:
+          model: ${UNITRACK_AI_MODEL:claude-sonnet-4-6}
+
   # Grace window for in-flight requests on shutdown (pairs with server.shutdown: graceful).
   lifecycle:
     timeout-per-shutdown-phase: 30s

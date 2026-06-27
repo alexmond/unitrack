@@ -163,6 +163,14 @@
             <artifactId>h2</artifactId>
             <scope>runtime</scope>
         </dependency>
+        <!-- In-app AI failure analysis via Spring AI's Anthropic ChatClient (off by default —
+             see spring.ai.anthropic.* / the AiAnalyzer). Shares the Spring AI stack already
+             pulled for the MCP server, so structured output (.entity) uses one victools version
+             (no clash). BOM-managed version. -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-model-anthropic</artifactId>
+        </dependency>
     </dependencies>
 
     <build>
