@@ -61,25 +61,34 @@ revisit **(2)** if a clean multi-dialect JUnit-XML library appears.
 
 ## Formats not yet ingested (gaps)
 
-Coverage breadth is already strong (the 4 formats span JVM/JS/Python/.NET/Ruby via the
-standard tools) — and **adopting coverage-model widens it further (Clover, etc.) at no extra
-code**. The remaining gaps cluster in **test results** and **per-language perf/bench**, where
-the rule is the same: reach for a maintained library per format if one exists, else the
-format dictates the approach (JSON → Jackson POJOs; simple XML → DOM).
+**UniTrack is polyglot by intent — Go, .NET, Node, Python, JVM, Ruby, PHP, anything.** It is
+not a JVM-targeted tool; broad format support is a **first-class goal** ("the more the
+merrier"). So the bias is to **add format parsers liberally** — preferring a maintained
+library per format (per the posture above), else letting the format dictate the approach
+(JSON → Jackson POJOs; simple XML → DOM).
 
-**Test results** (only JUnit XML today) — highest-leverage first:
-- **.NET TRX** — biggest asymmetry: .NET *coverage* is first-class (OpenCover) but .NET
-  *tests* must be converted.
-- **xUnit.net / NUnit3 XML**, **Go `test -json`** (native), **TAP**, **Allure results JSON**.
-- **CTRF** (Common Test Report Format) — emerging unified JSON test standard; on-brand for a
-  "unified" tool, and a trivial Jackson bind.
+Where we stand per ecosystem (✓ native · ⇢ works only via a converter to a format we accept ·
+✗ missing):
 
-**Coverage:**
-- **Clover XML** — the one mainstream coverage format we miss today; **free once
-  coverage-model lands**.
+| Ecosystem | Tests | Coverage | Bench / perf |
+|---|---|---|---|
+| JVM | JUnit XML ✓ | JaCoCo ✓ | JMH ✓ |
+| .NET | ✗ TRX / xUnit / NUnit (⇢ convert→JUnit) | OpenCover ✓ · Cobertura ✓ · LCOV ✓ (Coverlet) | ✗ BenchmarkDotNet |
+| Go | ✗ `test -json` (⇢ gotestsum→JUnit) | ✗ native `cover.out` (⇢ gocover-cobertura) | ✗ `test -bench` |
+| Node / JS / TS | ⇢ jest/mocha→JUnit | LCOV ✓ · Cobertura ✓ (nyc/c8) | ✗ (tinybench/benchmark.js JSON) |
+| Python | pytest `--junitxml` ✓ | coverage.py Cobertura/LCOV ✓ | ✗ pytest-benchmark JSON |
+| PHP | PHPUnit JUnit ✓ | ✗ Clover (Cobertura ✓) | — |
+| Ruby | ⇢ RSpec→JUnit | SimpleCov→Cobertura/LCOV ✓ | — |
+| Any | ✗ TAP · ✗ CTRF · ✗ Allure | — | — |
 
-**Performance:**
-- Micro-bench analogs to JMH: **Go `test -bench`**, **pytest-benchmark JSON**,
-  **BenchmarkDotNet JSON**, **Google Benchmark JSON** (all JSON → Jackson).
-- More load sources: **Gatling** (deferred — brittle simulation.log), **Locust** CSV,
-  **Artillery** JSON.
+Reading the matrix: **coverage is broadly covered** (often natively; coverage-model widens it
+further — Clover etc. for free). The real gaps are **native test-result formats** (everything
+non-JUnit is convert-only or missing) and **per-language micro-bench** (only JVM/JMH today).
+
+Highest-leverage additions, treating every ecosystem as first-class:
+- **.NET TRX** — native .NET tests (pairs with our already-strong .NET coverage).
+- **Go `test -json`** + native `cover.out` + **`test -bench`** — Go is entirely converter-dependent today.
+- **CTRF** (Common Test Report Format) — language-agnostic unified JSON test standard; a trivial Jackson bind and on-brand for a polyglot tool.
+- **Clover XML** — free once coverage-model lands.
+- JMH analogs: **BenchmarkDotNet**, **pytest-benchmark**, **Go bench**, **Google Benchmark** (all JSON → Jackson).
+- More load sources: **Gatling** (deferred — brittle simulation.log), **Locust** CSV, **Artillery** JSON.
