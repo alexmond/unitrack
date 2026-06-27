@@ -45,6 +45,14 @@
             <artifactId>jackson-databind</artifactId>
         </dependency>
 
+        <!-- Coverage report parsing (JaCoCo/Cobertura/LCOV/OpenCover/Clover) — the Jenkins
+             Coverage plugin's standalone engine. Replaces the hand-rolled parsers. -->
+        <dependency>
+            <groupId>edu.hm.hafner</groupId>
+            <artifactId>coverage-model</artifactId>
+            <version>0.71.1</version>
+        </dependency>
+
         <!-- Test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
