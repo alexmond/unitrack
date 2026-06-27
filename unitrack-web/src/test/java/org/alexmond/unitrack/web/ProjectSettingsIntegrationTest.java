@@ -17,6 +17,7 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -104,7 +105,8 @@ class ProjectSettingsIntegrationTest {
 			.andExpect(content().string(containsString("Quality gate")))
 			.andExpect(content().string(containsString("GitHub")));
 
-		mvc.perform(post("/projects/{id}/settings", projectId).param("baseBranch", "release")
+		mvc.perform(post("/projects/{id}/settings", projectId).with(csrf())
+			.param("baseBranch", "release")
 			.param("minLineCoverage", "75")
 			.param("maxCoverageDropPct", "")
 			.param("failOnNewFailures", "false")

@@ -75,10 +75,18 @@ spec:
             - name: http
               containerPort: 8080
               protocol: TCP
+            # Actuator runs here, separate from the public app port. The Service exposes only
+            # `http`, so health/metrics/prometheus are reachable in-cluster (probes, scrape) but
+            # never through the ingress / Cloudflare Tunnel.
+            - name: mgmt
+              containerPort: {{ .Values.managementPort }}
+              protocol: TCP
           envFrom:
             - configMapRef:
                 name: {{ include "unitrack.fullname" . }}
           env:
+            - name: MANAGEMENT_PORT
+              value: {{ .Values.managementPort | quote }}
             - name: UNITRACK_DB_PASSWORD
               valueFrom:
                 secretKeyRef:
@@ -115,19 +123,19 @@ spec:
           startupProbe:
             httpGet:
               path: {{ .Values.probes.startup.path }}
-              port: http
+              port: mgmt
             periodSeconds: {{ .Values.probes.startup.periodSeconds }}
             failureThreshold: {{ .Values.probes.startup.failureThreshold }}
           livenessProbe:
             httpGet:
               path: {{ .Values.probes.liveness.path }}
-              port: http
+              port: mgmt
             periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
             failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
           readinessProbe:
             httpGet:
               path: {{ .Values.probes.readiness.path }}
-              port: http
+              port: mgmt
             periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
             failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
           resources:

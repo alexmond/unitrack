@@ -19,6 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -101,12 +102,14 @@ class MembershipIntegrationTest {
 			.andExpect(status().isOk())
 			.andExpect(content().string(containsString("members")));
 
-		mvc.perform(post("/projects/{id}/members", projectId).param("username", "bob").param("role", "WRITE"))
+		mvc.perform(
+				post("/projects/{id}/members", projectId).with(csrf()).param("username", "bob").param("role", "WRITE"))
 			.andExpect(status().is3xxRedirection());
 		assertThat(membership.canWrite("bob", projectId)).isTrue();
 
 		// Unknown user -> redirect with error, no membership created.
-		mvc.perform(post("/projects/{id}/members", projectId).param("username", "ghost").param("role", "READ"))
+		mvc.perform(
+				post("/projects/{id}/members", projectId).with(csrf()).param("username", "ghost").param("role", "READ"))
 			.andExpect(status().is3xxRedirection());
 	}
 
@@ -118,7 +121,7 @@ class MembershipIntegrationTest {
 		user("carol");
 
 		mvc.perform(get("/projects/{id}/members", projectId)).andExpect(status().isForbidden());
-		mvc.perform(post("/projects/{id}/settings", projectId).param("minLineCoverage", "70"))
+		mvc.perform(post("/projects/{id}/settings", projectId).with(csrf()).param("minLineCoverage", "70"))
 			.andExpect(status().isForbidden());
 	}
 

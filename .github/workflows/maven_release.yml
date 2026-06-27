@@ -45,15 +45,19 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Set release version
-        run: ./mvnw -B versions:set -DnewVersion=${{ inputs.releaseVersion }} -DgenerateBackupPoms=false
+        env:
+          RELEASE_VERSION: ${{ inputs.releaseVersion }}
+        run: ./mvnw -B versions:set -DnewVersion="$RELEASE_VERSION" -DgenerateBackupPoms=false
 
       - name: Build & verify (full gates + tests)
         run: ./mvnw -B clean verify
 
       - name: Commit & tag
+        env:
+          RELEASE_VERSION: ${{ inputs.releaseVersion }}
         run: |
-          git commit -am "release: ${{ inputs.releaseVersion }}"
-          git tag -a "v${{ inputs.releaseVersion }}" -m "Release ${{ inputs.releaseVersion }}"
+          git commit -am "release: $RELEASE_VERSION"
+          git tag -a "v$RELEASE_VERSION" -m "Release $RELEASE_VERSION"
 
       - name: Deploy to Maven Central
         env:
@@ -63,9 +67,13 @@ jobs:
         run: ./mvnw -B -Prelease -DskipTests deploy -Dgpg.passphrase="$GPG_PASSPHRASE"
 
       - name: Set next development version
-        run: ./mvnw -B versions:set -DnewVersion=${{ inputs.nextVersion }} -DgenerateBackupPoms=false
+        env:
+          NEXT_VERSION: ${{ inputs.nextVersion }}
+        run: ./mvnw -B versions:set -DnewVersion="$NEXT_VERSION" -DgenerateBackupPoms=false
 
       - name: Commit next version & push
+        env:
+          NEXT_VERSION: ${{ inputs.nextVersion }}
         run: |
-          git commit -am "chore: prepare for next development iteration ${{ inputs.nextVersion }}"
-          git push origin HEAD:${{ github.ref_name }} --follow-tags
+          git commit -am "chore: prepare for next development iteration $NEXT_VERSION"
+          git push origin HEAD:"$GITHUB_REF_NAME" --follow-tags

@@ -7,7 +7,6 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -38,9 +37,17 @@ public class SecurityConfig {
 			throws Exception {
 		// Unauthenticated API calls get a 401 instead of a redirect to the login page.
 		RequestMatcher apiPaths = (request) -> request.getRequestURI().startsWith("/api/");
-		// CSRF disabled: the API is token/stateless and the UI is an internal dashboard.
-		// (Re-enable with per-form tokens when hardening — see the auth epic.)
-		http.csrf(AbstractHttpConfigurer::disable)
+		// MCP transport (SSE + JSON-RPC) — stateless, no browser form, so CSRF-exempt
+		// like the API.
+		RequestMatcher mcpPaths = (request) -> {
+			String uri = request.getRequestURI();
+			return uri.equals("/sse") || uri.startsWith("/mcp");
+		};
+		// CSRF is ON for the cookie-session UI (Thymeleaf injects per-form tokens); the
+		// token-auth,
+		// stateless API and the MCP transport are exempt (no ambient browser credentials
+		// to forge).
+		http.csrf((csrf) -> csrf.ignoringRequestMatchers(apiPaths, mcpPaths))
 			.addFilterBefore(apiTokenAuthFilter, UsernamePasswordAuthenticationFilter.class)
 			.authorizeHttpRequests((auth) -> {
 				// Static assets are public — otherwise, in closed mode, the login page
@@ -78,7 +85,24 @@ public class SecurityConfig {
 					auth.anyRequest().permitAll();
 				}
 				else {
-					auth.anyRequest().authenticated();
+					// Closed mode is now "public-readable": anonymous visitors may READ,
+					// and
+					// per-project visibility is enforced in the controllers (PUBLIC
+					// projects are
+					// shown; PRIVATE ones 404 — see ProjectAccessService). All
+					// writes/management
+					// require a login (defense in depth on top of the controller checks).
+					// Ingest
+					// stays open for CI unless an ingest token is required (handled
+					// above).
+					if (!props.isRequireIngestToken()) {
+						auth.requestMatchers(HttpMethod.POST, "/api/v1/ingest").permitAll();
+					}
+					auth.requestMatchers(HttpMethod.POST, "/**").authenticated();
+					auth.requestMatchers(HttpMethod.PUT, "/**").authenticated();
+					auth.requestMatchers(HttpMethod.DELETE, "/**").authenticated();
+					auth.requestMatchers(HttpMethod.PATCH, "/**").authenticated();
+					auth.anyRequest().permitAll();
 				}
 			})
 			.exceptionHandling((ex) -> ex

@@ -43,7 +43,9 @@
 
     <!-- A single test failing repeatedly isn't a cluster — list those separately. -->
     <div th:unless="${recurringFailures.isEmpty()}">
-        <h2>Recurring failures <span class="muted">(a single test failing repeatedly — not a cluster)</span></h2>
+        <h2>Recurring failures <span class="muted">(a single test failing repeatedly the same way —
+            consistent failures; nondeterministic ones are under
+            <a th:href="@{/projects/{id}/flaky(id=${project.id})}">Flaky tests</a>)</span></h2>
         <div th:each="c : ${recurringFailures}" class="cluster">
             <details class="failure">
                 <summary>

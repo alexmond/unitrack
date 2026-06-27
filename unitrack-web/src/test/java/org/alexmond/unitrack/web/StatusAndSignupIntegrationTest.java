@@ -10,6 +10,7 @@ import org.springframework.web.context.WebApplicationContext;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
@@ -40,7 +41,7 @@ class StatusAndSignupIntegrationTest {
 	void signupIsDisabledByDefault() throws Exception {
 		MockMvc mvc = mvc();
 		mvc.perform(get("/signup")).andExpect(status().is3xxRedirection()).andExpect(redirectedUrl("/login"));
-		mvc.perform(post("/signup").param("username", "nope").param("password", "password123"))
+		mvc.perform(post("/signup").with(csrf()).param("username", "nope").param("password", "password123"))
 			.andExpect(status().is3xxRedirection())
 			.andExpect(redirectedUrl("/login"));
 	}

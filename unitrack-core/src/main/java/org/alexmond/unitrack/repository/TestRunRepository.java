@@ -28,6 +28,48 @@ public interface TestRunRepository extends JpaRepository<TestRun, Long> {
 			""")
 	List<TestRun> findLatestTwoRunsPerProject();
 
+	/**
+	 * For every project whose latest run is FAILED, how long it has been red — in one
+	 * set-based query (no per-project N+1). The streak is scoped to the latest run's
+	 * branch+flag: {@code lastGreenAt} = the most recent prior PASSED run on that series,
+	 * {@code brokenSince} = the first run after it (the onset), {@code runsRed} = the
+	 * runs shipped on top of the breakage. Projects whose latest run passed are not
+	 * returned.
+	 */
+	@Query(nativeQuery = true, value = """
+			WITH latest AS (
+			    SELECT t.project_id, t.branch, t.flag, t.status, t.created_at,
+			           ROW_NUMBER() OVER (PARTITION BY t.project_id ORDER BY t.created_at DESC, t.id DESC) AS rn
+			    FROM test_run t
+			),
+			cur AS (
+			    SELECT project_id, branch, flag, created_at AS latest_at
+			    FROM latest WHERE rn = 1 AND status = 'FAILED'
+			),
+			grn AS (
+			    SELECT c.project_id, MAX(g.created_at) AS last_green_at
+			    FROM cur c
+			    JOIN test_run g ON g.project_id = c.project_id
+			         AND COALESCE(g.branch, '') = COALESCE(c.branch, '')
+			         AND COALESCE(g.flag, '') = COALESCE(c.flag, '')
+			         AND g.status = 'PASSED' AND g.created_at <= c.latest_at
+			    GROUP BY c.project_id
+			)
+			SELECT c.project_id AS "projectId",
+			       g.last_green_at AS "lastGreenAt",
+			       MIN(r.created_at) AS "brokenSince",
+			       COUNT(r.id) AS "runsRed"
+			FROM cur c
+			LEFT JOIN grn g ON g.project_id = c.project_id
+			JOIN test_run r ON r.project_id = c.project_id
+			     AND COALESCE(r.branch, '') = COALESCE(c.branch, '')
+			     AND COALESCE(r.flag, '') = COALESCE(c.flag, '')
+			     AND r.created_at <= c.latest_at
+			     AND (g.last_green_at IS NULL OR r.created_at > g.last_green_at)
+			GROUP BY c.project_id, g.last_green_at
+			""")
+	List<BrokenSince> findBrokenSince();
+
 	List<TestRun> findByProjectIdOrderByCreatedAtAsc(Long projectId, Pageable pageable);
 
 	/** Recent runs on a single branch, newest first — for branch-scoped Overview. */

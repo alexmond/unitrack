@@ -49,7 +49,8 @@
 <div class="toolbar">
     <span th:if="${shared}">Shared read-only view · </span>
     <span th:unless="${shared}">Self-contained export — save this page or </span>
-    <button type="button" onclick="window.print()">Print / Save as PDF</button>
+    <button type="button" class="btn btn-sm btn-secondary" onclick="window.print()">
+        <i class="bi bi-printer" aria-hidden="true"></i> Print / Save as PDF</button>
 </div>
 
 <div class="doc">

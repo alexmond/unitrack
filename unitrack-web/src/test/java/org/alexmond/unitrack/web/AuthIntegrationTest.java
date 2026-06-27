@@ -12,6 +12,7 @@ import org.springframework.web.context.WebApplicationContext;
 
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -64,8 +65,8 @@ class AuthIntegrationTest {
 		mvc.perform(get("/profile")).andExpect(status().is3xxRedirection()).andExpect(redirectedUrl("/login"));
 
 		// Seeded admin can log in (password from unitrack.security.admin-password in test
-		// config). POST to the form-login processing URL; CSRF is disabled.
-		mvc.perform(post("/login").param("username", "admin").param("password", "testadmin"))
+		// config). POST to the form-login processing URL with a CSRF token (CSRF is on).
+		mvc.perform(post("/login").with(csrf()).param("username", "admin").param("password", "testadmin"))
 			.andExpect(status().is3xxRedirection())
 			.andExpect(header().string("Location", "/profile"));
 	}

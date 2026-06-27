@@ -1,5 +1,9 @@
 # UniTrack
 
+[![coverage](https://unitrack.alexmond.org/badge/36/coverage.svg)](https://unitrack.alexmond.org/projects/36)
+[![tests](https://unitrack.alexmond.org/badge/36/pass.svg)](https://unitrack.alexmond.org/projects/36)
+[![flaky](https://unitrack.alexmond.org/badge/36/flaky.svg)](https://unitrack.alexmond.org/projects/36)
+
 A self-hosted server for tracking and reporting **JUnit test execution** and **JaCoCo code
 coverage** over time — think Allure Report meets Codecov, for the JVM. CI uploads Surefire/JUnit
 XML and JaCoCo XML after each build; UniTrack stores every run keyed by project/branch/commit and
@@ -10,6 +14,33 @@ Built with **Spring Boot 4** and **Java 21**, as a multi-module Maven project (`
 > See [`doc/competitor-analysis.md`](doc/competitor-analysis.md) for the feature comparison against
 > Allure, Codecov, ReportPortal, SonarQube, Datadog Test Optimization, Trunk, and others, plus the
 > prioritized roadmap of features worth adopting.
+
+## Screenshots
+
+The all-projects dashboard — health across every repo, failing gates first:
+
+![UniTrack dashboard](doc/images/screenshots/01-dashboard.png)
+
+<table>
+<tr>
+<td width="50%"><img src="doc/images/screenshots/02-project.png" alt="Project overview"><br><sub><b>Project overview</b> — gate verdict, pass/fail/coverage trend, coverage by module, recent runs, run compare.</sub></td>
+<td width="50%"><img src="doc/images/screenshots/06-load-tests.png" alt="Load tests"><br><sub><b>Load tests</b> — p50/p90/p99 latency, throughput and error-rate trends from JMeter/k6 runs (here a regression at <code>a4</code> that recovers).</sub></td>
+</tr>
+<tr>
+<td><img src="doc/images/screenshots/03-coverage.png" alt="Coverage"><br><sub><b>Coverage</b> — per-file / per-package line coverage for the latest run.</sub></td>
+<td><img src="doc/images/screenshots/04-flaky.png" alt="Flaky tests"><br><sub><b>Flaky tests</b> — tests that both passed and failed on the same commit, with failure rates.</sub></td>
+</tr>
+<tr>
+<td><img src="doc/images/screenshots/07-clusters.png" alt="Failure clusters"><br><sub><b>Failure clusters</b> — recurring failures grouped by a normalized signature.</sub></td>
+<td><img src="doc/images/screenshots/08-run-detail.png" alt="Run detail"><br><sub><b>Run detail</b> — failures with stacktraces and the quality-gate verdict.</sub></td>
+</tr>
+<tr>
+<td><img src="doc/images/screenshots/05-test-timing.png" alt="Test timing"><br><sub><b>Test timing</b> — suite-time trend and the slowest tests per run.</sub></td>
+<td></td>
+</tr>
+</table>
+
+> Captured from the built-in demo dataset (run locally with `UNITRACK_DEMO_ENABLED=true`).
 
 ## Documentation
 
@@ -52,6 +83,21 @@ deployment. The published site is built from a separate documentation playbook r
   assistants like Claude can answer "what's flaky in project X?" straight from UniTrack.
 - **CI integration** — a `curl`-based uploader script and ready-to-copy GitHub Actions workflows.
 
+## Status badges
+
+UniTrack serves live, visibility-aware status badges per project (a private project's badge 404s, so
+it can't be probed) — embed them in a README or PR, Codecov-style. UniTrack tracks itself: the badges
+at the top of this README are its own latest run. Embed yours:
+
+```markdown
+[![coverage](https://<unitrack>/badge/<projectId>/coverage.svg)](https://<unitrack>/projects/<projectId>)
+[![tests](https://<unitrack>/badge/<projectId>/pass.svg)](https://<unitrack>/projects/<projectId>)
+[![flaky](https://<unitrack>/badge/<projectId>/flaky.svg)](https://<unitrack>/projects/<projectId>)
+```
+
+Metrics: `coverage`, `pass` (test pass-rate), `flaky` (flaky count). For custom styling, use the
+shields.io endpoint: `https://img.shields.io/endpoint?url=https://<unitrack>/badge/<projectId>/coverage`.
+
 ## Architecture
 
 A multi-module Maven build (`org.alexmond:unitrack-parent`), structured like
@@ -83,7 +129,9 @@ automatically from `compose.yaml`. Run the web module (`-am` also builds `unitra
 ./mvnw -pl unitrack-web -am spring-boot:run
 ```
 
-Then open <http://localhost:8080>. Health: <http://localhost:8080/actuator/health>.
+Then open <http://localhost:8080>. Actuator runs on a separate port by default (so it isn't exposed
+when deployed) — health is at <http://localhost:9001/actuator/health>; set `MANAGEMENT_PORT=8080` to
+fold it back onto the app port.
 
 To point at an existing Postgres instead, set `UNITRACK_DB_URL`, `UNITRACK_DB_USER`,
 `UNITRACK_DB_PASSWORD`.

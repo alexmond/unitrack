@@ -22,6 +22,7 @@ import static org.hamcrest.Matchers.not;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -105,11 +106,13 @@ class ProjectVisibilityIntegrationTest {
 	void visibilityToggleIsOwnerOnly() throws Exception {
 		MockMvc mvc = mvc();
 		// READ member is not an owner -> forbidden.
-		mvc.perform(post("/projects/{id}/visibility", privateId).param("visibility", "PUBLIC").with(user("vis-alice")))
-			.andExpect(status().isForbidden());
+		mvc.perform(post("/projects/{id}/visibility", privateId).with(csrf())
+			.param("visibility", "PUBLIC")
+			.with(user("vis-alice"))).andExpect(status().isForbidden());
 		// Admin can change it.
-		mvc.perform(post("/projects/{id}/visibility", privateId).param("visibility", "PUBLIC").with(user("admin")))
-			.andExpect(status().is3xxRedirection());
+		mvc.perform(post("/projects/{id}/visibility", privateId).with(csrf())
+			.param("visibility", "PUBLIC")
+			.with(user("admin"))).andExpect(status().is3xxRedirection());
 	}
 
 }
