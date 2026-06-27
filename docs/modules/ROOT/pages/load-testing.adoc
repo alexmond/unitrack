@@ -14,6 +14,11 @@ Add a `perf` file to the xref:ingestion.adoc[ingest] upload; the format is auto-
   label.
 * *k6 JSON summary* -- `k6 run --summary-export=summary.json`. Pre-aggregated; the parser reads
   `http_req_duration` percentiles, `http_reqs` count/rate and `http_req_failed`.
+* *JMH JSON* -- a JMH microbenchmark result run with `-rf json` (track JVM library performance
+  over time). Each benchmark becomes one tracked label (`Class.method[params]`); scores are
+  normalised to ms, lower-is-better. Time-per-op modes (`avgt`/`sample`/`ss`) carry real
+  percentiles -- *prefer `avgt`*; `thrpt` (ops/sec) is inverted to a mean ms/op with flat
+  percentiles. JMH has no error concept, so error rate is always 0.
 
 [source,bash]
 ----
