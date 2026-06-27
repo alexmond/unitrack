@@ -7,6 +7,7 @@ import org.alexmond.unitrack.domain.TestCaseResult;
 import org.alexmond.unitrack.domain.TestRun;
 import org.alexmond.unitrack.domain.TestStatus;
 import org.alexmond.unitrack.domain.TestSuiteResult;
+import org.alexmond.unitrack.repository.BrokenSince;
 import org.alexmond.unitrack.repository.CoverageFileEntryRepository;
 import org.alexmond.unitrack.repository.CoverageReportRepository;
 import org.alexmond.unitrack.repository.PackageCoverage;
@@ -87,6 +88,18 @@ public class ReportingService {
 			byProject.computeIfAbsent(r.getProject().getId(), (k) -> new ArrayList<>()).add(r);
 		}
 		byProject.values().forEach((list) -> list.sort(Comparator.comparing(TestRun::getCreatedAt).reversed()));
+		return byProject;
+	}
+
+	/**
+	 * Per-project "broken since" (regression age) for the board, keyed by project id —
+	 * one set-based query, only projects whose latest run is failing are present.
+	 */
+	public Map<Long, BrokenSince> brokenSinceByProject() {
+		Map<Long, BrokenSince> byProject = new HashMap<>();
+		for (BrokenSince b : runs.findBrokenSince()) {
+			byProject.put(b.getProjectId(), b);
+		}
 		return byProject;
 	}
 

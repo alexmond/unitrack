@@ -58,12 +58,20 @@
         </tr>
         </thead>
         <tbody>
-        <tr th:each="h : ${board}" th:classappend="${h.hasRuns() and !h.gatePassed()} ? 'row-fail'"
+        <tr th:each="h : ${board}"
+            th:classappend="${h.isRegressed()} ? 'regressed' : (${h.hasRuns() and !h.gatePassed()} ? 'row-fail')"
             th:attr="data-project-id=${h.projectId()}">
             <td>
                 <a th:href="@{/projects/{id}(id=${h.projectId()})}" th:text="${h.projectName()}">project</a>
                 <i th:if="${h.isPrivate()}" class="bi bi-lock-fill muted" title="Private" aria-label="Private"></i>
                 <code class="mono muted" th:if="${h.branch() != null}" th:text="${h.branch()}">main</code>
+                <div th:if="${h.isRegressed()}" class="broken-since"
+                     th:title="'Failing since ' + ${#temporals.format(h.brokenSince(), 'yyyy-MM-dd HH:mm')}">
+                    <i class="bi bi-arrow-down-right" aria-hidden="true"></i>
+                    <span>broken since <span th:text="${#temporals.format(h.brokenSince(), 'MMM d')}">Jun 6</span>
+                        · <span th:text="${h.daysRedLabel()}">2w</span>
+                        · <span th:text="${h.runsRed()}">41</span> runs</span>
+                </div>
             </td>
             <td data-live="gate">
                 <th:block th:if="${h.hasRuns()}">
