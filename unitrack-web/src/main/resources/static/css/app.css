@@ -116,6 +116,13 @@
 }
 .theme-toggle:hover { background: var(--panel-2); }
 
+/* Buttons: one compact family tuned to the dashboard scale. Bootstrap's defaults (16px / ~38px)
+   run large next to the 13px subnav + table text and mix awkwardly with the many .btn-sm actions;
+   tighten the default and small sizes so primary CTAs, form submits and inline actions read as one
+   set. Colours/variants stay Bootstrap's. */
+.btn { font-size: var(--fs-md); padding: 7px 14px; border-radius: var(--r-md); line-height: 1.3; }
+.btn-sm { font-size: var(--fs-sm); padding: 5px 11px; border-radius: var(--r-sm); }
+
 * { box-sizing: border-box; }
 
 body {
@@ -145,7 +152,7 @@ a:hover { text-decoration: underline; }
 .topbar .brand { font-weight: 700; font-size: 18px; color: var(--text); }
 .topbar .brand span { color: var(--blue); }
 .topbar .spacer { flex: 1; }
-.topbar nav a { color: var(--muted); margin-left: 16px; }
+.topbar nav a { color: var(--muted); margin-left: 16px; display: inline-flex; align-items: center; gap: 6px; }
 
 /* Project section nav — a wrapping row of pills; the current section is a filled pill. */
 .subnav {

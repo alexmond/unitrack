@@ -8,6 +8,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /** Self-service signup is rate-limited per client IP. */
@@ -25,11 +26,11 @@ class SignupRateLimitIntegrationTest {
 	@Test
 	void blocksAfterTheHourlyLimit() throws Exception {
 		MockMvc mvc = mvc();
-		mvc.perform(post("/signup").param("username", "su-rl-1").param("password", "password123"))
+		mvc.perform(post("/signup").with(csrf()).param("username", "su-rl-1").param("password", "password123"))
 			.andExpect(status().is3xxRedirection());
-		mvc.perform(post("/signup").param("username", "su-rl-2").param("password", "password123"))
+		mvc.perform(post("/signup").with(csrf()).param("username", "su-rl-2").param("password", "password123"))
 			.andExpect(status().is3xxRedirection());
-		mvc.perform(post("/signup").param("username", "su-rl-3").param("password", "password123"))
+		mvc.perform(post("/signup").with(csrf()).param("username", "su-rl-3").param("password", "password123"))
 			.andExpect(status().isTooManyRequests());
 	}
 

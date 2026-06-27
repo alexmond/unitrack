@@ -52,6 +52,11 @@ spring:
 
 server:
   port: ${PORT:8080}
+  # Public-facing: never leak stack traces / exception messages / binding errors to clients.
+  error:
+    include-stacktrace: never
+    include-message: never
+    include-binding-errors: never
   # Let in-flight ingests finish when the process is told to stop (e.g. a Kubernetes
   # rolling update sends SIGTERM); Spring stops accepting new requests, then drains.
   shutdown: graceful
@@ -64,6 +69,12 @@ server:
     max-part-count: 10000
 
 management:
+  server:
+    # Actuator runs on its own port so it is NOT reachable through the public app port / ingress
+    # (health, metrics, prometheus, env stay internal). The chart points probes + the prometheus
+    # scrape at this port and exposes only the app port on the Service. Set MANAGEMENT_PORT=8080 to
+    # fold it back onto the app port for a simple all-in-one local run.
+    port: ${MANAGEMENT_PORT:9001}
   endpoints:
     web:
       exposure:

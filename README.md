@@ -110,7 +110,9 @@ automatically from `compose.yaml`. Run the web module (`-am` also builds `unitra
 ./mvnw -pl unitrack-web -am spring-boot:run
 ```
 
-Then open <http://localhost:8080>. Health: <http://localhost:8080/actuator/health>.
+Then open <http://localhost:8080>. Actuator runs on a separate port by default (so it isn't exposed
+when deployed) — health is at <http://localhost:9001/actuator/health>; set `MANAGEMENT_PORT=8080` to
+fold it back onto the app port.
 
 To point at an existing Postgres instead, set `UNITRACK_DB_URL`, `UNITRACK_DB_USER`,
 `UNITRACK_DB_PASSWORD`.

@@ -17,6 +17,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -55,12 +56,13 @@ class OwnersIntegrationTest {
 			.andExpect(content().string(containsString("Test owners")));
 
 		// Anonymous can't add a rule.
-		mvc.perform(
-				post("/projects/{id}/owners/rules", projectId).param("owner", "@x").param("pattern", "com\\.x\\..*"))
-			.andExpect(status().isForbidden());
+		mvc.perform(post("/projects/{id}/owners/rules", projectId).with(csrf())
+			.param("owner", "@x")
+			.param("pattern", "com\\.x\\..*")).andExpect(status().isForbidden());
 
 		// Admin can.
-		mvc.perform(post("/projects/{id}/owners/rules", projectId).param("owner", "@payments")
+		mvc.perform(post("/projects/{id}/owners/rules", projectId).with(csrf())
+			.param("owner", "@payments")
 			.param("pattern", "com\\.billing\\..*")
 			.with(user("admin"))).andExpect(status().is3xxRedirection());
 		assertThat(ownership.listRules(projectId)).anyMatch((r) -> r.owner().equals("@payments"));

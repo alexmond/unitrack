@@ -9,17 +9,20 @@
           aria-label="Live updates reconnecting" role="status"></span>
     <div class="spacer"></div>
     <nav>
-        <a th:href="@{/}">Projects</a>
-        <a th:href="@{/status}">Status</a>
-        <a th:href="@{/owners}">Owners</a>
-        <a th:if="${isAdmin}" th:href="@{/ops}">Ops</a>
-        <a th:if="${isAdmin}" th:href="@{/audit}">Audit</a>
-        <a th:if="${currentUser != null}" th:href="@{/profile}" th:text="${currentUser}">user</a>
-        <a th:if="${currentUser == null}" th:href="@{/login}">Sign in</a>
-        <a th:if="${currentUser == null and signupEnabled}" th:href="@{/signup}">Sign up</a>
+        <!-- Signed-out visitors get a minimal bar (just Sign in) — the public landing is reached via
+             the brand logo; the working nav appears once logged in. -->
+        <a th:if="${currentUser != null}" th:href="@{/}"><i class="bi bi-grid-1x2" aria-hidden="true"></i> Projects</a>
+        <a th:if="${currentUser != null}" th:href="@{/status}"><i class="bi bi-activity" aria-hidden="true"></i> Status</a>
+        <a th:if="${currentUser != null}" th:href="@{/owners}"><i class="bi bi-people" aria-hidden="true"></i> Owners</a>
+        <a th:if="${isAdmin}" th:href="@{/ops}"><i class="bi bi-sliders" aria-hidden="true"></i> Ops</a>
+        <a th:if="${isAdmin}" th:href="@{/audit}"><i class="bi bi-journal-text" aria-hidden="true"></i> Audit</a>
+        <a th:if="${currentUser != null}" th:href="@{/profile}" th:title="'Account — ' + ${currentUser}">
+            <i class="bi bi-person-circle" aria-hidden="true"></i> <span th:text="${currentUser}">user</span></a>
+        <a th:if="${currentUser == null}" th:href="@{/login}"><i class="bi bi-box-arrow-in-right" aria-hidden="true"></i> Sign in</a>
+        <a th:if="${currentUser == null and signupEnabled}" th:href="@{/signup}"><i class="bi bi-person-plus" aria-hidden="true"></i> Sign up</a>
     </nav>
     <form th:if="${currentUser != null}" method="post" th:action="@{/logout}" style="display:inline;margin-left:16px">
-        <button class="theme-toggle" type="submit">Logout</button>
+        <button class="theme-toggle" type="submit"><i class="bi bi-box-arrow-right" aria-hidden="true"></i> Logout</button>
     </form>
     <button id="theme-toggle" class="theme-toggle" type="button"
             aria-label="Toggle light/dark theme" title="Toggle theme"
@@ -43,7 +46,8 @@
        th:classappend="${active == 'timing'} ? 'current'"
        th:attr="aria-current=${active == 'timing'} ? 'page' : null">
         <i class="bi bi-stopwatch" aria-hidden="true"></i> Test timing</a>
-    <a th:href="@{/projects/{id}/perf(id=${projectId})}"
+    <a th:if="${active == 'load' or @perfRunRepository.existsByProjectId(projectId)}"
+       th:href="@{/projects/{id}/perf(id=${projectId})}"
        th:classappend="${active == 'load'} ? 'current'"
        th:attr="aria-current=${active == 'load'} ? 'page' : null">
         <i class="bi bi-rocket-takeoff" aria-hidden="true"></i> Load tests</a>
@@ -51,6 +55,9 @@
        th:classappend="${active == 'clusters'} ? 'current'"
        th:attr="aria-current=${active == 'clusters'} ? 'page' : null">
         <i class="bi bi-diagram-3" aria-hidden="true"></i> Failure clusters</a>
+    <!-- Management section — only for users who can write/manage this project. Hidden for anonymous
+         and read-only visitors, so the public view of a project is read-only. -->
+    <th:block th:if="${currentUser != null and @membershipService.canWrite(currentUser, projectId)}">
     <span class="subnav-sep" aria-hidden="true"></span>
     <a th:href="@{/projects/{id}/triage(id=${projectId})}"
        th:classappend="${active == 'triage'} ? 'current'"
@@ -72,6 +79,7 @@
        th:classappend="${active == 'members'} ? 'current'"
        th:attr="aria-current=${active == 'members'} ? 'page' : null">
         <i class="bi bi-people" aria-hidden="true"></i> Members</a>
+    </th:block>
 </nav>
 
 <footer th:fragment="footer" class="footer">

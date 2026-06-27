@@ -38,9 +38,17 @@ public class SettingsController {
 	private final ProjectRepository projects;
 
 	@GetMapping("/projects/{id}/settings")
-	public String settings(@PathVariable Long id, Model model) {
+	public String settings(@PathVariable Long id, Model model, Authentication auth) {
 		Project project = reporting.findProject(id)
 			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found"));
+		// The settings page exposes project config (gate thresholds, GitHub/GitLab) —
+		// viewing it
+		// requires write access, matching the save handler. Otherwise any logged-in user
+		// could read
+		// another project's (incl. a private project's) settings.
+		if (auth == null || !membership.canWrite(auth.getName(), id)) {
+			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Project write access required");
+		}
 		model.addAttribute("project", project);
 		model.addAttribute("settings", settings.find(id).orElse(null));
 		model.addAttribute("globals", settings.globals());
