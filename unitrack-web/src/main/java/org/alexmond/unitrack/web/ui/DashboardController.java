@@ -165,6 +165,7 @@ public class DashboardController {
 		model.addAttribute("modules",
 				reporting.latestCoverage(id).map((c) -> reporting.moduleCoverage(c.getId())).orElse(List.of()));
 		model.addAttribute("trendLabels", toJson(labels(trend.stream().map(TestRun::getShortSha).toList())));
+		model.addAttribute("trendTimes", toJson(trend.stream().map(DashboardController::epochMilli).toList()));
 		model.addAttribute("trendPassed", toJson(trend.stream().map(TestRun::getPassed).toList()));
 		model.addAttribute("trendFailed", toJson(trend.stream().map((r) -> r.getFailed() + r.getErrors()).toList()));
 		model.addAttribute("trendSkipped", toJson(trend.stream().map(TestRun::getSkipped).toList()));
@@ -364,6 +365,11 @@ public class DashboardController {
 		return "java -jar unitrack-cli.jar upload \\\n" + "  --url " + base + " \\\n" + "  --project \"" + projectName
 				+ "\" \\\n" + "  --junit \"target/surefire-reports/*.xml\" \\\n"
 				+ "  --jacoco \"target/site/jacoco/jacoco.xml\"";
+	}
+
+	/** Run timestamp as epoch millis for the time-based trend x-axis (null-safe). */
+	private static Long epochMilli(TestRun run) {
+		return (run.getCreatedAt() != null) ? run.getCreatedAt().toEpochMilli() : null;
 	}
 
 	/** Trend X labels with duplicate SHAs disambiguated (a re-run of the same commit). */
