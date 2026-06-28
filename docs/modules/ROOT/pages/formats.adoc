@@ -51,3 +51,17 @@ Adding a format is a small `TestResultParser` / `CoverageParser` / `PerfResultPa
 implementation that self-identifies via `supports(...)` — no change to ingest wiring. See
 xref:architecture.adoc[Architecture] and `doc/parser-libraries.md`. Requests welcome.
 ====
+
+== Large reports & memory
+
+Parsing is bounded-memory, so a large report won't exhaust the heap:
+
+* *XML* (JUnit/TRX/xUnit/NUnit, JaCoCo/Cobertura/OpenCover) is parsed with streaming
+  StAX — one suite / package / module is held at a time, never the whole document tree.
+* *JSON* with an unbounded array (CTRF tests, JMH benchmarks) is streamed element by
+  element; the k6 summary is pre-aggregated and small.
+* *Perf logs* (JMeter JTL, Gatling) stream line by line into a fixed-size histogram.
+
+A hard decompressed-size guard (`unitrack.ingest.max-report-bytes` / `max-perf-bytes`)
+backs this up: a pathological upload is rejected with a clear error rather than risking an
+out-of-memory crash. See xref:ingestion.adoc[Ingestion].
