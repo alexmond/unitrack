@@ -7,10 +7,12 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
+
+import javax.xml.stream.XMLStreamReader;
 
 import org.alexmond.unitrack.domain.TestStatus;
 import org.springframework.stereotype.Component;
-import org.w3c.dom.Element;
 
 /**
  * Parses Visual Studio / {@code dotnet test} <strong>TRX</strong> result files (MSTest
@@ -21,7 +23,9 @@ import org.w3c.dom.Element;
  * {@code <Results><UnitTestResult outcome=".." duration="hh:mm:ss.fff">} carries the
  * per-test outcome/timing (+ {@code <Output><ErrorInfo>} message/stacktrace);
  * {@code <TestDefinitions><UnitTest><TestMethod className=".." name=".."/>} maps each
- * result to its class. Results are grouped into {@link ParsedSuite}s by class name.
+ * result to its class. The two blocks are siblings in any order, so both are streamed
+ * (StAX) in one pass and joined afterwards; results are grouped into {@link ParsedSuite}s
+ * by class name.
  */
 @Component
 public class TrxXmlParser implements TestResultParser {
@@ -40,11 +44,21 @@ public class TrxXmlParser implements TestResultParser {
 	@Override
 	public JUnitResults parse(InputStream in) {
 		try {
-			Element root = XmlSupport.parse(in).getDocumentElement();
-			Map<String, String[]> defsById = testMethodsById(root);
+			Map<String, String[]> defsById = new HashMap<>();
+			List<XmlNode> results = new ArrayList<>();
+			XMLStreamReader reader = StaxXml.open(in);
+			StaxXml.forEachSubtree(reader, Set.of("UnitTestResult", "UnitTest"), (node) -> {
+				if ("UnitTest".equals(node.name())) {
+					addDefinition(node, defsById);
+				}
+				else {
+					results.add(node);
+				}
+			});
+			reader.close();
 
 			Map<String, List<ParsedCase>> bySuite = new LinkedHashMap<>();
-			for (Element result : XmlSupport.descendants(root, "UnitTestResult")) {
+			for (XmlNode result : results) {
 				ParsedCase parsed = toCase(result, defsById);
 				bySuite.computeIfAbsent(parsed.className(), (k) -> new ArrayList<>()).add(parsed);
 			}
@@ -62,32 +76,28 @@ public class TrxXmlParser implements TestResultParser {
 		}
 	}
 
-	/** {@code testId -> [className, methodName]} from the TestDefinitions block. */
-	private static Map<String, String[]> testMethodsById(Element root) {
-		Map<String, String[]> map = new HashMap<>();
-		for (Element unitTest : XmlSupport.descendants(root, "UnitTest")) {
-			String id = unitTest.getAttribute("id");
-			List<Element> methods = XmlSupport.descendants(unitTest, "TestMethod");
-			if (!id.isEmpty() && !methods.isEmpty()) {
-				Element m = methods.getFirst();
-				map.put(id, new String[] { className(m.getAttribute("className")), m.getAttribute("name") });
-			}
+	/** Adds {@code testId -> [className, methodName]} for a TestDefinitions UnitTest. */
+	private static void addDefinition(XmlNode unitTest, Map<String, String[]> map) {
+		String id = unitTest.attr("id");
+		List<XmlNode> methods = unitTest.descendants("TestMethod");
+		if (!id.isEmpty() && !methods.isEmpty()) {
+			XmlNode m = methods.getFirst();
+			map.put(id, new String[] { className(m.attr("className")), m.attr("name") });
 		}
-		return map;
 	}
 
-	private static ParsedCase toCase(Element result, Map<String, String[]> defsById) {
-		String[] def = defsById.get(result.getAttribute("testId"));
+	private static ParsedCase toCase(XmlNode result, Map<String, String[]> defsById) {
+		String[] def = defsById.get(result.attr("testId"));
 		String className = (def != null && !def[0].isEmpty()) ? def[0] : "(unknown)";
-		String name = (def != null && !def[1].isEmpty()) ? def[1] : result.getAttribute("testName");
-		TestStatus status = mapOutcome(result.getAttribute("outcome"));
-		long durationMs = parseDuration(result.getAttribute("duration"));
+		String name = (def != null && !def[1].isEmpty()) ? def[1] : result.attr("testName");
+		TestStatus status = mapOutcome(result.attr("outcome"));
+		long durationMs = parseDuration(result.attr("duration"));
 
 		String message = null;
 		String stacktrace = null;
 		if (status == TestStatus.FAILED || status == TestStatus.ERROR) {
-			message = firstText(result, "Message");
-			stacktrace = firstText(result, "StackTrace");
+			message = result.firstDescendantText("Message");
+			stacktrace = result.firstDescendantText("StackTrace");
 		}
 		return new ParsedCase(className, className, name, status, durationMs, null, message, stacktrace, null, null,
 				List.of());
@@ -137,19 +147,6 @@ public class TrxXmlParser implements TestResultParser {
 		catch (NumberFormatException ex) {
 			return 0L;
 		}
-	}
-
-	private static String firstText(Element parent, String tag) {
-		List<Element> els = XmlSupport.descendants(parent, tag);
-		if (els.isEmpty()) {
-			return null;
-		}
-		String text = els.getFirst().getTextContent();
-		if (text == null) {
-			return null;
-		}
-		String trimmed = text.strip();
-		return trimmed.isEmpty() ? null : trimmed;
 	}
 
 }

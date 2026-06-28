@@ -6,17 +6,19 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+
+import javax.xml.stream.XMLStreamReader;
 
 import org.springframework.stereotype.Component;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
 
 /**
  * Parses an OpenCover XML report ({@code <CoverageSession>} root), as produced by
  * OpenCover and Coverlet's {@code --format opencover}. Line coverage is derived from
  * {@code <SequencePoint>} visit counts grouped by source line; branches from
  * {@code <BranchPoint>} visit counts. Each method's {@code <FileRef>} resolves into the
- * module's {@code <File>} table to attribute coverage to a source file.
+ * module's {@code <File>} table to attribute coverage to a source file. Modules are
+ * streamed one at a time (StAX).
  *
  * <p>
  * (.NET coverage from Coverlet's default and Python coverage.py both emit Cobertura XML,
@@ -38,22 +40,15 @@ public class OpenCoverXmlParser implements CoverageParser {
 	@Override
 	public CoverageResults parse(InputStream in) {
 		try {
-			Document doc = XmlSupport.parse(in);
-			Element root = doc.getDocumentElement();
-			if (!"CoverageSession".equals(root.getNodeName())) {
-				throw new IngestException("Not an OpenCover report: root element is <" + root.getNodeName() + ">");
+			XMLStreamReader reader = StaxXml.open(in);
+			String root = StaxXml.nextStartElement(reader);
+			if (!"CoverageSession".equals(root)) {
+				throw new IngestException("Not an OpenCover report: root element is <" + root + ">");
 			}
 
 			Map<String, FileAcc> byFile = new LinkedHashMap<>();
-			for (Element module : XmlSupport.descendants(root, "Module")) {
-				Map<String, String> filePaths = new HashMap<>();
-				for (Element file : XmlSupport.descendants(module, "File")) {
-					filePaths.put(file.getAttribute("uid"), file.getAttribute("fullPath"));
-				}
-				for (Element method : XmlSupport.descendants(module, "Method")) {
-					accumulateMethod(method, filePaths, byFile);
-				}
-			}
+			StaxXml.forEachSubtree(reader, Set.of("Module"), (module) -> collectModule(module, byFile));
+			reader.close();
 
 			List<CoverageResults.ParsedFileCoverage> files = new ArrayList<>();
 			int lc = 0;
@@ -90,21 +85,31 @@ public class OpenCoverXmlParser implements CoverageParser {
 		}
 	}
 
-	private static void accumulateMethod(Element method, Map<String, String> filePaths, Map<String, FileAcc> byFile) {
+	private static void collectModule(XmlNode module, Map<String, FileAcc> byFile) {
+		Map<String, String> filePaths = new HashMap<>();
+		for (XmlNode file : module.descendants("File")) {
+			filePaths.put(file.attr("uid"), file.attr("fullPath"));
+		}
+		for (XmlNode method : module.descendants("Method")) {
+			accumulateMethod(method, filePaths, byFile);
+		}
+	}
+
+	private static void accumulateMethod(XmlNode method, Map<String, String> filePaths, Map<String, FileAcc> byFile) {
 		String uid = fileRefUid(method);
 		if (uid == null) {
 			return;
 		}
 		FileAcc acc = byFile.computeIfAbsent(filePaths.getOrDefault(uid, uid), (k) -> new FileAcc());
-		for (Element sp : XmlSupport.descendants(method, "SequencePoint")) {
-			int line = XmlSupport.attrInt(sp, "sl", 0);
+		for (XmlNode sp : method.descendants("SequencePoint")) {
+			int line = sp.attrInt("sl", 0);
 			if (line > 0) {
-				boolean covered = XmlSupport.attrInt(sp, "vc", 0) > 0;
+				boolean covered = sp.attrInt("vc", 0) > 0;
 				acc.lines.merge(line, covered, (a, b) -> a || b);
 			}
 		}
-		for (Element bp : XmlSupport.descendants(method, "BranchPoint")) {
-			if (XmlSupport.attrInt(bp, "vc", 0) > 0) {
+		for (XmlNode bp : method.descendants("BranchPoint")) {
+			if (bp.attrInt("vc", 0) > 0) {
 				acc.branchCovered++;
 			}
 			else {
@@ -116,12 +121,12 @@ public class OpenCoverXmlParser implements CoverageParser {
 	/**
 	 * The {@code uid} of the method's first {@code <FileRef>}, or null if it has none.
 	 */
-	private static String fileRefUid(Element method) {
-		List<Element> refs = XmlSupport.children(method, "FileRef");
+	private static String fileRefUid(XmlNode method) {
+		List<XmlNode> refs = method.children("FileRef");
 		if (refs.isEmpty()) {
 			return null;
 		}
-		String uid = refs.get(0).getAttribute("uid");
+		String uid = refs.get(0).attr("uid");
 		return uid.isBlank() ? null : uid;
 	}
 

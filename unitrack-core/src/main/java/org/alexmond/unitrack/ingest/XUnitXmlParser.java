@@ -6,10 +6,12 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
+
+import javax.xml.stream.XMLStreamReader;
 
 import org.alexmond.unitrack.domain.TestStatus;
 import org.springframework.stereotype.Component;
-import org.w3c.dom.Element;
 
 /**
  * Parses xUnit.net v2 XML (`dotnet test --logger xunit` / {@code -xml}). Shape:
@@ -34,12 +36,13 @@ public class XUnitXmlParser implements TestResultParser {
 	@Override
 	public JUnitResults parse(InputStream in) {
 		try {
-			Element root = XmlSupport.parse(in).getDocumentElement();
 			Map<String, List<ParsedCase>> bySuite = new LinkedHashMap<>();
-			for (Element test : XmlSupport.descendants(root, "test")) {
+			XMLStreamReader reader = StaxXml.open(in);
+			StaxXml.forEachSubtree(reader, Set.of("test"), (test) -> {
 				ParsedCase parsed = toCase(test);
 				bySuite.computeIfAbsent(parsed.className(), (k) -> new ArrayList<>()).add(parsed);
-			}
+			});
+			reader.close();
 			List<ParsedSuite> suites = new ArrayList<>();
 			for (Map.Entry<String, List<ParsedCase>> e : bySuite.entrySet()) {
 				suites.add(Suites.of(e.getKey(), e.getValue()));
@@ -51,19 +54,19 @@ public class XUnitXmlParser implements TestResultParser {
 		}
 	}
 
-	private static ParsedCase toCase(Element test) {
-		String type = test.getAttribute("type");
+	private static ParsedCase toCase(XmlNode test) {
+		String type = test.attr("type");
 		String className = type.isEmpty() ? "(unknown)" : type;
-		String method = test.getAttribute("method");
-		String name = !method.isEmpty() ? method : test.getAttribute("name");
-		TestStatus status = mapResult(test.getAttribute("result"));
-		long durationMs = Suites.secondsToMillis(test.getAttribute("time"));
+		String method = test.attr("method");
+		String name = !method.isEmpty() ? method : test.attr("name");
+		TestStatus status = mapResult(test.attr("result"));
+		long durationMs = test.attrSecondsToMillis("time");
 
 		String message = null;
 		String stacktrace = null;
 		if (status == TestStatus.FAILED || status == TestStatus.ERROR) {
-			message = Suites.firstText(test, "message");
-			stacktrace = Suites.firstText(test, "stack-trace");
+			message = test.firstDescendantText("message");
+			stacktrace = test.firstDescendantText("stack-trace");
 		}
 		return new ParsedCase(className, className, name, status, durationMs, null, message, stacktrace, null, null,
 				List.of());
