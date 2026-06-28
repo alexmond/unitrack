@@ -1,9 +1,8 @@
 package org.alexmond.unitrack.ingest;
 
 import org.springframework.stereotype.Component;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
 
+import javax.xml.stream.XMLStreamReader;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
@@ -11,6 +10,8 @@ import java.util.List;
 /**
  * Parses a JaCoCo XML report ({@code <report>} root). Reads the report-level counters for
  * aggregate coverage and the per-{@code <sourcefile>} counters for the file breakdown.
+ * Packages are streamed one at a time (StAX) so a large report's whole tree never sits in
+ * memory.
  */
 @Component
 public class JacocoXmlParser implements CoverageParser {
@@ -28,23 +29,24 @@ public class JacocoXmlParser implements CoverageParser {
 	@Override
 	public CoverageResults parse(InputStream in) {
 		try {
-			Document doc = XmlSupport.parse(in);
-			Element report = doc.getDocumentElement();
-			if (!"report".equals(report.getNodeName())) {
-				throw new IngestException("Not a JaCoCo report: root element is <" + report.getNodeName() + ">");
+			XMLStreamReader reader = StaxXml.open(in);
+			String root = StaxXml.nextStartElement(reader);
+			if (!"report".equals(root)) {
+				throw new IngestException("Not a JaCoCo report: root element is <" + root + ">");
 			}
 
-			Counters total = readCounters(XmlSupport.children(report, "counter"));
-
+			Counters total = new Counters();
 			List<CoverageResults.ParsedFileCoverage> files = new ArrayList<>();
-			for (Element pkg : XmlSupport.children(report, "package")) {
-				String packageName = pkg.getAttribute("name");
-				for (Element sourceFile : XmlSupport.children(pkg, "sourcefile")) {
-					Counters c = readCounters(XmlSupport.children(sourceFile, "counter"));
-					files.add(new CoverageResults.ParsedFileCoverage(packageName, sourceFile.getAttribute("name"),
-							c.lineCovered, c.lineMissed, c.branchCovered, c.branchMissed));
+			StaxXml.forEachChild(reader, (child) -> {
+				switch (child.name()) {
+					case "counter" -> applyCounter(child, total);
+					case "package" -> collectPackage(child, files);
+					default -> {
+						// sessioninfo etc. — not tracked
+					}
 				}
-			}
+			});
+			reader.close();
 
 			return new CoverageResults(total.lineCovered, total.lineMissed, total.branchCovered, total.branchMissed,
 					total.instructionCovered, total.instructionMissed, total.methodCovered, total.methodMissed, files);
@@ -57,35 +59,43 @@ public class JacocoXmlParser implements CoverageParser {
 		}
 	}
 
-	private Counters readCounters(List<Element> counterElements) {
-		Counters c = new Counters();
-		for (Element counter : counterElements) {
-			String type = counter.getAttribute("type");
-			int missed = XmlSupport.attrInt(counter, "missed", 0);
-			int covered = XmlSupport.attrInt(counter, "covered", 0);
-			switch (type) {
-				case "LINE" -> {
-					c.lineCovered = covered;
-					c.lineMissed = missed;
-				}
-				case "BRANCH" -> {
-					c.branchCovered = covered;
-					c.branchMissed = missed;
-				}
-				case "INSTRUCTION" -> {
-					c.instructionCovered = covered;
-					c.instructionMissed = missed;
-				}
-				case "METHOD" -> {
-					c.methodCovered = covered;
-					c.methodMissed = missed;
-				}
-				default -> {
-					// CLASS, COMPLEXITY, etc. are not tracked.
-				}
+	private void collectPackage(XmlNode pkg, List<CoverageResults.ParsedFileCoverage> files) {
+		String packageName = pkg.attr("name");
+		for (XmlNode sourceFile : pkg.children("sourcefile")) {
+			Counters c = new Counters();
+			for (XmlNode counter : sourceFile.children("counter")) {
+				applyCounter(counter, c);
+			}
+			files.add(new CoverageResults.ParsedFileCoverage(packageName, sourceFile.attr("name"), c.lineCovered,
+					c.lineMissed, c.branchCovered, c.branchMissed));
+		}
+	}
+
+	private void applyCounter(XmlNode counter, Counters c) {
+		String type = counter.attr("type");
+		int missed = counter.attrInt("missed", 0);
+		int covered = counter.attrInt("covered", 0);
+		switch (type) {
+			case "LINE" -> {
+				c.lineCovered = covered;
+				c.lineMissed = missed;
+			}
+			case "BRANCH" -> {
+				c.branchCovered = covered;
+				c.branchMissed = missed;
+			}
+			case "INSTRUCTION" -> {
+				c.instructionCovered = covered;
+				c.instructionMissed = missed;
+			}
+			case "METHOD" -> {
+				c.methodCovered = covered;
+				c.methodMissed = missed;
+			}
+			default -> {
+				// CLASS, COMPLEXITY, etc. are not tracked.
 			}
 		}
-		return c;
 	}
 
 	private static final class Counters {

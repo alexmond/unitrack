@@ -3,7 +3,6 @@ package org.alexmond.unitrack.ingest;
 import java.util.List;
 
 import org.alexmond.unitrack.domain.TestStatus;
-import org.w3c.dom.Element;
 
 /** Shared helpers for building {@link ParsedSuite}s from parsed cases. */
 final class Suites {
@@ -31,20 +30,6 @@ final class Suites {
 		catch (NumberFormatException ex) {
 			return 0L;
 		}
-	}
-
-	/** First descendant {@code <tag>}'s trimmed text, or null when absent/empty. */
-	static String firstText(Element parent, String tag) {
-		List<Element> els = XmlSupport.descendants(parent, tag);
-		if (els.isEmpty()) {
-			return null;
-		}
-		String text = els.getFirst().getTextContent();
-		if (text == null) {
-			return null;
-		}
-		String trimmed = text.strip();
-		return trimmed.isEmpty() ? null : trimmed;
 	}
 
 }
