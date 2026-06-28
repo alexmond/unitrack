@@ -8,6 +8,8 @@ import java.util.Map;
 
 import org.alexmond.unitrack.domain.TestStatus;
 import org.springframework.stereotype.Component;
+import tools.jackson.core.JsonParser;
+import tools.jackson.core.JsonToken;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -40,21 +42,43 @@ public class CtrfJsonParser implements TestResultParser {
 
 	@Override
 	public JUnitResults parse(InputStream in) {
-		try {
-			JsonNode results = MAPPER.readTree(in).path("results");
-			JsonNode testsNode = results.path("tests");
-			if (!testsNode.isArray()) {
+		// Stream results.tests one element at a time (the array can be huge); the tool
+		// name
+		// (the suite fallback) is captured wherever it appears, so the suite grouping is
+		// resolved after the pass and works regardless of tool/tests field order (#369).
+		try (JsonParser p = MAPPER.createParser(in)) {
+			String tool = "ctrf";
+			boolean sawTests = false;
+			List<PendingTest> pending = new ArrayList<>();
+			JsonToken token;
+			while ((token = p.nextToken()) != null) {
+				if (token != JsonToken.PROPERTY_NAME) {
+					continue;
+				}
+				String field = p.currentName();
+				if ("tool".equals(field) && p.nextToken() == JsonToken.START_OBJECT) {
+					JsonNode toolNode = p.readValueAsTree();
+					String name = toolNode.path("name").asString("");
+					if (!name.isBlank()) {
+						tool = name;
+					}
+				}
+				else if ("tests".equals(field) && p.nextToken() == JsonToken.START_ARRAY) {
+					sawTests = true;
+					while (p.nextToken() != JsonToken.END_ARRAY) {
+						pending.add(toPending(p.readValueAsTree()));
+					}
+				}
+			}
+			if (!sawTests) {
 				throw new IngestException("Not a CTRF report: results.tests array is missing");
 			}
-			String tool = results.path("tool").path("name").asString("ctrf");
+
 			// Preserve first-seen suite order for a stable result.
 			Map<String, List<ParsedCase>> bySuite = new LinkedHashMap<>();
-			for (JsonNode test : testsNode) {
-				String suite = test.path("suite").asString("");
-				if (suite.isBlank()) {
-					suite = tool;
-				}
-				bySuite.computeIfAbsent(suite, (k) -> new ArrayList<>()).add(toCase(suite, test));
+			for (PendingTest pt : pending) {
+				String suite = pt.suite().isBlank() ? tool : pt.suite();
+				bySuite.computeIfAbsent(suite, (k) -> new ArrayList<>()).add(toCase(suite, pt));
 			}
 			List<ParsedSuite> suites = new ArrayList<>();
 			for (Map.Entry<String, List<ParsedCase>> e : bySuite.entrySet()) {
@@ -70,18 +94,20 @@ public class CtrfJsonParser implements TestResultParser {
 		}
 	}
 
-	private static ParsedCase toCase(String suite, JsonNode test) {
-		String name = test.path("name").asString("(unnamed)");
-		TestStatus status = mapStatus(test.path("status").asString(""));
-		long durationMs = test.path("duration").asLong(0L);
-		String message = emptyToNull(test.path("message").asString(""));
-		String trace = emptyToNull(test.path("trace").asString(""));
-		String failureMessage = (status == TestStatus.FAILED || status == TestStatus.ERROR) ? message : null;
-		String failureTrace = (status == TestStatus.FAILED || status == TestStatus.ERROR) ? trace : null;
+	private static PendingTest toPending(JsonNode test) {
+		return new PendingTest(test.path("suite").asString(""), test.path("name").asString("(unnamed)"),
+				mapStatus(test.path("status").asString("")), test.path("duration").asLong(0L),
+				emptyToNull(test.path("message").asString("")), emptyToNull(test.path("trace").asString("")));
+	}
+
+	private static ParsedCase toCase(String suite, PendingTest test) {
+		boolean failed = test.status() == TestStatus.FAILED || test.status() == TestStatus.ERROR;
+		String failureMessage = failed ? test.message() : null;
+		String failureTrace = failed ? test.trace() : null;
 		// CTRF tests carry no class; use the suite as the class so the UI groups
 		// sensibly.
-		return new ParsedCase(suite, suite, name, status, durationMs, null, failureMessage, failureTrace, null, null,
-				List.of());
+		return new ParsedCase(suite, suite, test.name(), test.status(), test.durationMs(), null, failureMessage,
+				failureTrace, null, null, List.of());
 	}
 
 	private static ParsedSuite toSuite(String name, List<ParsedCase> cases) {
@@ -107,6 +133,13 @@ public class CtrfJsonParser implements TestResultParser {
 		}
 		String trimmed = value.strip();
 		return trimmed.isEmpty() ? null : trimmed;
+	}
+
+	/**
+	 * One streamed CTRF test, with the suite fallback deferred until the tool is known.
+	 */
+	private record PendingTest(String suite, String name, TestStatus status, long durationMs, String message,
+			String trace) {
 	}
 
 }

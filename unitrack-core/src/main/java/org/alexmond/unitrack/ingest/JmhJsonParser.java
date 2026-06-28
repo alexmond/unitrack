@@ -7,6 +7,8 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import org.springframework.stereotype.Component;
+import tools.jackson.core.JsonParser;
+import tools.jackson.core.JsonToken;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -45,17 +47,25 @@ public class JmhJsonParser implements PerfResultParser {
 
 	@Override
 	public PerfResults parse(InputStream in) {
-		try {
-			JsonNode root = MAPPER.readTree(in);
-			if (!root.isArray() || root.isEmpty()) {
+		// Stream the top-level array one benchmark element at a time so a report with
+		// many
+		// forks/benchmarks (rawData can be large) never loads the whole document (#369).
+		try (JsonParser p = MAPPER.createParser(in)) {
+			if (p.nextToken() != JsonToken.START_ARRAY) {
 				throw new IngestException("Not a JMH JSON report: expected a non-empty array of benchmarks");
 			}
 			List<PerfResults.LabelStats> labels = new ArrayList<>();
-			for (JsonNode bench : root) {
+			boolean any = false;
+			while (p.nextToken() != JsonToken.END_ARRAY) {
+				any = true;
+				JsonNode bench = p.readValueAsTree();
 				PerfResults.LabelStats stats = toLabelStats(bench);
 				if (stats != null) {
 					labels.add(stats);
 				}
+			}
+			if (!any) {
+				throw new IngestException("Not a JMH JSON report: expected a non-empty array of benchmarks");
 			}
 			if (labels.isEmpty()) {
 				throw new IngestException("No JMH benchmarks with a primaryMetric found");
