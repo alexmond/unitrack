@@ -15,6 +15,16 @@
     <name>unitrack-web</name>
     <description>UniTrack Spring Boot application — REST API and Thymeleaf dashboard</description>
 
+    <!-- The self-hosted server -> AGPL-3.0 (overrides the parent's Apache; see root LICENSE).
+         Not published to Maven Central. -->
+    <licenses>
+        <license>
+            <name>GNU Affero General Public License v3.0 only</name>
+            <url>https://www.gnu.org/licenses/agpl-3.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
     <dependencies>
         <dependency>
             <groupId>org.alexmond</groupId>

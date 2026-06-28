@@ -1,4 +1,10 @@
 UniTrack
 Copyright 2026 Alexander Mondshain and the UniTrack contributors
 
-This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+UniTrack is multi-licensed (open-core):
+  * The self-hosted server (unitrack-web, unitrack-it) is licensed under the
+    GNU Affero General Public License v3.0 only (AGPL-3.0-only).
+  * The published libraries (unitrack-core, unitrack-cli, unitrack-maven-plugin)
+    are licensed under the Apache License, Version 2.0 (Apache-2.0).
+
+See the root LICENSE file and each module's own LICENSE.

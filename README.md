@@ -338,4 +338,22 @@ coverage deltas, and quality gates.
 
 ## License
 
-Apache-2.0 (intended).
+UniTrack is **open-core**, licensed per module:
+
+| Module | License | |
+|---|---|---|
+| `unitrack-web` (the self-hosted server) | **AGPL-3.0-only** | network copyleft |
+| `unitrack-it` (server-only integration tests) | **AGPL-3.0-only** | |
+| `unitrack-core` | **Apache-2.0** | published to Maven Central |
+| `unitrack-cli` | **Apache-2.0** | published to Maven Central |
+| `unitrack-maven-plugin` | **Apache-2.0** | published to Maven Central |
+
+The artifacts on Maven Central — `org.alexmond:unitrack-core`, `unitrack-cli`, and
+`unitrack-maven-plugin` — are **Apache-2.0 and safe to depend on**; only the server is AGPL-3.0.
+Full texts: [`LICENSE-APACHE-2.0.txt`](LICENSE-APACHE-2.0.txt), [`LICENSE-AGPL-3.0.txt`](LICENSE-AGPL-3.0.txt);
+see the root [`LICENSE`](LICENSE) and each module's `LICENSE`.
+
+Any future premium/enterprise features (e.g. SSO, data retention, org-scale automation) will live in
+a **separate commercial module** under their own license — never AGPL. The open-core server stays
+fully AGPL-3.0. Contributions are accepted under [`CONTRIBUTING.md`](CONTRIBUTING.md) (DCO + a CLA
+grant that preserves dual-licensing).
