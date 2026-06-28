@@ -13,6 +13,8 @@ teams actually act on. Each feature has its own page:
   logical run via a `runKey`.
 * xref:failure-clustering.adoc[Failure Clustering & Triage] -- group similar failures and
   auto-categorise them with rules.
+* xref:ai-analysis.adoc[AI Root-Cause Analysis] -- click-to-run LLM root cause + fix direction
+  for a failure cluster (bring your own key; off by default).
 * xref:test-regression.adoc[Test Regression Report] -- the itemised diff vs the baseline:
   what newly failed, what got fixed, what is still failing.
 * xref:unit-test-performance.adoc[Unit-test Performance] -- slowest-tests leaderboard and
@@ -24,8 +26,10 @@ teams actually act on. Each feature has its own page:
 
 All of the above surface in the Thymeleaf dashboard:
 
-* a *project list* with the latest run and coverage at a glance;
-* a *project page* charting pass/fail and coverage trends over time;
+* a *project list* (board) with the latest run and coverage at a glance, *failing gates first*,
+  and a *"broken since"* rot signal (age + run count) on projects that regressed and stayed red;
+* a *project page* charting pass/fail and coverage trends over a true time axis (so a slow
+  regression and its onset are visible, not just the current number);
 * a *run page* with the suite/case tree, captured output and attachments, and the
   quality-gate verdict;
 * dedicated *flaky*, *clusters* and *triage* views.

@@ -84,6 +84,18 @@ regression detection.
 | `max-error-pct`          | `1.0`  | Max allowed error rate for a load-test run.
 |===
 
+== `spring.ai.anthropic` (AI analysis)
+
+See xref:ai-analysis.adoc[AI Root-Cause Analysis]. Off unless an API key is set.
+
+[cols="2,1,3"]
+|===
+| Property | Default | Meaning
+
+| `spring.ai.anthropic.api-key` (`UNITRACK_AI_API_KEY`)          | _unset_ | Anthropic key; unset ⇒ AI disabled.
+| `spring.ai.anthropic.chat.options.model` (`UNITRACK_AI_MODEL`) | `claude-sonnet-4-6` | Analysis model.
+|===
+
 == `unitrack.demo`
 
 [cols="2,1,3"]

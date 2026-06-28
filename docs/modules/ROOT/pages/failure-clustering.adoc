@@ -35,6 +35,12 @@ assigns the owner. Each failing test on a run page shows its owner, so "whose fa
 is answered at a glance. (Routing owner-scoped notifications to chat is a separate, planned
 piece.)
 
+== AI root-cause
+
+For a cluster spanning more than one test, an *Analyze with AI* button asks an LLM for a likely
+root cause and fix direction. It is bring-your-own-key and off by default -- see
+xref:ai-analysis.adoc[AI Root-Cause Analysis].
+
 == Working the queue
 
 . Open *Clusters* after a red build to see the distinct root causes.
