@@ -5,11 +5,11 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.HdrHistogram.Histogram;
 import org.springframework.stereotype.Component;
 
 /**
@@ -133,70 +133,46 @@ public class GatlingLogParser implements PerfResultParser {
 		return true;
 	}
 
-	/** Per-label accumulator of sample latencies (nearest-rank percentiles). */
+	/** Per-label latency accumulator backed by an {@link Histogram} — O(1) memory. */
 	private static final class Acc {
 
-		private final List<Long> latencies = new ArrayList<>();
+		private final Histogram hist = new Histogram(3);
 
 		private long errors;
 
 		void add(long ms, boolean ok) {
-			this.latencies.add(ms);
+			this.hist.recordValue(Math.max(0L, ms));
 			if (!ok) {
 				this.errors++;
 			}
 		}
 
 		void merge(Acc other) {
-			this.latencies.addAll(other.latencies);
+			this.hist.add(other.hist);
 			this.errors += other.errors;
 		}
 
 		long count() {
-			return this.latencies.size();
+			return this.hist.getTotalCount();
 		}
 
 		PerfResults.LabelStats toLabelStats(String label) {
-			long[] s = sorted();
-			return new PerfResults.LabelStats(label, s.length, this.errors, errorPct(s.length), mean(s), pct(s, 50),
-					pct(s, 90), pct(s, 95), pct(s, 99));
+			long n = this.hist.getTotalCount();
+			return new PerfResults.LabelStats(label, n, this.errors, errorPct(n), this.hist.getMean(),
+					this.hist.getValueAtPercentile(50), this.hist.getValueAtPercentile(90),
+					this.hist.getValueAtPercentile(95), this.hist.getValueAtPercentile(99));
 		}
 
 		PerfResults toResults(double throughput, long durationMs, List<PerfResults.LabelStats> labels) {
-			long[] s = sorted();
-			return new PerfResults(s.length, this.errors, errorPct(s.length), throughput, durationMs, mean(s),
-					pct(s, 50), pct(s, 90), pct(s, 95), pct(s, 99), (s.length > 0) ? s[0] : 0,
-					(s.length > 0) ? s[s.length - 1] : 0, labels);
-		}
-
-		private long[] sorted() {
-			long[] s = this.latencies.stream().mapToLong(Long::longValue).toArray();
-			Arrays.sort(s);
-			return s;
+			long n = this.hist.getTotalCount();
+			return new PerfResults(n, this.errors, errorPct(n), throughput, durationMs, this.hist.getMean(),
+					this.hist.getValueAtPercentile(50), this.hist.getValueAtPercentile(90),
+					this.hist.getValueAtPercentile(95), this.hist.getValueAtPercentile(99),
+					(n > 0) ? this.hist.getMinValue() : 0, (n > 0) ? this.hist.getMaxValue() : 0, labels);
 		}
 
 		private double errorPct(long total) {
 			return (total > 0) ? (this.errors * 100.0 / total) : 0.0;
-		}
-
-		private static double mean(long[] s) {
-			if (s.length == 0) {
-				return 0.0;
-			}
-			long sum = 0;
-			for (long v : s) {
-				sum += v;
-			}
-			return (double) sum / s.length;
-		}
-
-		private static double pct(long[] sorted, double p) {
-			if (sorted.length == 0) {
-				return 0.0;
-			}
-			int rank = (int) Math.ceil(p / 100.0 * sorted.length);
-			rank = Math.max(1, Math.min(rank, sorted.length));
-			return sorted[rank - 1];
 		}
 
 	}
