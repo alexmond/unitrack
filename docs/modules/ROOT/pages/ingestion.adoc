@@ -74,6 +74,26 @@ Multipart uploads default to 25 MB per file and 100 MB per request. Raise these 
 `spring.servlet.multipart.max-file-size` / `max-request-size` if you upload large merged
 reports.
 
+Those caps apply to the *compressed* request. Because a gzipped report inflates ~10–20×, a
+second guard caps the *decompressed* bytes a single part may consume, so an oversized (or
+gzip-bombed) report fails fast with a clear message instead of exhausting the heap:
+
+[cols="2,1,3"]
+|===
+| Property | Default | Applies to
+
+| `unitrack.ingest.max-report-bytes`
+| `256MB`
+| Test + coverage reports (still DOM/full-document parsed, so sized to the heap).
+
+| `unitrack.ingest.max-perf-bytes`
+| `1GB`
+| Performance results (these stream into a bounded histogram, so this is a generous backstop).
+|===
+
+Set either to `0` to disable that guard. A part that trips the limit is rejected with `4xx`
+and recorded as a `FAILED` ingest job whose reason names the limit.
+
 == Processing history
 
 Every upload is recorded as an *ingest job* — `PROCESSED` or `FAILED` (with the reason) plus

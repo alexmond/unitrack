@@ -109,6 +109,14 @@ info:
     component: unitrack-web
 
 unitrack:
+  # Ingest size guards — hard caps on the DECOMPRESSED bytes of a single uploaded part, so a
+  # pathologically large (or gzip-bombed) report fails fast with a clear message instead of
+  # OOM-ing the process. Reports are still DOM/full-document parsed, so their cap is sized to
+  # the heap; perf logs stream into a bounded histogram, so theirs is a generous backstop. Set
+  # either to 0 to disable.
+  ingest:
+    max-report-bytes: ${UNITRACK_INGEST_MAX_REPORT_BYTES:256MB}
+    max-perf-bytes: ${UNITRACK_INGEST_MAX_PERF_BYTES:1GB}
   notifications:
     enabled: ${UNITRACK_NOTIFICATIONS_ENABLED:false}
     from-address: ${UNITRACK_MAIL_FROM:unitrack@localhost}
