@@ -2,6 +2,7 @@ name: Publish CLI image
 on:
   - tag
   - manual
+checkout: true
 variables:
   IMAGE: ghcr.io/alexmond/unitrack-uploader
   IMAGE_TAG: latest
@@ -17,8 +18,6 @@ jobs:
       - GHCR_USERNAME
       - GHCR_TOKEN
     steps:
-      - name: checkout
-        run: git clone https://github.com/alexmond/unitrack.git .
       - name: build-cli-jar
         run: ./mvnw -B -pl unitrack-cli -am -DskipTests package -Dmaven.repo.local=.m2/repository
       - name: docker-login

@@ -5,6 +5,7 @@ on:
 push:
   branches:
     - main
+checkout: true
 jobs:
   lab-scan:
     image: eclipse-temurin:21-jdk
@@ -13,8 +14,6 @@ jobs:
       - LAB_DENY_PATTERNS
       - LAB_SCAN_BASELINE
     steps:
-      - name: checkout
-        run: git clone --depth 1 https://github.com/alexmond/unitrack.git .
       - name: scan-for-lab-references
         run: |
           set -euo pipefail

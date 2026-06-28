@@ -5,6 +5,7 @@ on:
 push:
   branches:
     - main
+checkout: true
 jobs:
   build:
     image: eclipse-temurin:21-jdk
@@ -17,7 +18,5 @@ jobs:
       - unitrack-*/target/surefire-reports/*.xml
       - unitrack-*/target/site/jacoco/jacoco.xml
     steps:
-      - name: checkout
-        run: git clone --depth 1 https://github.com/alexmond/unitrack.git .
       - name: build-and-test
         run: ./mvnw -B verify -Dmaven.repo.local=.m2/repository

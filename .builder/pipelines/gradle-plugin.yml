@@ -9,6 +9,7 @@ push:
     - unitrack-gradle-plugin/**
     - unitrack-cli/**
     - .builder/pipelines/gradle-plugin.yml
+checkout: true
 jobs:
   build:
     image: eclipse-temurin:21-jdk
@@ -19,8 +20,6 @@ jobs:
         - .m2/repository
         - .gradle
     steps:
-      - name: checkout
-        run: git clone --depth 1 https://github.com/alexmond/unitrack.git .
       - name: install-cli-to-local-repo
         run: ./mvnw -B -ntp -pl unitrack-cli -am -DskipTests install -Dmaven.repo.local=.m2/repository
       - name: build-gradle-plugin
