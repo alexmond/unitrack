@@ -72,4 +72,11 @@ only the error-rate rule applies.
 curl --fail "$UNITRACK_URL/api/v1/perf-runs/$PERF_RUN_ID/regression"   # exits non-zero on 422
 ----
 
+* *Go `test -bench`* -- the Go analog of JMH (`Benchmark… ns/op` lines). `ns/op` becomes a
+  mean ms-per-op and the iteration count the sample count; Go reports only a mean, so
+  percentiles are flat.
+
+See xref:formats.adoc[Supported Formats] for the full list across test results, coverage and
+performance.
+
 NOTE: Gatling support is planned -- see the roadmap.
