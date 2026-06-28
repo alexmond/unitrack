@@ -185,6 +185,15 @@ a:hover { text-decoration: underline; }
     font-weight: 600;
 }
 .subnav a:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+/* Module filter: the selected module reads as clearly blue (the faint default
+   .current panel highlight is hard to see, esp. in dark theme). Matches the blue
+   selected-state used for branches and segmented controls. */
+.subnav.module-filter a.current {
+    background: var(--blue);
+    border-color: var(--blue);
+    color: #fff;
+}
+.subnav.module-filter a.current:hover { background: var(--blue); color: #fff; }
 .subnav .subnav-sep {
     align-self: stretch;
     width: 1px;
