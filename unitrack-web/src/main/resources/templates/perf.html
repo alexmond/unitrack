@@ -12,6 +12,16 @@
     <h1 th:text="${project.name} + ' — load tests'">project — load tests</h1>
     <nav th:replace="~{fragments/common :: subnav(${project.id}, 'load')}"></nav>
 
+    <!-- Flag filter: each perf flag is its own series (e.g. several perf tests uploaded together).
+         Scopes the charts + run table to one series, like the coverage module filter. -->
+    <div th:if="${perfFlags != null and perfFlags.size() > 1}" class="subnav module-filter"
+         style="border-top:none;padding-top:0" aria-label="Filter by perf flag">
+        <a th:each="pf : ${perfFlags}"
+           th:href="@{/projects/{id}/perf(id=${project.id},flag=${pf})}"
+           th:classappend="${selectedFlag == pf} ? 'current'"
+           th:text="${pf}">default</a>
+    </div>
+
     <div th:unless="${hasPerf}" class="empty">
         <i class="bi bi-rocket-takeoff empty-icon" aria-hidden="true"></i>
         <h3>No load tests yet</h3>
@@ -33,12 +43,13 @@
     <h2>Recent perf runs</h2>
     <table class="table table-hover align-middle" th:unless="${perfRuns.isEmpty()}">
         <thead>
-        <tr><th>When</th><th>Commit</th><th>Format</th><th class="num">Samples</th><th class="num">p95</th>
+        <tr><th>When</th><th>Flag</th><th>Commit</th><th>Format</th><th class="num">Samples</th><th class="num">p95</th>
             <th class="num">Throughput</th><th class="num">Errors</th><th></th><th></th></tr>
         </thead>
         <tbody>
         <tr th:each="r : ${perfRuns}">
             <td class="muted" th:text="${#temporals.format(r.createdAt, 'MMM dd HH:mm')}">when</td>
+            <td><code class="mono" th:text="${r.flag}">default</code></td>
             <td><code class="mono" th:text="${r.commitSha != null ? #strings.abbreviate(r.commitSha,9) : '—'}">sha</code></td>
             <td class="muted" th:text="${r.format}">jmeter</td>
             <td class="num" th:text="${r.sampleCount}">0</td>

@@ -52,6 +52,26 @@ implementation that self-identifies via `supports(...)` — no change to ingest 
 xref:architecture.adoc[Architecture] and `doc/parser-libraries.md`. Requests welcome.
 ====
 
+== Multiple perf tests in one upload
+
+A build often runs several perf suites (an API load test, a checkout scenario, a JMH
+microbenchmark). Upload them together — each `perf` file becomes its own **series**, keyed
+by a flag, so its trend and regression are tracked independently:
+
+[source,bash]
+----
+curl -F project=myapp -F commit=$SHA \
+     -F 'perf=@api.jtl'      -F 'perfFlag=api' \
+     -F 'perf=@checkout.jtl' -F 'perfFlag=checkout' \
+     -F 'perf=@bench.json'   -F 'perfFlag=micro' \
+     http://localhost:8080/api/v1/ingest
+----
+
+`perfFlag` is matched to each `perf` file by position. If you omit it, the filename stem is
+used (`api.jtl` → `api`); a single perf file with no `perfFlag` keeps using the request
+`flag`. The Load-tests page shows a flag filter to switch between series (like the coverage
+module filter).
+
 == Large reports & memory
 
 Parsing is bounded-memory, so a large report won't exhaust the heap:

@@ -136,6 +136,18 @@ public class ReportingService {
 		return perfRuns.findByProjectIdOrderByCreatedAtDesc(projectId, PageRequest.ofSize(limit));
 	}
 
+	/** Recent perf runs (newest first), optionally scoped to one flag (series). */
+	public List<org.alexmond.unitrack.domain.PerfRun> recentPerfRuns(Long projectId, String flag, int limit) {
+		PageRequest page = PageRequest.ofSize(limit);
+		return (flag == null || flag.isBlank()) ? perfRuns.findByProjectIdOrderByCreatedAtDesc(projectId, page)
+				: perfRuns.findByProjectIdAndFlagOrderByCreatedAtDesc(projectId, flag, page);
+	}
+
+	/** Distinct perf flags (series) for a project — for the perf flag filter. */
+	public List<String> perfFlags(Long projectId) {
+		return perfRuns.findDistinctFlagsByProjectId(projectId);
+	}
+
 	public Optional<org.alexmond.unitrack.domain.PerfRun> findPerfRun(Long id) {
 		return perfRuns.findById(id);
 	}
