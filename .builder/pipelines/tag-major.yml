@@ -2,6 +2,7 @@ name: Update major action tag
 on:
   - tag
   - manual
+checkout: true
 variables:
   RELEASE_TAG: "v0.0.0"
 jobs:
@@ -11,8 +12,6 @@ jobs:
     secrets:
       - GIT_PUSH_TOKEN
     steps:
-      - name: checkout
-        run: git clone https://github.com/alexmond/unitrack.git .
       - name: move-major-tag
         run: |
           set -euo pipefail

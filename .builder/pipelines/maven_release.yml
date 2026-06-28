@@ -1,6 +1,7 @@
 name: Maven release
 on:
   - manual
+checkout: true
 variables:
   RELEASE_VERSION: "0.0.0"
   NEXT_VERSION: "0.0.0-SNAPSHOT"
@@ -19,8 +20,6 @@ jobs:
       - GPG_PRIVATE_KEY
       - GPG_PASSPHRASE
     steps:
-      - name: checkout
-        run: git clone https://github.com/alexmond/unitrack.git .
       - name: import-gpg-key
         run: printf '%s' "$GPG_PRIVATE_KEY" | gpg --batch --import
       - name: set-release-version
