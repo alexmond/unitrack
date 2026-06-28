@@ -1,8 +1,8 @@
 package org.alexmond.unitrack.ingest;
 
-import java.io.ByteArrayInputStream;
+import java.io.BufferedInputStream;
+import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import lombok.RequiredArgsConstructor;
@@ -21,22 +21,23 @@ public class PerfParsers {
 	private final List<PerfResultParser> parsers;
 
 	public Parsed parse(InputStream in) {
-		byte[] content;
+		// Peek the head for detection, then hand the SAME stream to the parser so it
+		// streams
+		// the rest — never buffer the whole upload (a multi-hour JTL would OOM).
 		try {
-			content = in.readAllBytes();
-		}
-		catch (Exception ex) {
-			throw new IngestException("Failed reading performance upload: " + ex.getMessage(), ex);
-		}
-		int sampleLen = Math.min(content.length, HEAD_SAMPLE_BYTES);
-		String head = new String(content, 0, sampleLen, StandardCharsets.UTF_8);
-		for (PerfResultParser parser : this.parsers) {
-			if (parser.supports(head)) {
-				return new Parsed(parser.format(), parser.parse(new ByteArrayInputStream(content)));
+			BufferedInputStream bis = StreamSniff.buffered(in, HEAD_SAMPLE_BYTES);
+			String head = StreamSniff.head(bis, HEAD_SAMPLE_BYTES);
+			for (PerfResultParser parser : this.parsers) {
+				if (parser.supports(head)) {
+					return new Parsed(parser.format(), parser.parse(bis));
+				}
 			}
 		}
+		catch (IOException ex) {
+			throw new IngestException("Failed reading performance upload: " + ex.getMessage(), ex);
+		}
 		throw new IngestException(
-				"Unrecognized performance result format (expected JMeter JTL, k6 JSON summary or JMH JSON)");
+				"Unrecognized performance result format (expected JMeter JTL, k6 JSON, JMH JSON or Gatling)");
 	}
 
 	/** The detected format id plus the parsed results. */

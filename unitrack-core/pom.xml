@@ -66,6 +66,13 @@
             <artifactId>h2</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- Bounded-memory latency percentiles for large perf uploads (multi-hour load
+             tests): record into a histogram instead of holding every sample. BOM-managed. -->
+        <dependency>
+            <groupId>org.hdrhistogram</groupId>
+            <artifactId>HdrHistogram</artifactId>
+            <version>2.2.2</version>
+        </dependency>
     </dependencies>
 
     <build>
