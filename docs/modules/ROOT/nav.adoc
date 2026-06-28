@@ -6,6 +6,7 @@
 ** xref:cli.adoc[UniTrack CLI uploader]
 ** xref:ci-recipes.adoc[CI Recipes (per ecosystem)]
 ** xref:rest-api.adoc[REST API]
+** xref:formats.adoc[Supported Formats]
 * xref:features.adoc[Features]
 ** xref:flaky-detection.adoc[Flaky Detection]
 ** xref:quality-gate.adoc[Quality Gate]

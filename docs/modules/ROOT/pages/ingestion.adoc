@@ -20,9 +20,9 @@ Content-Type: multipart/form-data
 | Field | Required | Description
 
 | `project`    | yes | Project name; created on first sight.
-| `junit`      | yes | One or more Surefire/JUnit XML files (repeatable).
-| `jacoco`     | no  | One or more coverage reports (repeatable): JaCoCo XML, Cobertura XML, LCOV, or OpenCover XML -- auto-detected.
-| `perf`       | no  | A performance/load-test result -- JMeter JTL or k6 JSON summary (auto-detected): latency percentiles, throughput, error rate.
+| `junit`      | yes | One or more test-result files (repeatable): JUnit/Surefire XML, .NET TRX, CTRF JSON, or Go `test -json` -- auto-detected. See xref:formats.adoc[Supported Formats].
+| `jacoco`     | no  | One or more coverage reports (repeatable): JaCoCo XML, Cobertura XML, LCOV, OpenCover XML, or Go cover profile -- auto-detected.
+| `perf`       | no  | A performance/load-test result -- JMeter JTL, k6 JSON, JMH JSON, or Go `test -bench` (auto-detected): latency percentiles, throughput, error rate.
 | `branch`     | no  | Git branch the build ran on.
 | `commit`     | no  | Commit SHA -- used for flaky detection and GitHub status.
 | `buildUrl`   | no  | Link back to the CI build.
@@ -40,12 +40,13 @@ latency, throughput and error rate (overall and per request label). The response
 
 == What happens on ingest
 
-. The JUnit XML is parsed into suites and cases, capturing status and any
-  `system-out`/`system-err` output and attachments.
+. The test results are parsed into suites and cases (format auto-detected -- JUnit/Surefire
+  XML, .NET TRX, CTRF JSON, or Go `test -json`; see xref:formats.adoc[Supported Formats]),
+  capturing status and any `system-out`/`system-err` output and attachments.
 . The coverage report's format is auto-detected from its content -- *JaCoCo XML*,
-  *Cobertura XML*, *LCOV* (`.info`), or *OpenCover XML* -- and its counters are aggregated
-  into a line-coverage percentage and stored per file. The `jacoco` upload field accepts any
-  of these, so non-JVM projects can report coverage too:
+  *Cobertura XML*, *LCOV* (`.info`), *OpenCover XML*, or a *Go cover profile* -- and its
+  counters are aggregated into a line-coverage percentage and stored per file. The `jacoco`
+  upload field accepts any of these, so non-JVM projects can report coverage too:
 +
 [cols="1,3"]
 |===

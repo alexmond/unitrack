@@ -16,7 +16,7 @@ import java.util.regex.Pattern;
  * containing many {@code <testsuite>} elements and a single {@code <testsuite>} root.
  */
 @Component
-public class JUnitXmlParser {
+public class JUnitXmlParser implements TestResultParser {
 
 	/**
 	 * JUnit 5 {@code publishEntry} attachment marker, e.g.
@@ -24,6 +24,17 @@ public class JUnitXmlParser {
 	 */
 	private static final Pattern ATTACHMENT_MARKER = Pattern.compile("\\[\\[ATTACHMENT\\|([^\\]]+)\\]\\]");
 
+	@Override
+	public String format() {
+		return "junit";
+	}
+
+	@Override
+	public boolean supports(String headSample) {
+		return headSample.contains("<testsuite");
+	}
+
+	@Override
 	public JUnitResults parse(InputStream in) {
 		try {
 			Document doc = XmlSupport.parse(in);

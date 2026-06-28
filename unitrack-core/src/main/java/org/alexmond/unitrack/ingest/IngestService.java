@@ -45,7 +45,7 @@ public class IngestService {
 
 	private final CoverageFileEntryRepository coverageFiles;
 
-	private final JUnitXmlParser junitParser;
+	private final TestResultParsers testResultParsers;
 
 	private final CoverageParsers coverageParsers;
 
@@ -152,10 +152,10 @@ public class IngestService {
 		List<ParsedSuite> all = new ArrayList<>();
 		for (Supplier<InputStream> supplier : streams) {
 			try (InputStream in = supplier.get()) {
-				all.addAll(junitParser.parse(in).suites());
+				all.addAll(this.testResultParsers.parse(in).results().suites());
 			}
 			catch (IOException ex) {
-				throw new IngestException("Failed reading JUnit upload: " + ex.getMessage(), ex);
+				throw new IngestException("Failed reading test-result upload: " + ex.getMessage(), ex);
 			}
 		}
 		return new JUnitResults(all);
