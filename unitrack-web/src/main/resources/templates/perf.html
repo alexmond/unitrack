@@ -29,6 +29,17 @@
             to chart latency, throughput and errors.</p>
     </div>
 
+    <!-- Change-point detection (#379): a sustained p95 step on this series, with onset + depth. -->
+    <div th:if="${perfStep != null}" class="gate" style="border-left-color: var(--c-fail); margin-bottom:18px">
+        <strong><i class="bi bi-graph-down-arrow" aria-hidden="true"></i> p95 latency regressed</strong>
+        — since
+        <code class="mono" th:text="${perfStep.onsetCommit != null ? #strings.abbreviate(perfStep.onsetCommit,9) : '—'}">abc1234</code>
+        <span class="muted" th:text="'(' + ${#temporals.format(perfStep.onsetAt,'MMM dd')} + ')'">(Jun 20)</span>:
+        <span th:text="${#numbers.formatDecimal(perfStep.baselineMedian,1,0)}">120</span> →
+        <span th:text="${#numbers.formatDecimal(perfStep.recentMedian,1,0)}">180</span> ms
+        <span class="muted">(+<span th:text="${#numbers.formatDecimal(perfStep.depthZ,1,1)}">4.2</span>σ vs its own noise)</span>
+    </div>
+
     <div th:if="${hasPerf}">
         <h2>Latency <span class="muted">(p50 / p90 / p99, ms)</span></h2>
         <div class="chart-wrap"><canvas id="latencyChart" height="90"></canvas></div>

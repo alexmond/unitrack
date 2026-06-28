@@ -16,6 +16,7 @@ import org.alexmond.unitrack.report.FlakyTestView;
 import org.alexmond.unitrack.report.TestTimelinePoint;
 import org.alexmond.unitrack.report.PerfRegressionService;
 import org.alexmond.unitrack.report.PerfRunDetailService;
+import org.alexmond.unitrack.report.PerfStepDetectionService;
 import org.alexmond.unitrack.report.PerfTrendPoint;
 import org.alexmond.unitrack.report.PerformanceService;
 import org.alexmond.unitrack.report.PerformanceSummary;
@@ -91,6 +92,8 @@ public class DashboardController {
 	private final PerfRegressionService perfRegression;
 
 	private final PerfRunDetailService perfRunDetail;
+
+	private final PerfStepDetectionService perfStepDetection;
 
 	private final CoverageDiffService coverageDiff;
 
@@ -343,6 +346,7 @@ public class DashboardController {
 		model.addAttribute("perfFlags", perfFlags);
 		model.addAttribute("selectedFlag", selectedFlag);
 		model.addAttribute("perfRuns", reporting.recentPerfRuns(id, selectedFlag, RUN_LIST_LIMIT));
+		model.addAttribute("perfStep", perfStepDetection.detectLatencyStep(id, selectedFlag).orElse(null));
 		model.addAttribute("hasPerf", !trend.isEmpty());
 		model.addAttribute("trendLabels", toJson(labels(trend.stream().map(PerfTrendPoint::shortSha).toList())));
 		model.addAttribute("trendP50", toJson(trend.stream().map((p) -> round(p.p50Ms())).toList()));
