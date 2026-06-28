@@ -277,6 +277,29 @@
     function xAt(i) { return trendMode === 'time' ? times[i] : i; }
     function pts(arr) { return arr.map(function (v, i) { return { x: xAt(i), y: v }; }); }
 
+    const DAY_MS = 86400000;
+    function isRed(i) { return failed[i] > 0; }
+    // Onset of the CURRENT regression: the first run of the trailing red streak (only when the
+    // latest run is itself red), else -1 — makes "broken since / rotting for N days" legible.
+    function trailingRedOnset() {
+        const n = failed.length;
+        if (n === 0 || !isRed(n - 1)) { return -1; }
+        let i = n - 1;
+        while (i - 1 >= 0 && isRed(i - 1)) { i--; }
+        return i;
+    }
+    // The largest reporting gap (silence): {ms, idx} with idx the later point bounding it.
+    function largestGap() {
+        let best = -1, idx = -1;
+        for (let i = 1; i < times.length; i++) {
+            if (times[i] != null && times[i - 1] != null) {
+                const g = times[i] - times[i - 1];
+                if (g > best) { best = g; idx = i; }
+            }
+        }
+        return { ms: best, idx: idx };
+    }
+
     if (labels.length > 0 && window.Chart) {
         const css = getComputedStyle(document.documentElement);
         const muted = css.getPropertyValue('--muted').trim() || '#8b98a5';
@@ -304,8 +327,62 @@
         }
         const initBounds = xBounds();
 
+        // Makes the slow-regression story legible: a red "rotting since" wash from the onset of
+        // the current red streak to the latest run, a dashed onset rule, and a faint band over
+        // the largest reporting gap labelled "no runs · Nd" (silence is a positive signal).
+        const healthOverlay = {
+            id: 'healthOverlay',
+            beforeDatasetsDraw: function (chart) {
+                const ctx = chart.ctx, area = chart.chartArea, x = chart.scales.x;
+                const oi = trailingRedOnset();
+                if (oi >= 0) {
+                    const px = x.getPixelForValue(xAt(oi));
+                    ctx.save();
+                    ctx.fillStyle = 'rgba(229,83,75,0.08)';
+                    ctx.fillRect(px, area.top, area.right - px, area.bottom - area.top);
+                    ctx.restore();
+                }
+                if (trendMode === 'time') {
+                    const g = largestGap();
+                    if (g.idx > 0 && g.ms > 2 * DAY_MS) {
+                        const x0 = x.getPixelForValue(times[g.idx - 1]), x1 = x.getPixelForValue(times[g.idx]);
+                        ctx.save();
+                        ctx.fillStyle = 'rgba(139,152,165,0.12)';
+                        ctx.fillRect(x0, area.top, x1 - x0, area.bottom - area.top);
+                        ctx.restore();
+                    }
+                }
+            },
+            afterDatasetsDraw: function (chart) {
+                const ctx = chart.ctx, area = chart.chartArea, x = chart.scales.x;
+                const oi = trailingRedOnset();
+                if (oi >= 0) {
+                    const px = x.getPixelForValue(xAt(oi));
+                    ctx.save();
+                    ctx.strokeStyle = '#e5534b'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 3]);
+                    ctx.beginPath(); ctx.moveTo(px, area.top); ctx.lineTo(px, area.bottom); ctx.stroke();
+                    ctx.setLineDash([]);
+                    ctx.fillStyle = '#e5534b'; ctx.font = '11px sans-serif'; ctx.textAlign = 'left';
+                    ctx.fillText('regressed', Math.min(px + 4, area.right - 62), area.top + 12);
+                    ctx.restore();
+                }
+                if (trendMode === 'time') {
+                    const g = largestGap();
+                    if (g.idx > 0 && g.ms > 2 * DAY_MS) {
+                        const x0 = x.getPixelForValue(times[g.idx - 1]), x1 = x.getPixelForValue(times[g.idx]);
+                        ctx.save();
+                        ctx.fillStyle = muted; ctx.font = '11px sans-serif'; ctx.textAlign = 'center';
+                        ctx.fillText('no runs · ' + Math.max(1, Math.round(g.ms / DAY_MS)) + 'd', (x0 + x1) / 2,
+                            area.top + 12);
+                        ctx.restore();
+                    }
+                }
+            }
+        };
+
         trendChartInstance = window.__chart(document.getElementById('trendChart'), {
             type: 'line',
+            plugins: [healthOverlay],
             data: {
                 // Lines (no fill) for each series, so you can read growth/trend per series without a
                 // solid area blocking the view: test counts on the left axis, coverage % on the right.
