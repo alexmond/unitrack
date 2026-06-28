@@ -54,7 +54,7 @@
 
         <!-- Module filter (multi-module projects): pill row that scopes the package + file
              tables below to one module. Derived from the package tree (see ReportingService). -->
-        <div th:if="${modules != null and modules.size() > 1}" class="subnav"
+        <div th:if="${modules != null and modules.size() > 1}" class="subnav module-filter"
              style="border-top:none;padding-top:0" aria-label="Filter by module">
             <a th:href="@{/projects/{id}/coverage(id=${project.id})}"
                th:classappend="${selectedModule == null} ? 'current'">All modules</a>
