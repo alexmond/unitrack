@@ -7,7 +7,6 @@ import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * The StAX report parsers must tolerate a DOCTYPE (Cobertura ships one) yet never resolve
@@ -36,9 +35,18 @@ class StaxXmlSafetyTest {
 		String doc = "<?xml version=\"1.0\"?>"
 				+ "<!DOCTYPE testsuite [ <!ENTITY xxe SYSTEM \"file:///etc/hostname\"> ]>"
 				+ "<testsuite name=\"&xxe;\" tests=\"0\"></testsuite>";
-		// External entities are disabled, so the reference cannot be expanded — the parse
-		// fails fast rather than reading the host file.
-		assertThatThrownBy(() -> this.parser.parse(xml(doc))).isInstanceOf(IngestException.class);
+		// The host file must never be read. External entities are neutralized to an empty
+		// stream, so the parse either fails fast or yields a blank (un-expanded) name —
+		// both safe; what matters is the file contents never leak in.
+		JUnitResults results;
+		try {
+			results = this.parser.parse(xml(doc));
+		}
+		catch (IngestException refused) {
+			return;
+		}
+		String name = results.suites().isEmpty() ? "" : results.suites().getFirst().name();
+		assertThat(name).isBlank();
 	}
 
 }

@@ -102,7 +102,7 @@ public class JUnitXmlParser implements TestResultParser {
 
 	private String firstText(XmlNode caseEl, String tag) {
 		XmlNode el = caseEl.child(tag);
-		return (el == null) ? null : el.trimmedTextOrNull();
+		return (el != null) ? el.trimmedTextOrNull() : null;
 	}
 
 	private List<String> extractAttachments(String... texts) {
