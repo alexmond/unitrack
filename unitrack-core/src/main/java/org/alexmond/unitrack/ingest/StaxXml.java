@@ -8,7 +8,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
 
-import javax.xml.XMLConstants;
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;
@@ -32,14 +31,15 @@ final class StaxXml {
 
 	private static XMLInputFactory hardenedFactory() {
 		XMLInputFactory factory = XMLInputFactory.newFactory();
-		// Permit DOCTYPE (Cobertura ships one) but never fetch anything external: the
-		// external-entities flag plus the JAXP external-DTD/schema limits are the XXE
-		// guard.
+		// Permit DOCTYPE (Cobertura reports ship a SYSTEM doctype) and don't resolve
+		// external general entities. The resolver below neutralizes any external DTD or
+		// entity by returning an empty stream — so nothing is fetched over the network
+		// (XXE-safe) and a report's harmless external DTD declaration doesn't break
+		// parsing.
 		factory.setProperty(XMLInputFactory.SUPPORT_DTD, true);
 		factory.setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, false);
-		factory.setProperty(XMLConstants.ACCESS_EXTERNAL_DTD, "");
-		factory.setProperty(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
 		factory.setProperty(XMLInputFactory.IS_COALESCING, true);
+		factory.setXMLResolver((publicId, systemId, baseUri, namespace) -> InputStream.nullInputStream());
 		return factory;
 	}
 
