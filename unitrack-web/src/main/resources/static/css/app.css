@@ -378,6 +378,10 @@ details.failure pre {
 /* Inline mono (flags, SHAs) — use the theme text colour, not the dark code-block colour
    (Bootstrap's --bs-code-color maps to --code-text, which is near-invisible on the light page). */
 code.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; color: var(--text); }
+/* A mono identifier inside a link should read as a link (blue), not body text — otherwise
+   e.g. the "Coverage by module" names look unclickable next to the blue branch links. */
+a code.mono { color: var(--blue); }
+a:hover code.mono { text-decoration: underline; }
 
 .gate {
     border: 1px solid var(--border);
