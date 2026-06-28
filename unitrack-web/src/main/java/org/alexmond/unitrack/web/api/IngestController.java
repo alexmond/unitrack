@@ -135,6 +135,7 @@ public class IngestController {
 			@RequestParam(name = "junit", required = false) List<MultipartFile> junit,
 			@RequestParam(name = "jacoco", required = false) List<MultipartFile> jacoco,
 			@RequestParam(name = "perf", required = false) List<MultipartFile> perf,
+			@RequestParam(name = "perfFlag", required = false) List<String> perfFlag,
 			@RequestParam(name = "async", defaultValue = "false") boolean async) {
 
 		boolean hasJunit = nonEmpty(junit);
@@ -159,31 +160,41 @@ public class IngestController {
 		long reportLimit = ingestProperties.maxReportBytesValue();
 		long perfLimit = ingestProperties.maxPerfBytesValue();
 
+		// Each non-empty perf file is its own series; resolve its flag (explicit
+		// perfFlag,
+		// else the filename when several share one upload, else the request flag).
+		List<MultipartFile> perfFiles = nonEmptyFiles(perf);
+		List<String> perfFlags = resolvePerfFlags(perfFiles, perfFlag, flag);
+
 		if (async) {
-			return enqueueAsync(meta, project, branch, commit, kind, size, uploader, newProject, junit, jacoco, perf,
-					reportLimit, perfLimit);
+			return enqueueAsync(meta, project, branch, commit, kind, size, uploader, newProject, junit, jacoco,
+					perfFiles, perfFlags, reportLimit, perfLimit);
 		}
 
 		// Synchronous (default): preserves the gate/exit-code contract — the parsed
-		// result
-		// is returned in the response.
+		// result is returned in the response.
 		List<Supplier<InputStream>> junitStreams = toSuppliers(junit, reportLimit, "report");
 		List<Supplier<InputStream>> jacocoStreams = toSuppliers(jacoco, reportLimit, "report");
-		List<Supplier<InputStream>> perfStreams = toSuppliers(perf, perfLimit, "perf");
+		List<PerfIngestService.PerfPart> perfParts = new ArrayList<>();
+		for (int i = 0; i < perfFiles.size(); i++) {
+			perfParts.add(
+					new PerfIngestService.PerfPart(supplierFor(perfFiles.get(i), perfLimit, "perf"), perfFlags.get(i)));
+		}
 		Long jobId = ingestJobs.start(project, branch, commit, kind, size, uploader);
-		ApiResponses.IngestResultJson body = process(meta, project, kind, junitStreams, jacocoStreams, perfStreams,
+		ApiResponses.IngestResultJson body = process(meta, project, kind, junitStreams, jacocoStreams, perfParts,
 				uploader, newProject, jobId);
 		return ResponseEntity.status(HttpStatus.CREATED).body(body);
 	}
 
 	private ResponseEntity<AsyncAcceptedJson> enqueueAsync(IngestRequest meta, String project, String branch,
 			String commit, String kind, long size, String uploader, boolean newProject, List<MultipartFile> junit,
-			List<MultipartFile> jacoco, List<MultipartFile> perf, long reportLimit, long perfLimit) {
+			List<MultipartFile> jacoco, List<MultipartFile> perfFiles, List<String> perfFlags, long reportLimit,
+			long perfLimit) {
 		// The multipart streams die with the request, so buffer the (decompressed,
 		// size-guarded) parts to temp files before returning. An oversized upload trips
 		// the
 		// guard here and fails fast with 4xx, before anything is queued.
-		Spool spool = spoolToTemp(junit, jacoco, perf, reportLimit, perfLimit);
+		Spool spool = spoolToTemp(junit, jacoco, perfFiles, perfFlags, reportLimit, perfLimit);
 		Long jobId = ingestJobs.enqueue(project, branch, commit, kind, size, uploader);
 		try {
 			ingestExecutor.execute(() -> runAsync(meta, project, kind, uploader, newProject, jobId, spool));
@@ -218,7 +229,7 @@ public class IngestController {
 	 */
 	private ApiResponses.IngestResultJson process(IngestRequest meta, String project, String kind,
 			List<Supplier<InputStream>> junitStreams, List<Supplier<InputStream>> jacocoStreams,
-			List<Supplier<InputStream>> perfStreams, String uploader, boolean newProject, Long jobId) {
+			List<PerfIngestService.PerfPart> perfParts, String uploader, boolean newProject, Long jobId) {
 		// One Observation around the unit of work: Boot derives the metric (Timer) and
 		// the
 		// span from it. Low-cardinality dimensions become metric tags; ids/names are
@@ -239,13 +250,17 @@ public class IngestController {
 						.parentObservation(observation)
 						.observe(() -> publishGitHubStatus(ingested));
 				}
-				PerfRun perfRun = perfStreams.isEmpty() ? null : perfIngest.ingest(meta, perfStreams);
-				if (perfRun != null) {
-					publishPerfComment(perfRun);
+				// Each perf file is its own series; the first is the "primary" returned
+				// in
+				// the response and recorded on the job.
+				List<PerfRun> perfRunList = perfParts.isEmpty() ? List.of() : perfIngest.ingestAll(meta, perfParts);
+				PerfRun perfRun = perfRunList.isEmpty() ? null : perfRunList.get(0);
+				for (PerfRun pr : perfRunList) {
+					publishPerfComment(pr);
 				}
 				// A newly-created (PRIVATE by default) project gets its uploader as
-				// OWNER,
-				// so an authenticated CI/user keeps access to what it just created.
+				// OWNER, so an authenticated CI/user keeps access to what it just
+				// created.
 				if (newProject && uploader != null) {
 					Long newProjectId = (run != null) ? run.getProject().getId() : perfRun.getProject().getId();
 					membership.grantIfUserExists(newProjectId, uploader, ProjectRole.OWNER);
@@ -256,9 +271,9 @@ public class IngestController {
 					audit.record(uploader, "RUN_INGESTED", "API", run.getProject().getId(), "run #" + run.getId() + " "
 							+ run.getStatus() + " on " + ((run.getBranch() != null) ? run.getBranch() : "-"));
 				}
-				if (perfRun != null) {
-					audit.record(uploader, "PERF_INGESTED", "API", perfRun.getProject().getId(),
-							"perf run #" + perfRun.getId());
+				for (PerfRun pr : perfRunList) {
+					audit.record(uploader, "PERF_INGESTED", "API", pr.getProject().getId(),
+							"perf run #" + pr.getId() + " (" + pr.getFlag() + ")");
 				}
 				ingestJobs.succeeded(jobId, (run != null) ? run.getProject().getId() : perfRun.getProject().getId(),
 						(run != null) ? run.getId() : null, (perfRun != null) ? perfRun.getId() : null);
@@ -325,20 +340,74 @@ public class IngestController {
 			if (file == null || file.isEmpty()) {
 				continue;
 			}
-			suppliers.add(() -> {
-				try {
-					// Guard the DECOMPRESSED stream: gzip inflates ~10-20x, so the size
-					// cap must count bytes the parser actually consumes, not the wire
-					// size.
-					InputStream inflated = GzipStreams.gunzipIfNeeded(file.getInputStream());
-					return new BoundedInputStream(inflated, maxBytes, label);
-				}
-				catch (IOException ex) {
-					throw new IngestException("Could not read upload '" + file.getOriginalFilename() + "'", ex);
-				}
-			});
+			suppliers.add(supplierFor(file, maxBytes, label));
 		}
 		return suppliers;
+	}
+
+	private static Supplier<InputStream> supplierFor(MultipartFile file, long maxBytes, String label) {
+		return () -> {
+			try {
+				// Guard the DECOMPRESSED stream: gzip inflates ~10-20x, so the size cap
+				// must
+				// count bytes the parser actually consumes, not the wire size.
+				InputStream inflated = GzipStreams.gunzipIfNeeded(file.getInputStream());
+				return new BoundedInputStream(inflated, maxBytes, label);
+			}
+			catch (IOException ex) {
+				throw new IngestException("Could not read upload '" + file.getOriginalFilename() + "'", ex);
+			}
+		};
+	}
+
+	private static List<MultipartFile> nonEmptyFiles(List<MultipartFile> files) {
+		List<MultipartFile> kept = new ArrayList<>();
+		if (files != null) {
+			for (MultipartFile file : files) {
+				if (file != null && !file.isEmpty()) {
+					kept.add(file);
+				}
+			}
+		}
+		return kept;
+	}
+
+	/**
+	 * The flag (series) for each perf file: an explicit {@code perfFlag} param if given,
+	 * else the filename stem when several perf files share one upload (so each is its own
+	 * series), else the request-level {@code flag} (single-file back-compat).
+	 */
+	private static List<String> resolvePerfFlags(List<MultipartFile> perfFiles, List<String> perfFlag,
+			String requestFlag) {
+		List<String> flags = new ArrayList<>();
+		boolean multiple = perfFiles.size() > 1;
+		for (int i = 0; i < perfFiles.size(); i++) {
+			String explicit = (perfFlag != null && i < perfFlag.size()) ? perfFlag.get(i) : null;
+			if (explicit != null && !explicit.isBlank()) {
+				flags.add(explicit.trim());
+			}
+			else {
+				flags.add(multiple ? filenameStem(perfFiles.get(i)) : requestFlag);
+			}
+		}
+		return flags;
+	}
+
+	/** {@code dir/api-load.jtl.gz} → {@code api-load}; null/blank → {@code default}. */
+	private static String filenameStem(MultipartFile file) {
+		String name = file.getOriginalFilename();
+		if (name == null || name.isBlank()) {
+			return "default";
+		}
+		int slash = Math.max(name.lastIndexOf('/'), name.lastIndexOf('\\'));
+		if (slash >= 0) {
+			name = name.substring(slash + 1);
+		}
+		int dot = name.indexOf('.');
+		if (dot > 0) {
+			name = name.substring(0, dot);
+		}
+		return name.isBlank() ? "default" : name;
 	}
 
 	/**
@@ -346,14 +415,21 @@ public class IngestController {
 	 * worker can read it after the request has returned. Partial temp files are cleaned
 	 * up if any part is rejected.
 	 */
-	private Spool spoolToTemp(List<MultipartFile> junit, List<MultipartFile> jacoco, List<MultipartFile> perf,
-			long reportLimit, long perfLimit) {
+	private Spool spoolToTemp(List<MultipartFile> junit, List<MultipartFile> jacoco, List<MultipartFile> perfFiles,
+			List<String> perfFlags, long reportLimit, long perfLimit) {
 		List<Path> temps = new ArrayList<>();
 		try {
 			List<Supplier<InputStream>> junitStreams = spoolGroup(junit, reportLimit, "report", temps);
 			List<Supplier<InputStream>> jacocoStreams = spoolGroup(jacoco, reportLimit, "report", temps);
-			List<Supplier<InputStream>> perfStreams = spoolGroup(perf, perfLimit, "perf", temps);
-			return new Spool(junitStreams, jacocoStreams, perfStreams, temps);
+			List<PerfIngestService.PerfPart> perfParts = new ArrayList<>();
+			for (int i = 0; i < perfFiles.size(); i++) {
+				MultipartFile file = perfFiles.get(i);
+				Path tmp = createTempCopy(file, perfLimit, "perf");
+				temps.add(tmp);
+				String name = file.getOriginalFilename();
+				perfParts.add(new PerfIngestService.PerfPart(() -> openTemp(tmp, name), perfFlags.get(i)));
+			}
+			return new Spool(junitStreams, jacocoStreams, perfParts, temps);
 		}
 		catch (RuntimeException ex) {
 			deleteQuietly(temps);
@@ -414,9 +490,11 @@ public class IngestController {
 		}
 	}
 
-	/** Buffered async upload: temp-file-backed suppliers plus the paths to clean up. */
+	/**
+	 * Buffered async upload: temp-file-backed suppliers/parts plus the paths to clean up.
+	 */
 	private record Spool(List<Supplier<InputStream>> junit, List<Supplier<InputStream>> jacoco,
-			List<Supplier<InputStream>> perf, List<Path> temps) {
+			List<PerfIngestService.PerfPart> perf, List<Path> temps) {
 
 		void cleanup() {
 			deleteQuietly(this.temps);

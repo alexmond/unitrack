@@ -334,11 +334,15 @@ public class DashboardController {
 	}
 
 	@GetMapping("/projects/{id}/perf")
-	public String perf(@PathVariable Long id, Model model) {
+	public String perf(@PathVariable Long id, @RequestParam(required = false) String flag, Model model) {
 		Project project = access.requireReadProject(id);
-		List<PerfTrendPoint> trend = reporting.perfTrend(id, TREND_FLAG, TREND_LIMIT);
+		List<String> perfFlags = reporting.perfFlags(id);
+		String selectedFlag = selectedPerfFlag(flag, perfFlags);
+		List<PerfTrendPoint> trend = reporting.perfTrend(id, selectedFlag, TREND_LIMIT);
 		model.addAttribute("project", project);
-		model.addAttribute("perfRuns", reporting.recentPerfRuns(id, RUN_LIST_LIMIT));
+		model.addAttribute("perfFlags", perfFlags);
+		model.addAttribute("selectedFlag", selectedFlag);
+		model.addAttribute("perfRuns", reporting.recentPerfRuns(id, selectedFlag, RUN_LIST_LIMIT));
 		model.addAttribute("hasPerf", !trend.isEmpty());
 		model.addAttribute("trendLabels", toJson(labels(trend.stream().map(PerfTrendPoint::shortSha).toList())));
 		model.addAttribute("trendP50", toJson(trend.stream().map((p) -> round(p.p50Ms())).toList()));
@@ -347,6 +351,20 @@ public class DashboardController {
 		model.addAttribute("trendThroughput", toJson(trend.stream().map((p) -> round(p.throughputRps())).toList()));
 		model.addAttribute("trendError", toJson(trend.stream().map((p) -> round(p.errorPct())).toList()));
 		return "perf";
+	}
+
+	/**
+	 * The perf series to show: the requested flag if valid, else the {@code default}
+	 * rollup, else the first.
+	 */
+	private static String selectedPerfFlag(String requested, List<String> perfFlags) {
+		if (requested != null && !requested.isBlank() && perfFlags.contains(requested)) {
+			return requested;
+		}
+		if (perfFlags.contains(TREND_FLAG)) {
+			return TREND_FLAG;
+		}
+		return perfFlags.isEmpty() ? null : perfFlags.get(0);
 	}
 
 	@GetMapping("/perf-runs/{id}")
