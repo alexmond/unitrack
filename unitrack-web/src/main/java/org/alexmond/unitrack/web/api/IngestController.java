@@ -75,6 +75,8 @@ public class IngestController {
 
 	private final org.alexmond.unitrack.web.ingest.IngestJobService ingestJobs;
 
+	private final org.alexmond.unitrack.web.ingest.IngestProperties ingestProperties;
+
 	private final PerfRunRegressionService perfRunRegression;
 
 	private final GateFailureNotifier gateFailureNotifier;
@@ -108,8 +110,10 @@ public class IngestController {
 			@RequestParam(name = "jacoco", required = false) List<MultipartFile> jacoco,
 			@RequestParam(name = "perf", required = false) List<MultipartFile> perf) {
 
-		List<Supplier<InputStream>> junitStreams = toSuppliers(junit);
-		List<Supplier<InputStream>> perfStreams = toSuppliers(perf);
+		long reportLimit = ingestProperties.maxReportBytesValue();
+		long perfLimit = ingestProperties.maxPerfBytesValue();
+		List<Supplier<InputStream>> junitStreams = toSuppliers(junit, reportLimit, "report");
+		List<Supplier<InputStream>> perfStreams = toSuppliers(perf, perfLimit, "perf");
 		if (junitStreams.isEmpty() && perfStreams.isEmpty()) {
 			throw new IngestException("Provide at least one 'junit' or 'perf' file");
 		}
@@ -142,7 +146,7 @@ public class IngestController {
 			return observation.observe(() -> {
 				TestRun run = null;
 				if (!junitStreams.isEmpty()) {
-					run = ingestService.ingest(meta, junitStreams, toSuppliers(jacoco));
+					run = ingestService.ingest(meta, junitStreams, toSuppliers(jacoco, reportLimit, "report"));
 					// Post-ingest publishing as an explicit child span — parent passed
 					// through
 					// (not via thread-local), so it nests correctly even if moved
@@ -218,7 +222,7 @@ public class IngestController {
 		gitHubPrComment.publishPerf(perfRun, regression);
 	}
 
-	private static List<Supplier<InputStream>> toSuppliers(List<MultipartFile> files) {
+	private static List<Supplier<InputStream>> toSuppliers(List<MultipartFile> files, long maxBytes, String label) {
 		List<Supplier<InputStream>> suppliers = new ArrayList<>();
 		if (files == null) {
 			return suppliers;
@@ -229,7 +233,12 @@ public class IngestController {
 			}
 			suppliers.add(() -> {
 				try {
-					return org.alexmond.unitrack.ingest.GzipStreams.gunzipIfNeeded(file.getInputStream());
+					// Guard the DECOMPRESSED stream: gzip inflates ~10-20x, so the size
+					// cap must count bytes the parser actually consumes, not the wire
+					// size.
+					InputStream inflated = org.alexmond.unitrack.ingest.GzipStreams
+						.gunzipIfNeeded(file.getInputStream());
+					return new org.alexmond.unitrack.ingest.BoundedInputStream(inflated, maxBytes, label);
 				}
 				catch (IOException ex) {
 					throw new IngestException("Could not read upload '" + file.getOriginalFilename() + "'", ex);
