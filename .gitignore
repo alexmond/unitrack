@@ -12,3 +12,6 @@ data/
 
 # dev-crew transient run handoffs
 .claude/dev-crew/runs/
+
+# Screenshot-tour output lands in the module dir (surefire CWD); the deck lives in /presentation
+unitrack-web/presentation/
