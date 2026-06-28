@@ -32,6 +32,15 @@ public class IngestProperties {
 	 */
 	private DataSize maxPerfBytes = DataSize.ofGigabytes(1);
 
+	/** Worker threads for async ingest ({@code POST /api/v1/ingest?async=true}). */
+	private int asyncPoolSize = 2;
+
+	/**
+	 * Queued async jobs allowed to wait for a worker; once the pool and queue are full, a
+	 * new async upload is rejected with 429 (back-pressure).
+	 */
+	private int asyncQueueCapacity = 20;
+
 	public long maxReportBytesValue() {
 		return (this.maxReportBytes != null) ? this.maxReportBytes.toBytes() : -1;
 	}

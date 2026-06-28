@@ -94,6 +94,36 @@ gzip-bombed) report fails fast with a clear message instead of exhausting the he
 Set either to `0` to disable that guard. A part that trips the limit is rejected with `4xx`
 and recorded as a `FAILED` ingest job whose reason names the limit.
 
+== Async ingest
+
+Ingest is synchronous by default: the response carries the parsed result (totals, coverage,
+quality gate) that the CLI and GitHub Action use for the exit code and PR comment.
+
+For large uploads — or when the client doesn't need the result inline — pass `async=true`:
+
+[source,bash]
+----
+curl -F project=myapp -F commit=$SHA -F async=true \
+     -F 'perf=@results.jtl' \
+     http://localhost:8080/api/v1/ingest
+# 202 Accepted
+# { "jobId": 42, "status": "QUEUED", "statusUrl": "/api/v1/ingest-jobs/42" }
+----
+
+The upload is buffered, queued to a bounded worker pool, and processed off the request
+thread. Poll the job for the outcome:
+
+[source,bash]
+----
+curl http://localhost:8080/api/v1/ingest-jobs/42
+# { "id": 42, "status": "PROCESSED", "runId": 1234, ... }   # or FAILED with failureReason
+----
+
+A single job is readable by an admin or the job's own uploader. The worker pool and queue
+are bounded (`unitrack.ingest.async-pool-size` / `async-queue-capacity`); once both are
+full a new async upload is rejected with `429`. Jobs are persisted, so a job left in flight
+by a restart is recovered (marked `FAILED`) on the next startup.
+
 == Processing history
 
 Every upload is recorded as an *ingest job* — `PROCESSED` or `FAILED` (with the reason) plus
