@@ -72,6 +72,15 @@ used (`api.jtl` → `api`); a single perf file with no `perfFlag` keeps using th
 `flag`. The Load-tests page shows a flag filter to switch between series (like the coverage
 module filter).
 
+== Perf regression detection
+
+Each perf series (flag) is watched for a *sustained level shift* in p95 latency. When a
+series steps to a worse level and stays there, the Load-tests page shows a *p95 latency
+regressed* badge with the onset commit/date and the depth (a robust z-score vs the series'
+own noise) — so a regression that hides inside normal run-to-run jitter is still caught,
+and you can see *when* it started. Detection is classical and transparent (median/MAD +
+CUSUM onset); a lone spike or a series that has since recovered does not flag.
+
 == Large reports & memory
 
 Parsing is bounded-memory, so a large report won't exhaust the heap:

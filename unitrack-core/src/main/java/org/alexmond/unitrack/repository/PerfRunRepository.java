@@ -30,6 +30,12 @@ public interface PerfRunRepository extends JpaRepository<PerfRun, Long> {
 	List<PerfRun> findByProjectIdAndFlagOrderByCreatedAtDesc(Long projectId, String flag, Pageable pageable);
 
 	/**
+	 * Newest first with a stable id tiebreak — for ordered series (change-point
+	 * detection).
+	 */
+	List<PerfRun> findByProjectIdAndFlagOrderByCreatedAtDescIdDesc(Long projectId, String flag, Pageable pageable);
+
+	/**
 	 * Most recent prior perf run on the baseline branch with the same flag — the
 	 * baseline.
 	 */
