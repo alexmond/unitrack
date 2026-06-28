@@ -12,6 +12,7 @@
 ** xref:coverage-flags.adoc[Coverage Flags]
 ** xref:report-merging.adoc[Report Merging]
 ** xref:failure-clustering.adoc[Failure Clustering & Triage]
+** xref:ai-analysis.adoc[AI Root-Cause Analysis]
 ** xref:test-regression.adoc[Test Regression Report]
 ** xref:pr-delta-baseline.adoc[PR/MR Delta Baseline]
 ** xref:unit-test-performance.adoc[Unit-test Performance]
