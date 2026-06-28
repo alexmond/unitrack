@@ -24,6 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      actions: write
     steps:
       - uses: actions/checkout@v4
 
@@ -77,3 +78,12 @@ jobs:
         run: |
           git commit -am "chore: prepare for next development iteration $NEXT_VERSION"
           git push origin HEAD:"$GITHUB_REF_NAME" --follow-tags
+
+      # A tag pushed with GITHUB_TOKEN does NOT fire publish-cli-image.yml's `on: push: tags`
+      # (GitHub suppresses workflow-token pushes to avoid loops), so dispatch it explicitly
+      # against the just-pushed tag — otherwise the GHCR uploader image lags the release.
+      - name: Trigger the CLI uploader image build for the tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_VERSION: ${{ inputs.releaseVersion }}
+        run: gh workflow run publish-cli-image.yml --ref "v$RELEASE_VERSION"
