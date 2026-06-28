@@ -14,6 +14,11 @@ public interface IngestJobRepository extends JpaRepository<IngestJob, Long> {
 
 	List<IngestJob> findByProjectIdOrderByCreatedAtDesc(Long projectId, Pageable pageable);
 
+	/**
+	 * Jobs for one project by name (set at enqueue, before the project id is resolved).
+	 */
+	List<IngestJob> findByProjectNameOrderByCreatedAtDesc(String projectName, Pageable pageable);
+
 	List<IngestJob> findByStatusIn(Collection<IngestStatus> statuses);
 
 }

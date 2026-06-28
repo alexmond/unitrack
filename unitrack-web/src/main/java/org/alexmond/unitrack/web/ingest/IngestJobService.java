@@ -96,6 +96,12 @@ public class IngestJobService {
 		return this.jobs.findByOrderByCreatedAtDesc(PageRequest.of(0, limit));
 	}
 
+	/** Recent jobs for one project (by name) — for the project-scoped ingest view. */
+	@Transactional(readOnly = true)
+	public List<IngestJob> recentForProject(String projectName, int limit) {
+		return this.jobs.findByProjectNameOrderByCreatedAtDesc(projectName, PageRequest.of(0, limit));
+	}
+
 	private static void finish(IngestJob job) {
 		Instant now = Instant.now();
 		job.setFinishedAt(now);
