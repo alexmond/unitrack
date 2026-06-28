@@ -1,6 +1,5 @@
 package org.alexmond.unitrack.web.alert;
 
-import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -11,6 +10,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import org.alexmond.notify4j.HttpClientConfig;
 import org.alexmond.notify4j.NotificationMetrics;
+import org.alexmond.notify4j.NotificationsConfig;
 import org.alexmond.notify4j.NotificationsFactory;
 import org.alexmond.unitrack.domain.AlertEvent;
 import org.springframework.beans.factory.ObjectProvider;
@@ -58,8 +58,17 @@ public class Notify4jConfig {
 		MeterRegistry registry = meterRegistry.getIfAvailable();
 		NotificationMetrics metrics = (registry != null) ? new MicrometerNotificationMetrics(registry)
 				: NotificationMetrics.NOOP;
-		return new NotificationsFactory<>(new AlertEventAdapter(), List.of(), false, http, alertDeliveryExecutor,
-				metrics);
+		// notify4j 0.8 takes a NotificationsConfig (builder) instead of the old
+		// positional
+		// constructor — bundles includeLog/http/executor/metrics; the executor stays
+		// caller-owned.
+		NotificationsConfig config = NotificationsConfig.builder()
+			.includeLog(false)
+			.http(http)
+			.executor(alertDeliveryExecutor)
+			.metrics(metrics)
+			.build();
+		return new NotificationsFactory<>(new AlertEventAdapter(), config);
 	}
 
 }

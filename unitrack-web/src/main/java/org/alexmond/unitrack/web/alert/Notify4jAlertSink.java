@@ -41,8 +41,11 @@ public class Notify4jAlertSink implements AlertSink {
 		if (urls.isEmpty()) {
 			return;
 		}
-		try {
-			Notifications<AlertEvent> notifications = this.factory.create(urls);
+		// Notifications is AutoCloseable (notify4j 0.8+): close it to release any
+		// per-channel
+		// resources (e.g. reminders). The shared delivery executor is caller-owned and is
+		// NOT shut down by close(), so closing each per-event facade is safe.
+		try (Notifications<AlertEvent> notifications = this.factory.create(urls)) {
 			notifications.send(event, List.of(event.kind().name().toLowerCase(Locale.ROOT)));
 		}
 		catch (RuntimeException ex) {
@@ -62,8 +65,8 @@ public class Notify4jAlertSink implements AlertSink {
 		}
 		AlertEvent event = new AlertEvent(projectId, projectName, AlertKind.GATE_FAILED, null,
 				"Test alert from UniTrack — channel '" + channel.label() + "' is wired up.");
-		try {
-			this.factory.create(List.of(url)).send(event, List.of());
+		try (Notifications<AlertEvent> notifications = this.factory.create(List.of(url))) {
+			notifications.send(event, List.of());
 		}
 		catch (RuntimeException ex) {
 			log.warn("notify4j test delivery failed for channel {}", channel.label(), ex);
