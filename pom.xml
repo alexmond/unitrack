@@ -50,6 +50,12 @@
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
 
+        <!-- Browser-driven screenshot/capture tests (@Tag("ui")) are presentation tooling,
+             not correctness gates: they need a real Chrome and are timing/seed-sensitive, so
+             they're excluded from the default build (and CI's `mvn verify`) to keep the gate
+             reliable. Run them on demand with `-DexcludedGroups=`. -->
+        <excludedGroups>ui</excludedGroups>
+
         <jacoco-maven-plugin.version>0.8.15</jacoco-maven-plugin.version>
         <maven-pmd-plugin.version>3.28.0</maven-pmd-plugin.version>
         <maven-checkstyle-plugin.version>3.6.0</maven-checkstyle-plugin.version>
