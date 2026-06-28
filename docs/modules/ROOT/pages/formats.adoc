@@ -13,6 +13,8 @@ its category.
 
 | *JUnit / Surefire XML* (`junit`) | `<testsuite>` / `<testsuites>` root | The JVM standard; also the conversion target many tools already emit.
 | *.NET TRX* (`trx`)               | `<TestRun>` in the MSTest namespace | Visual Studio / `dotnet test`. Outcome → status, `duration` timespan → ms, `ErrorInfo` → message/stacktrace; grouped by test class.
+| *xUnit.net XML* (`xunit`)        | `<assemblies>` root | xUnit.net v2 (`--logger xunit`); `result` → status, grouped by `type` (class).
+| *NUnit 3 XML* (`nunit`)          | `<test-run>` root | `<test-case result="..">`; grouped by `classname`.
 | *CTRF JSON* (`ctrf`)             | top-level `results.tests` + `results.summary` | https://ctrf.io[Common Test Report Format] — one schema with reporters for Jest, Playwright, pytest, PHPUnit, Go and more.
 | *Go `test -json`* (`go-test`)    | NDJSON action events (`"Action"` + `"Time"` + `"Package"`) | `go test -json`; events aggregated per package/test into pass/fail/skip + duration, with output captured for failures.
 |===
@@ -40,6 +42,7 @@ its category.
 | *k6 JSON summary* (`k6`) | k6 `--summary-export` JSON | Pre-aggregated metrics.
 | *JMH JSON* (`jmh`)      | JSON array with `jmhVersion` | JVM microbenchmarks (`-rf json`); `avgt`/`thrpt` normalized to ms-per-op.
 | *Go `test -bench`* (`go-bench`) | `Benchmark… ns/op` lines | The Go analog of JMH; `ns/op` → mean ms, iteration count → samples.
+| *Gatling* (`gatling`)   | tab-separated `simulation.log` with `REQUEST` rows | Per-request latency (`end - start`) → percentiles + OK/KO error rate. Located by shape, so it tolerates Gatling's per-version column shifts.
 |===
 
 [NOTE]
