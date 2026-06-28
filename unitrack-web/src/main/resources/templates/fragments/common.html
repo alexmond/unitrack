@@ -63,6 +63,10 @@
          and read-only visitors, so the public view of a project is read-only. -->
     <th:block th:if="${currentUser != null and @membershipService.canWrite(currentUser, projectId)}">
     <span class="subnav-sep" aria-hidden="true"></span>
+    <a th:href="@{/projects/{id}/ingest(id=${projectId})}"
+       th:classappend="${active == 'ingest'} ? 'current'"
+       th:attr="aria-current=${active == 'ingest'} ? 'page' : null">
+        <i class="bi bi-inbox" aria-hidden="true"></i> Ingest</a>
     <a th:href="@{/projects/{id}/triage(id=${projectId})}"
        th:classappend="${active == 'triage'} ? 'current'"
        th:attr="aria-current=${active == 'triage'} ? 'page' : null">
