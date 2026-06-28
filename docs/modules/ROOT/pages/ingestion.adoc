@@ -73,3 +73,11 @@ malformed upload returns `4xx` with an error message.
 Multipart uploads default to 25 MB per file and 100 MB per request. Raise these via
 `spring.servlet.multipart.max-file-size` / `max-request-size` if you upload large merged
 reports.
+
+== Processing history
+
+Every upload is recorded as an *ingest job* — `PROCESSED` or `FAILED` (with the reason) plus
+timing, size and the resulting run id. Admins see the history at `/ingest` (and
+`GET /api/v1/ingest-jobs`). A failed parse still leaves a record (written in its own
+transaction), so a broken CI upload is diagnosable after the fact. Large uploads stream and
+aggregate latency into a bounded histogram, so a multi-hour perf log won't exhaust memory.

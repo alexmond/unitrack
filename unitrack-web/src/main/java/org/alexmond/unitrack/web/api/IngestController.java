@@ -73,6 +73,8 @@ public class IngestController {
 
 	private final PerfIngestService perfIngest;
 
+	private final org.alexmond.unitrack.web.ingest.IngestJobService ingestJobs;
+
 	private final PerfRunRegressionService perfRunRegression;
 
 	private final GateFailureNotifier gateFailureNotifier;
@@ -133,41 +135,67 @@ public class IngestController {
 			.lowCardinalityKeyValue("has_coverage", String.valueOf((jacoco != null) && !jacoco.isEmpty()))
 			.highCardinalityKeyValue("project", project);
 
-		return observation.observe(() -> {
-			TestRun run = null;
-			if (!junitStreams.isEmpty()) {
-				run = ingestService.ingest(meta, junitStreams, toSuppliers(jacoco));
-				// Post-ingest publishing as an explicit child span — parent passed
-				// through
-				// (not via thread-local), so it nests correctly even if moved off-thread.
-				TestRun ingested = run;
-				Observation.createNotStarted("unitrack.report", observationRegistry)
-					.parentObservation(observation)
-					.observe(() -> publishGitHubStatus(ingested));
+		Long jobId = ingestJobs.start(project, branch, commit,
+				junitStreams.isEmpty() ? "perf" : (perfStreams.isEmpty() ? "tests" : "tests+perf"),
+				totalSize(junit, jacoco, perf), uploader);
+		try {
+			return observation.observe(() -> {
+				TestRun run = null;
+				if (!junitStreams.isEmpty()) {
+					run = ingestService.ingest(meta, junitStreams, toSuppliers(jacoco));
+					// Post-ingest publishing as an explicit child span — parent passed
+					// through
+					// (not via thread-local), so it nests correctly even if moved
+					// off-thread.
+					TestRun ingested = run;
+					Observation.createNotStarted("unitrack.report", observationRegistry)
+						.parentObservation(observation)
+						.observe(() -> publishGitHubStatus(ingested));
+				}
+				PerfRun perfRun = perfStreams.isEmpty() ? null : perfIngest.ingest(meta, perfStreams);
+				if (perfRun != null) {
+					publishPerfComment(perfRun);
+				}
+				// A newly-created (PRIVATE by default) project gets its uploader as
+				// OWNER, so
+				// an
+				// authenticated CI/user keeps access to what it just created.
+				if (existing == null && uploader != null) {
+					Long newProjectId = (run != null) ? run.getProject().getId() : perfRun.getProject().getId();
+					membership.grantIfUserExists(newProjectId, uploader, ProjectRole.OWNER);
+				}
+				observation.lowCardinalityKeyValue("result", (run != null) ? run.getStatus() : "PERF_ONLY");
+				if (run != null) {
+					observation.highCardinalityKeyValue("run.id", String.valueOf(run.getId()));
+					audit.record(uploader, "RUN_INGESTED", "API", run.getProject().getId(), "run #" + run.getId() + " "
+							+ run.getStatus() + " on " + ((run.getBranch() != null) ? run.getBranch() : "-"));
+				}
+				if (perfRun != null) {
+					audit.record(uploader, "PERF_INGESTED", "API", perfRun.getProject().getId(),
+							"perf run #" + perfRun.getId());
+				}
+				ingestJobs.succeeded(jobId, (run != null) ? run.getProject().getId() : perfRun.getProject().getId(),
+						(run != null) ? run.getId() : null, (perfRun != null) ? perfRun.getId() : null);
+				return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponses.IngestResultJson.of(run, perfRun));
+			});
+		}
+		catch (RuntimeException ex) {
+			ingestJobs.failed(jobId, (ex.getMessage() != null) ? ex.getMessage() : ex.getClass().getSimpleName());
+			throw ex;
+		}
+	}
+
+	/** Total uploaded bytes across all parts, for the ingest-job record. */
+	private static long totalSize(List<MultipartFile> junit, List<MultipartFile> jacoco, List<MultipartFile> perf) {
+		long total = 0;
+		for (List<MultipartFile> group : java.util.Arrays.asList(junit, jacoco, perf)) {
+			if (group != null) {
+				for (MultipartFile file : group) {
+					total += file.getSize();
+				}
 			}
-			PerfRun perfRun = perfStreams.isEmpty() ? null : perfIngest.ingest(meta, perfStreams);
-			if (perfRun != null) {
-				publishPerfComment(perfRun);
-			}
-			// A newly-created (PRIVATE by default) project gets its uploader as OWNER, so
-			// an
-			// authenticated CI/user keeps access to what it just created.
-			if (existing == null && uploader != null) {
-				Long newProjectId = (run != null) ? run.getProject().getId() : perfRun.getProject().getId();
-				membership.grantIfUserExists(newProjectId, uploader, ProjectRole.OWNER);
-			}
-			observation.lowCardinalityKeyValue("result", (run != null) ? run.getStatus() : "PERF_ONLY");
-			if (run != null) {
-				observation.highCardinalityKeyValue("run.id", String.valueOf(run.getId()));
-				audit.record(uploader, "RUN_INGESTED", "API", run.getProject().getId(), "run #" + run.getId() + " "
-						+ run.getStatus() + " on " + ((run.getBranch() != null) ? run.getBranch() : "-"));
-			}
-			if (perfRun != null) {
-				audit.record(uploader, "PERF_INGESTED", "API", perfRun.getProject().getId(),
-						"perf run #" + perfRun.getId());
-			}
-			return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponses.IngestResultJson.of(run, perfRun));
-		});
+		}
+		return total;
 	}
 
 	private void publishGitHubStatus(TestRun run) {
