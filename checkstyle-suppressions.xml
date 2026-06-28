@@ -28,4 +28,7 @@
     <!-- Test files are exempt from size limits: test methods are short but files accumulate many of them -->
     <suppress checks="MethodLength" files=".*Test\.java"/>
     <suppress checks="FileLength" files=".*Test\.java"/>
+
+    <!-- Spring Security's authorize-requests DSL is one fluent method that grows a line per rule. -->
+    <suppress checks="MethodLength" files="SecurityConfig\.java"/>
 </suppressions>

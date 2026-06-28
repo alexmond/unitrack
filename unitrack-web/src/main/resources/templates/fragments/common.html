@@ -16,6 +16,7 @@
         <a th:if="${currentUser != null}" th:href="@{/owners}"><i class="bi bi-people" aria-hidden="true"></i> Owners</a>
         <a th:if="${isAdmin}" th:href="@{/ops}"><i class="bi bi-sliders" aria-hidden="true"></i> Ops</a>
         <a th:if="${isAdmin}" th:href="@{/audit}"><i class="bi bi-journal-text" aria-hidden="true"></i> Audit</a>
+        <a th:if="${isAdmin}" th:href="@{/ingest}"><i class="bi bi-inbox" aria-hidden="true"></i> Ingest</a>
         <a th:if="${currentUser != null}" th:href="@{/profile}" th:title="'Account — ' + ${currentUser}">
             <i class="bi bi-person-circle" aria-hidden="true"></i> <span th:text="${currentUser}">user</span></a>
         <a th:if="${currentUser == null}" th:href="@{/login}"><i class="bi bi-box-arrow-in-right" aria-hidden="true"></i> Sign in</a>
