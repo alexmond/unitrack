@@ -15,6 +15,15 @@
     <name>unitrack-cli</name>
     <description>UniTrack CI uploader — a Spring Boot CLI that pushes test/coverage/perf results to a UniTrack server</description>
 
+    <!-- Published to Maven Central / runs in users' CI -> permissive (see root LICENSE). -->
+    <licenses>
+        <license>
+            <name>The Apache Software License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
     <properties>
         <picocli.version>4.7.7</picocli.version>
     </properties>

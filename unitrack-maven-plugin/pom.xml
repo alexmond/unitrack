@@ -16,6 +16,15 @@
     <description>Upload test/coverage reports and check the quality gate from a Maven build,
         reusing the unitrack-cli engine.</description>
 
+    <!-- Published to Maven Central / build integration -> permissive (see root LICENSE). -->
+    <licenses>
+        <license>
+            <name>The Apache Software License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
     <properties>
         <maven.version>3.9.9</maven.version>
         <maven-plugin-tools.version>3.15.1</maven-plugin-tools.version>
