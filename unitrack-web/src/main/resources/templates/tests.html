@@ -85,6 +85,28 @@
             <canvas id="trendChart" height="90"></canvas>
         </div>
 
+        <!-- Tests by module (derived from package, same as Coverage by module) — multi-module only.
+             Clicking a module filters the all-tests roster below. -->
+        <div th:if="${!testModules.isEmpty()}">
+            <h2>Tests by module <span class="muted">(latest run)</span></h2>
+            <table class="table table-hover align-middle">
+                <thead>
+                <tr><th>Module</th><th class="num">Tests</th><th class="num">Pass %</th>
+                    <th class="num">Failures</th><th class="num">Skipped</th></tr>
+                </thead>
+                <tbody>
+                <tr th:each="m : ${testModules}" th:classappend="${m.failed() > 0} ? 'row-fail'"
+                    class="mod-row" style="cursor:pointer" th:attr="data-module=${#strings.toLowerCase(m.name())}">
+                    <td><code class="mono" th:text="${m.name()}">web</code></td>
+                    <td class="num" th:text="${m.tests()}">0</td>
+                    <td class="num pct" th:text="${#numbers.formatDecimal(m.passRate(),1,1)} + '%'">100%</td>
+                    <td class="num" th:text="${m.failed()}">0</td>
+                    <td class="num muted" th:text="${m.skipped()}">0</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
         <!-- All tests in the latest run, with a client-side search box. -->
         <div class="trend-head">
             <h2>All tests <span class="muted" th:text="'(' + ${roster.size()} + ')'">(0)</span></h2>
@@ -122,7 +144,7 @@
         if (!box) { return; }
         var rows = Array.prototype.slice.call(document.querySelectorAll('#roster-body tr'));
         var none = document.getElementById('noMatches');
-        box.addEventListener('input', function () {
+        function applyFilter() {
             var q = box.value.trim().toLowerCase();
             var shown = 0;
             rows.forEach(function (tr) {
@@ -131,6 +153,16 @@
                 if (hit) { shown++; }
             });
             if (none) { none.style.display = shown === 0 ? '' : 'none'; }
+        }
+        box.addEventListener('input', applyFilter);
+
+        // Click a "Tests by module" row to filter the roster to that module's package.
+        document.querySelectorAll('tr.mod-row').forEach(function (row) {
+            row.addEventListener('click', function () {
+                box.value = row.getAttribute('data-module') || '';
+                applyFilter();
+                box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            });
         });
     })();
 </script>

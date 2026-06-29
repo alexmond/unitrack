@@ -412,6 +412,7 @@ public class DashboardController {
 		model.addAttribute("cur", cur);
 		model.addAttribute("prev", prev);
 		model.addAttribute("roster", roster);
+		model.addAttribute("testModules", (cur != null) ? reporting.testModules(cur.getId()) : List.of());
 		model.addAttribute("hasTrend", !trend.isEmpty());
 		model.addAttribute("trendLabels", toJson(labels(trend.stream().map(TestRun::getShortSha).toList())));
 		model.addAttribute("trendRunIds", toJson(trend.stream().map(TestRun::getId).toList()));
