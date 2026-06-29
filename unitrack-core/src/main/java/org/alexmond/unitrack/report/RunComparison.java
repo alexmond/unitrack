@@ -10,6 +10,7 @@ import org.alexmond.unitrack.domain.TestRun;
  * {@code class#name} strings.
  */
 public record RunComparison(TestRun base, TestRun head, List<String> newlyFailing, List<String> fixed,
-		List<String> stillFailing, Double coverageDelta, long durationDeltaMs, double passRateDelta) {
+		List<String> stillFailing, Double coverageDelta, long durationDeltaMs, double passRateDelta,
+		List<TestTimingDelta> timingDeltas) {
 
 }
