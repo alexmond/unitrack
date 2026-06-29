@@ -9,6 +9,13 @@
         <a th:href="@{/projects/{id}(id=${run.project.id})}" th:text="${run.project.name}">project</a> /
         Run #<span th:text="${run.id}">1</span>
     </p>
+    <!-- Flip between consecutive runs in this project+branch+flag series. -->
+    <div class="run-nav" style="margin:-6px 0 10px;display:flex;gap:10px;align-items:center">
+        <a th:if="${prevRunId != null}" th:href="@{/runs/{id}(id=${prevRunId})}" title="Previous run">← Prev</a>
+        <span th:unless="${prevRunId != null}" class="muted">← Prev</span>
+        <a th:if="${nextRunId != null}" th:href="@{/runs/{id}(id=${nextRunId})}" title="Next run">Next →</a>
+        <span th:unless="${nextRunId != null}" class="muted">Next →</span>
+    </div>
     <h1>
         Run #<span th:text="${run.id}">1</span>
         <span th:replace="~{fragments/components :: statusPill(${run.status})}"></span>

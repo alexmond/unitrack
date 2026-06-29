@@ -15,6 +15,24 @@ public interface TestRunRepository extends JpaRepository<TestRun, Long> {
 	List<TestRun> findByProjectIdOrderByCreatedAtDesc(Long projectId, Pageable pageable);
 
 	/**
+	 * The run just before this one in the same project+branch+flag series (for ←/→ nav).
+	 */
+	@Query("select r from TestRun r where r.project.id = :pid and r.flag = :flag "
+			+ "and ((:branch is null and r.branch is null) or r.branch = :branch) and r.createdAt < :ts "
+			+ "order by r.createdAt desc, r.id desc")
+	List<TestRun> findPrevious(@Param("pid") Long pid, @Param("branch") String branch, @Param("flag") String flag,
+			@Param("ts") Instant ts, Pageable pageable);
+
+	/**
+	 * The run just after this one in the same project+branch+flag series (for ←/→ nav).
+	 */
+	@Query("select r from TestRun r where r.project.id = :pid and r.flag = :flag "
+			+ "and ((:branch is null and r.branch is null) or r.branch = :branch) and r.createdAt > :ts "
+			+ "order by r.createdAt asc, r.id asc")
+	List<TestRun> findNext(@Param("pid") Long pid, @Param("branch") String branch, @Param("flag") String flag,
+			@Param("ts") Instant ts, Pageable pageable);
+
+	/**
 	 * The latest two runs of every project in one query — the board's batch fetch (avoids
 	 * a per-project query). Returns rows for all projects that have runs; group by
 	 * project in memory. The extra {@code rn} column is ignored by the entity mapping.

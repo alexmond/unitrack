@@ -10,6 +10,13 @@
         <a th:href="@{/projects/{id}/perf(id=${detail.projectId})}">Load tests</a> /
         Run #<span th:text="${detail.runId}">1</span>
     </p>
+    <!-- Flip between consecutive perf runs in this project+branch+flag series. -->
+    <div class="run-nav" style="margin:-6px 0 10px;display:flex;gap:10px;align-items:center">
+        <a th:if="${prevRunId != null}" th:href="@{/perf-runs/{id}(id=${prevRunId})}" title="Previous perf run">← Prev</a>
+        <span th:unless="${prevRunId != null}" class="muted">← Prev</span>
+        <a th:if="${nextRunId != null}" th:href="@{/perf-runs/{id}(id=${nextRunId})}" title="Next perf run">Next →</a>
+        <span th:unless="${nextRunId != null}" class="muted">Next →</span>
+    </div>
     <h1>
         Perf run #<span th:text="${detail.runId}">1</span>
         <span th:if="${detail.regression != null}" class="badge"
