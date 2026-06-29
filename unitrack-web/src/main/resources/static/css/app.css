@@ -236,6 +236,11 @@ h2 { font-size: 17px; margin: 28px 0 12px; }
 }
 .stat .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
 .stat .value { font-size: 24px; font-weight: 700; margin-top: 4px; }
+/* Optional change-vs-previous line under a KPI value. */
+.stat .delta { font-size: 12px; font-weight: 600; margin-top: 3px; }
+.stat .delta.up { color: var(--green); }
+.stat .delta.down { color: var(--red); }
+.stat .delta.flat { color: var(--muted); }
 
 /* Bootstrap .table provides bg/borders/hover (themed via the --bs-table-* bridge above);
    these add UniTrack's polish: a panel surface, uppercase muted headers, right-aligned numbers. */

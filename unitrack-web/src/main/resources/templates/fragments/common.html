@@ -35,6 +35,10 @@
        th:classappend="${active == 'overview'} ? 'current'"
        th:attr="aria-current=${active == 'overview'} ? 'page' : null">
         <i class="bi bi-bar-chart-line" aria-hidden="true"></i> Overview</a>
+    <a th:href="@{/projects/{id}/tests(id=${projectId})}"
+       th:classappend="${active == 'tests'} ? 'current'"
+       th:attr="aria-current=${active == 'tests'} ? 'page' : null">
+        <i class="bi bi-check2-square" aria-hidden="true"></i> Tests</a>
     <a th:href="@{/projects/{id}/coverage(id=${projectId})}"
        th:classappend="${active == 'coverage'} ? 'current'"
        th:attr="aria-current=${active == 'coverage'} ? 'page' : null">
