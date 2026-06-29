@@ -51,6 +51,18 @@
 <script th:inline="javascript">
     const labels = JSON.parse(/*[[${trendLabels}]]*/ '[]');
     const seconds = JSON.parse(/*[[${trendSeconds}]]*/ '[]');
+    const runIds = JSON.parse(/*[[${trendRunIds}]]*/ '[]');
+    // Click a point to investigate: open it vs the PREVIOUS run (the prior point) so you see
+    // which tests changed; the first point (no previous) opens the run itself.
+    function openCompare(chart, evt, ids) {
+        const hit = chart.getElementsAtEventForMode(evt, 'nearest', { intersect: false }, true);
+        if (!hit.length) { return; }
+        const i = hit[0].index;
+        const id = ids[i];
+        if (id == null) { return; }
+        const prev = (i > 0) ? ids[i - 1] : null;
+        window.location = (prev != null) ? ('/compare?base=' + prev + '&head=' + id) : ('/runs/' + id);
+    }
     if (labels.length > 0 && window.Chart) {
         const css = getComputedStyle(document.documentElement);
         const muted = css.getPropertyValue('--muted').trim() || '#8b98a5';
@@ -66,6 +78,8 @@
                 ]
             },
             options: {
+                onClick: function (e, els, chart) { openCompare(chart, e, runIds); },
+                onHover: function (e, els) { e.native.target.style.cursor = els.length ? 'pointer' : 'default'; },
                 scales: { y: { beginAtZero: true, ticks: { color: muted }, grid: { color: grid } },
                           x: { ticks: { color: muted }, grid: { color: grid } } },
                 plugins: { legend: { labels: { color: text } } }

@@ -172,6 +172,7 @@ public class DashboardController {
 		model.addAttribute("modules",
 				reporting.latestCoverage(id).map((c) -> reporting.moduleCoverage(c.getId())).orElse(List.of()));
 		model.addAttribute("trendLabels", toJson(labels(trend.stream().map(TestRun::getShortSha).toList())));
+		model.addAttribute("trendRunIds", toJson(trend.stream().map(TestRun::getId).toList()));
 		model.addAttribute("trendTimes", toJson(trend.stream().map(DashboardController::epochMilli).toList()));
 		model.addAttribute("trendPassed", toJson(trend.stream().map(TestRun::getPassed).toList()));
 		model.addAttribute("trendFailed", toJson(trend.stream().map((r) -> r.getFailed() + r.getErrors()).toList()));
@@ -335,6 +336,7 @@ public class DashboardController {
 				toJson(labels(summary.suiteTimeTrend().stream().map(DurationPoint::shortSha).toList())));
 		model.addAttribute("trendSeconds",
 				toJson(summary.suiteTimeTrend().stream().map((p) -> round(p.durationMs() / 1000.0)).toList()));
+		model.addAttribute("trendRunIds", toJson(summary.suiteTimeTrend().stream().map(DurationPoint::runId).toList()));
 		return "performance";
 	}
 
