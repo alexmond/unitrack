@@ -275,6 +275,8 @@ public class DashboardController {
 		TestRun run = access.requireReadRun(id);
 		Long projectId = run.getProject().getId();
 		model.addAttribute("run", run);
+		model.addAttribute("prevRunId", reporting.previousRunId(run));
+		model.addAttribute("nextRunId", reporting.nextRunId(run));
 
 		// Independent, DTO-returning sections run concurrently (each opens its own read
 		// tx).
@@ -373,9 +375,11 @@ public class DashboardController {
 
 	@GetMapping("/perf-runs/{id}")
 	public String perfRun(@PathVariable Long id, Model model) {
-		access.requireReadPerfRun(id);
+		org.alexmond.unitrack.domain.PerfRun run = access.requireReadPerfRun(id);
 		model.addAttribute("detail", perfRunDetail.detail(id)
 			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Perf run not found")));
+		model.addAttribute("prevRunId", reporting.previousPerfRunId(run));
+		model.addAttribute("nextRunId", reporting.nextPerfRunId(run));
 		return "perf-run";
 	}
 

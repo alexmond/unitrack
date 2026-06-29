@@ -131,6 +131,50 @@ public class ReportingService {
 		return runs.findById(id);
 	}
 
+	/**
+	 * Id of the run just before/after this one in its project+branch+flag series, or
+	 * null.
+	 */
+	public Long previousRunId(TestRun run) {
+		return runs
+			.findPrevious(run.getProject().getId(), run.getBranch(), run.getFlag(), run.getCreatedAt(),
+					PageRequest.ofSize(1))
+			.stream()
+			.findFirst()
+			.map(TestRun::getId)
+			.orElse(null);
+	}
+
+	public Long nextRunId(TestRun run) {
+		return runs
+			.findNext(run.getProject().getId(), run.getBranch(), run.getFlag(), run.getCreatedAt(),
+					PageRequest.ofSize(1))
+			.stream()
+			.findFirst()
+			.map(TestRun::getId)
+			.orElse(null);
+	}
+
+	public Long previousPerfRunId(org.alexmond.unitrack.domain.PerfRun run) {
+		return perfRuns
+			.findPrevious(run.getProject().getId(), run.getBranch(), run.getFlag(), run.getCreatedAt(),
+					PageRequest.ofSize(1))
+			.stream()
+			.findFirst()
+			.map(org.alexmond.unitrack.domain.PerfRun::getId)
+			.orElse(null);
+	}
+
+	public Long nextPerfRunId(org.alexmond.unitrack.domain.PerfRun run) {
+		return perfRuns
+			.findNext(run.getProject().getId(), run.getBranch(), run.getFlag(), run.getCreatedAt(),
+					PageRequest.ofSize(1))
+			.stream()
+			.findFirst()
+			.map(org.alexmond.unitrack.domain.PerfRun::getId)
+			.orElse(null);
+	}
+
 	/** Recent perf runs (newest first) for a project. */
 	public List<org.alexmond.unitrack.domain.PerfRun> recentPerfRuns(Long projectId, int limit) {
 		return perfRuns.findByProjectIdOrderByCreatedAtDesc(projectId, PageRequest.ofSize(limit));
