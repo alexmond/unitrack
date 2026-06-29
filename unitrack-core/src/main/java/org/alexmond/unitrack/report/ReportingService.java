@@ -259,6 +259,58 @@ public class ReportingService {
 		return runs.findDistinctFlags(projectId);
 	}
 
+	/**
+	 * Per-module test totals for a run, for the Tests page. Surefire/JUnit XML carries no
+	 * module concept, so the module is derived from each test's package exactly as
+	 * {@link #moduleCoverage} derives coverage modules (segment after the longest common
+	 * package prefix) — so Tests-by-module and Coverage-by-module line up. Returns empty
+	 * for a single-module project so the caller can hide the section. (The real fix — an
+	 * explicit module carried by the uploader, since the report formats can't — is
+	 * tracked separately.)
+	 */
+	public List<TestModuleRow> testModules(Long runId) {
+		List<TestCaseResult> all = cases.findByRunIdOrderByStatusAscClassNameAscNameAsc(runId);
+		if (all.isEmpty()) {
+			return List.of();
+		}
+		List<String[]> segments = all.stream().map((c) -> splitPackage(packageOf(c.getClassName()))).toList();
+		int prefix = commonPrefixLength(segments);
+		Map<String, int[]> byModule = new TreeMap<>();
+		for (int i = 0; i < all.size(); i++) {
+			String[] s = segments.get(i);
+			String module = (s.length > prefix) ? s[prefix] : "(root)";
+			int[] a = byModule.computeIfAbsent(module, (k) -> new int[3]);
+			a[0]++;
+			TestStatus st = all.get(i).getStatus();
+			if (st == TestStatus.PASSED) {
+				a[1]++;
+			}
+			else if (st == TestStatus.SKIPPED) {
+				a[2]++;
+			}
+		}
+		if (byModule.size() <= 1) {
+			return List.of();
+		}
+		return byModule.entrySet()
+			.stream()
+			.map((e) -> new TestModuleRow(e.getKey(), e.getValue()[0], e.getValue()[1],
+					e.getValue()[0] - e.getValue()[1] - e.getValue()[2], e.getValue()[2]))
+			.toList();
+	}
+
+	/**
+	 * The package of a fully-qualified class name (everything before the last dot), or
+	 * null.
+	 */
+	private static String packageOf(String className) {
+		if (className == null) {
+			return null;
+		}
+		int dot = className.lastIndexOf('.');
+		return (dot > 0) ? className.substring(0, dot) : null;
+	}
+
 	public List<TestCaseResult> allCasesFor(Long runId) {
 		return cases.findByRunIdOrderByStatusAscClassNameAscNameAsc(runId);
 	}
