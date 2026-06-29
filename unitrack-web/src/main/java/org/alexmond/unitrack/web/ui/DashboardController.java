@@ -28,6 +28,7 @@ import org.alexmond.unitrack.report.PullRequestService;
 import org.alexmond.unitrack.report.QualityGateService;
 import org.alexmond.unitrack.report.ReportingService;
 import org.alexmond.unitrack.report.TestRegressionService;
+import org.alexmond.unitrack.report.TestRosterRow;
 import org.alexmond.unitrack.report.TriageService;
 import org.alexmond.unitrack.web.account.MembershipService;
 import org.alexmond.unitrack.web.ai.AiAnalyzer;
@@ -383,6 +384,59 @@ public class DashboardController {
 		model.addAttribute("prevRunId", reporting.previousPerfRunId(run));
 		model.addAttribute("nextRunId", reporting.nextPerfRunId(run));
 		return "perf-run";
+	}
+
+	@GetMapping("/projects/{id}/tests")
+	public String tests(@PathVariable Long id, @RequestParam(required = false) String flag, Model model) {
+		Project project = access.requireReadProject(id);
+		List<String> flags = reporting.testFlags(id);
+		String selectedFlag = pickFlag(flag, flags);
+
+		List<TestRun> trend = reporting.trendRuns(id, null, selectedFlag, TREND_LIMIT);
+		TestRun cur = trend.isEmpty() ? null : trend.get(trend.size() - 1);
+		TestRun prev = (trend.size() > 1) ? trend.get(trend.size() - 2) : null;
+
+		java.util.Set<String> flakyKeys = flaky.listFlaky(id)
+			.stream()
+			.map((v) -> testKey(v.className(), v.name()))
+			.collect(java.util.stream.Collectors.toSet());
+		List<TestRosterRow> roster = (cur != null) ? reporting.allCasesFor(cur.getId())
+			.stream()
+			.map((c) -> new TestRosterRow(c.getClassName(), c.getName(), c.getStatus().name(), c.getDurationMs(),
+					flakyKeys.contains(testKey(c.getClassName(), c.getName()))))
+			.toList() : List.of();
+
+		model.addAttribute("project", project);
+		model.addAttribute("flags", flags);
+		model.addAttribute("selectedFlag", selectedFlag);
+		model.addAttribute("cur", cur);
+		model.addAttribute("prev", prev);
+		model.addAttribute("roster", roster);
+		model.addAttribute("hasTrend", !trend.isEmpty());
+		model.addAttribute("trendLabels", toJson(labels(trend.stream().map(TestRun::getShortSha).toList())));
+		model.addAttribute("trendRunIds", toJson(trend.stream().map(TestRun::getId).toList()));
+		model.addAttribute("trendTimes", toJson(trend.stream().map(DashboardController::epochMilli).toList()));
+		model.addAttribute("trendPassed", toJson(trend.stream().map(TestRun::getPassed).toList()));
+		model.addAttribute("trendFailed", toJson(trend.stream().map((r) -> r.getFailed() + r.getErrors()).toList()));
+		return "tests";
+	}
+
+	private static String testKey(String className, String name) {
+		return ((className != null) ? className : "") + "#" + name;
+	}
+
+	/**
+	 * The flag to show: the requested one if valid, else the {@code default} rollup, else
+	 * the first.
+	 */
+	private String pickFlag(String requested, List<String> flags) {
+		if (requested != null && !requested.isBlank() && flags.contains(requested)) {
+			return requested;
+		}
+		if (flags.contains(TREND_FLAG)) {
+			return TREND_FLAG;
+		}
+		return flags.isEmpty() ? TREND_FLAG : flags.get(0);
 	}
 
 	@GetMapping("/projects/{id}/test")

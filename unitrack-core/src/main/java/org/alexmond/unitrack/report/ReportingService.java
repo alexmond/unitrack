@@ -251,6 +251,14 @@ public class ReportingService {
 				List.of(TestStatus.FAILED, TestStatus.ERROR));
 	}
 
+	/**
+	 * Distinct flags (series) a project has test runs for — for the Tests-page flag
+	 * filter.
+	 */
+	public List<String> testFlags(Long projectId) {
+		return runs.findDistinctFlags(projectId);
+	}
+
 	public List<TestCaseResult> allCasesFor(Long runId) {
 		return cases.findByRunIdOrderByStatusAscClassNameAscNameAsc(runId);
 	}
