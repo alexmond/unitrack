@@ -12,15 +12,6 @@
     <h1 th:text="${project.name} + ' — tests'">project — tests</h1>
     <nav th:replace="~{fragments/common :: subnav(${project.id}, 'tests')}"></nav>
 
-    <!-- Flag (test series) filter — only when a project reports more than one flag. -->
-    <nav th:if="${flags.size() > 1}" class="subnav module-filter" aria-label="Test flag filter">
-        <a th:each="f : ${flags}"
-           th:href="@{/projects/{id}/tests(id=${project.id},flag=${f})}"
-           th:classappend="${f == selectedFlag} ? 'current'"
-           th:attr="aria-current=${f == selectedFlag} ? 'page' : null"
-           th:text="${f}">default</a>
-    </nav>
-
     <!-- Empty state: no test runs for this flag yet. -->
     <div th:if="${cur == null}" class="empty">
         <i class="bi bi-check2-square empty-icon" aria-hidden="true"></i>

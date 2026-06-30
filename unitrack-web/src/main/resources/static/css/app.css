@@ -387,6 +387,11 @@ code.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-si
    e.g. the "Coverage by module" names look unclickable next to the blue branch links. */
 a code.mono { color: var(--blue); }
 a:hover code.mono { text-decoration: underline; }
+/* A table row that is itself selectable (filters/drills on click) reads as a link:
+   its name is blue and underlines on hover, like an anchored name. */
+tr.mod-row { cursor: pointer; }
+tr.mod-row code.mono { color: var(--blue); }
+tr.mod-row:hover code.mono { text-decoration: underline; }
 
 .gate {
     border: 1px solid var(--border);
