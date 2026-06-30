@@ -63,6 +63,12 @@
        th:classappend="${active == 'clusters'} ? 'current'"
        th:attr="aria-current=${active == 'clusters'} ? 'page' : null">
         <i class="bi bi-diagram-3" aria-hidden="true"></i> Failure clusters</a>
+    <!-- Internal preview (epic #390): the reconciled Tests page with Flaky + Clusters folded in.
+         Login-only while we test-drive the new data + UI; hidden from anonymous viewers. -->
+    <a th:if="${currentUser != null}" th:href="@{/projects/{id}/new-tests(id=${projectId})}"
+       th:classappend="${active == 'newtests'} ? 'current'"
+       th:attr="aria-current=${active == 'newtests'} ? 'page' : null">
+        <i class="bi bi-cone-striped" aria-hidden="true"></i> New tests</a>
     <!-- Management section — only for users who can write/manage this project. Hidden for anonymous
          and read-only visitors, so the public view of a project is read-only. -->
     <th:block th:if="${currentUser != null and @membershipService.canWrite(currentUser, projectId)}">

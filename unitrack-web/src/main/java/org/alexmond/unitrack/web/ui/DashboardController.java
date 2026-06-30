@@ -436,6 +436,68 @@ public class DashboardController {
 		return "tests";
 	}
 
+	/**
+	 * Internal preview of the reconciled Tests page (P0, epic #390): the Tests aspect
+	 * with Flaky and Failure-clusters folded in as sections, on the canonical analytics
+	 * skeleton. Login-gated in {@code SecurityConfig} so it stays an internal test-drive
+	 * surface; the shipped {@code /tests}, {@code /flaky}, and {@code /clusters} pages
+	 * are untouched.
+	 */
+	@GetMapping("/projects/{id}/new-tests")
+	public String newTests(@PathVariable Long id, @RequestParam(required = false) String flag, Model model) {
+		if (access.currentUsername() == null) {
+			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Sign in to preview the new Tests page");
+		}
+		Project project = access.requireReadProject(id);
+		List<String> flags = reporting.testFlags(id);
+		String selectedFlag = pickFlag(flag, flags);
+
+		List<TestRun> trend = reporting.trendRuns(id, null, selectedFlag, TREND_LIMIT);
+		TestRun cur = trend.isEmpty() ? null : trend.get(trend.size() - 1);
+		TestRun prev = (trend.size() > 1) ? trend.get(trend.size() - 2) : null;
+
+		List<FlakyTestView> flakyViews = flaky.listFlaky(id);
+		java.util.Set<String> flakyKeys = flakyViews.stream()
+			.map((v) -> testKey(v.className(), v.name()))
+			.collect(java.util.stream.Collectors.toSet());
+		List<TestRosterRow> roster = (cur != null) ? reporting.allCasesFor(cur.getId())
+			.stream()
+			.map((c) -> new TestRosterRow(c.getClassName(), c.getName(), c.getStatus().name(), c.getDurationMs(),
+					flakyKeys.contains(testKey(c.getClassName(), c.getName()))))
+			.toList() : List.of();
+
+		// Failure clusters, folded in (same split as the standalone clusters page): a
+		// real
+		// cluster spans >1 distinct test; a single test failing repeatedly is a recurring
+		// failure (minus those already flagged flaky, which live in the Flaky section).
+		List<FailureCluster> allClusters = clustering.cluster(id);
+		java.util.Set<String> flakyDisplay = flakyViews.stream()
+			.map(FlakyTestView::displayName)
+			.collect(java.util.stream.Collectors.toSet());
+
+		model.addAttribute("project", project);
+		model.addAttribute("flags", flags);
+		model.addAttribute("selectedFlag", selectedFlag);
+		model.addAttribute("cur", cur);
+		model.addAttribute("prev", prev);
+		model.addAttribute("roster", roster);
+		model.addAttribute("testModules", (cur != null) ? reporting.testModules(cur.getId()) : List.of());
+		model.addAttribute("flakyList", flakyViews);
+		model.addAttribute("clusters", allClusters.stream().filter((c) -> c.distinctTests() > 1).toList());
+		model.addAttribute("recurringFailures",
+				allClusters.stream()
+					.filter((c) -> c.distinctTests() == 1 && !flakyDisplay.contains(c.tests().get(0)))
+					.toList());
+		model.addAttribute("aiEnabled", aiAnalyzer.enabled());
+		model.addAttribute("hasTrend", !trend.isEmpty());
+		model.addAttribute("trendLabels", toJson(labels(trend.stream().map(TestRun::getShortSha).toList())));
+		model.addAttribute("trendRunIds", toJson(trend.stream().map(TestRun::getId).toList()));
+		model.addAttribute("trendTimes", toJson(trend.stream().map(DashboardController::epochMilli).toList()));
+		model.addAttribute("trendPassed", toJson(trend.stream().map(TestRun::getPassed).toList()));
+		model.addAttribute("trendFailed", toJson(trend.stream().map((r) -> r.getFailed() + r.getErrors()).toList()));
+		return "new-tests";
+	}
+
 	private static String testKey(String className, String name) {
 		return ((className != null) ? className : "") + "#" + name;
 	}

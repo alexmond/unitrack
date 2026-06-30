@@ -83,6 +83,10 @@ public class SecurityConfig {
 				auth.requestMatchers("/projects/*/settings", "/projects/*/visibility", "/projects/*/members",
 						"/projects/*/members/**", "/projects/*/alerts", "/projects/*/alerts/**")
 					.authenticated();
+				// Internal preview of the reconciled Tests page (epic #390): login-only
+				// while
+				// we test-drive the new data + UI, in open mode as well as closed.
+				auth.requestMatchers("/projects/*/new-tests").authenticated();
 				if (props.isRequireIngestToken()) {
 					auth.requestMatchers(HttpMethod.POST, "/api/v1/ingest").authenticated();
 				}
