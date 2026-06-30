@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.alexmond.unitrack.repository.CoverageFileEntryRepository;
 import org.alexmond.unitrack.repository.CoverageReportRepository;
+import org.alexmond.unitrack.repository.ModuleCoverageAgg;
 import org.alexmond.unitrack.repository.PackageCoverage;
 import org.alexmond.unitrack.repository.ProjectRepository;
 import org.alexmond.unitrack.repository.TestCaseResultRepository;
@@ -83,6 +84,24 @@ class ModuleCoverageTest {
 	}
 
 	@Test
+	void usesExplicitUploaderModuleWhenPresent() {
+		given(coverageFiles.existsByReportIdAndModuleIsNotNull(3L)).willReturn(true);
+		given(coverageFiles.aggregateByModule(3L))
+			.willReturn(List.of(modAgg("unitrack-core", 80, 20, 5), modAgg("unitrack-web", 40, 60, 8)));
+
+		List<ModuleCoverage> mods = reporting.moduleCoverage(3L);
+
+		assertThat(mods).extracting(ModuleCoverage::name).containsExactly("unitrack-core", "unitrack-web");
+		ModuleCoverage web = mods.stream().filter((m) -> m.name().equals("unitrack-web")).findFirst().orElseThrow();
+		assertThat(web.files()).isEqualTo(8);
+		assertThat(web.lineTotal()).isEqualTo(100);
+	}
+
+	private static ModuleCoverageAgg modAgg(String module, long covered, long missed, long files) {
+		return new ModAgg(module, covered, missed, files);
+	}
+
+	@Test
 	void singleModuleCollapsesToOneEntrySoTheViewCanHide() {
 		// Files in one package collapse to a single aggregate row → one (root) module.
 		given(coverageFiles.aggregateByPackage(2L)).willReturn(List.of(new Pkg("com/example/app", 3, 1, 2)));
@@ -96,6 +115,41 @@ class ModuleCoverageTest {
 		@Override
 		public String getPackageName() {
 			return this.packageName;
+		}
+
+		@Override
+		public long getLineCovered() {
+			return this.lineCovered;
+		}
+
+		@Override
+		public long getLineMissed() {
+			return this.lineMissed;
+		}
+
+		@Override
+		public long getBranchCovered() {
+			return 0;
+		}
+
+		@Override
+		public long getBranchMissed() {
+			return 0;
+		}
+
+		@Override
+		public long getFiles() {
+			return this.files;
+		}
+
+	}
+
+	/** Test stand-in for the {@link ModuleCoverageAgg} projection. */
+	private record ModAgg(String module, long lineCovered, long lineMissed, long files) implements ModuleCoverageAgg {
+
+		@Override
+		public String getModule() {
+			return this.module;
 		}
 
 		@Override
