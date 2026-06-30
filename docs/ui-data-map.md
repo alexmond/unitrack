@@ -115,10 +115,61 @@ Reached from: Overview PRs.
 
 ---
 
-## Reconcile TODO (next pass — do NOT apply yet)
-Once every tab is documented, align across tabs:
-- Consistent **level depth** per aspect (some tabs are flat at L2: Flaky, Clusters; others go L2→L3→L4→L5).
-- **Flag vs module** model: Load tests filters by flag (pills); others break down by module (list). Pick one navigation idiom.
-- **Flag scope** missing on Tests & Test timing.
-- **Dead ends:** coverage package/file rows and flaky/cluster rows don't drill to an entity — decide whether they should.
-- **Shared entity reuse:** Run / Compare / Test-history are reached at differing depths per tab; define one canonical path.
+## Reconciliation spec (panel output — for review)
+
+Cross-tab reconciliation from a 7-role design panel (UX/IA director, frontend/design-system,
+competitor analyst, QA, restraint skeptic, developer advocate, performance engineer). **Design
+only — no code.** Goal/bar: *a user who learns one tab can predict every other tab — same
+levels, same idioms, no dead ends, one path to each shared entity.* The Overview page is the
+model the others converge on.
+
+### Core decisions (resolved)
+
+| # | Question | Decision |
+|---|---|---|
+| D1 | **Flag vs module idiom** | Flag and branch are **scope controls** (persisted dropdowns in the shared subnav), *not* a breakdown idiom. The **breakdown is always a list below the chart** — by *module* on Tests/Coverage/Timing, by *transaction LABEL* on Load tests. **Kill the pill bar.** |
+| D2 | **Flag scope missing on Tests/Timing** | Solved free by D1 — the subnav flag dropdown appears on every analytics tab (hidden when the project has one flag). |
+| D3 | **Flaky + Clusters as tabs** | **Fold into Tests** as L3 sections (your steer). Show a *summary* inline; "nothing to drill" renders as plain inline text (not fake-blue). But **keep the full flaky state-management roster and the cluster detail reachable as drills** — competitor evidence (Datadog flaky-management, Allure Categories) says don't delete the workflow surface. |
+| D4 | **Coverage file/package dead-ends** | **Phase it.** Now: package rows **expand inline**, file rows **link to the latest Run's `#coverage-by-file` (existing L5)** — no new screen; non-drilling names stay **non-blue**. Later (Phase 3): a real annotated **file-coverage detail (L4)** — Codecov table-stakes. |
+| D5 | **Shared-entity paths** | One canonical path each: **Run** ← any run reference; **Compare** ← any trend point; **Test history** ← any blue test name (Tests roster / Timing slowest / folded Flaky); **Perf-run** ← any perf point/row; **PR** ← any PR row. Same kind of thing = same color = same destination. |
+| D6 | **Skeleton = contract of slots** | The shared skeleton is *slots that may be empty or absent*, **not** five sections bolted onto every tab. By-module list renders only when `modules > 1`; empty KPI tiles are suppressed (not "—"); a 1-point trend is an empty state, not a chart; regression overlays/banners are hidden with no baseline. |
+
+### Canonical analytics-tab skeleton (top → bottom)
+
+1. **Shared subnav** — Analytics group ∣ Manage group (visual divider), plus **scope controls: branch ▾ + flag ▾** (persisted across tabs; flag hidden when single-flag).
+2. **KPI tile row** (`.stat-row`) — 3–4 tiles, each `value + Δ vs prev run`, color-coded. Δ suppressed on first run. Empty tiles suppressed.
+3. **Latest run/report line** (`.muted`) — blue → **Run (L4)**. (Order fixed: tiles *then* this line, on every tab — Coverage currently has it above; move it down.)
+4. **Primary trend** — time/run toggle, regression-since overlay, points → **Compare (L4)**. One trend per tab (Load keeps its 3 charts sharing one toggle). 1-point → "needs ≥2 runs" empty state.
+5. **Breakdown list** (`.table`, never pills) — "By module" / "By transaction" rows; first col `tr.mod-row` blue `code.mono`; row-click filters the rosters below in-page; `branch-current` = selected. Hidden when only one group.
+6. **Detail roster(s)** — search box; **blue entity names → L4 entity**. Always the bottom slot.
+7. **Consistent empty state** (`.empty`) per section.
+
+### Final tab list & L0–L5 path (after folding Flaky + Clusters into Tests)
+
+| Tab | Path |
+|---|---|
+| **Overview** (L1) | L0 Board → **L1** → section jumps to tabs / trend point → Compare / run·PR rows → Run·PR (L4) |
+| **Tests** | L2 tiles+trend → **L3** by-module · all-tests roster · *Flaky section* · *Clusters section* → **L4** Test history / Compare / Run → L5 |
+| **Coverage** | L2 tiles+trend → **L3** by-module · by-package (inline expand) · worst-covered files → **L4** Run (file → `run#coverage-by-file`, L5) / Compare |
+| **Test timing** | L2 tiles+trend → **L3** timing-by-module · slowest roster → **L4** Test history / Compare *(see Open decision T)* |
+| **Load tests** | L2 tiles + latency/throughput/error trends → **L3** by-**label** list · recent-perf-runs roster → **L4** Perf-run / Compare → L5 per-label |
+| **Manage** (Owners · Triage · Alerts · Settings · Members · Ingest) | write-paths; deliberately outside the analytics skeleton |
+
+### Build plan — shared fragments (frontend, buildable on existing CSS)
+
+- `fragments/components :: kpiTile / emptyState / latestRunLine / entityLink` — promote the markup that's already duplicated 4–5×.
+- Static `/static/js/trend.js` exposing `window.__trend(canvas, {datasets, onPoint, overlay})` on the existing `window.__chart` — kills ~600 lines of copy-pasted Chart.js and the `healthOverlay` drift. (Honor `[[` → `[ [`; mirror exposure into the shadowing test `application.yml`.)
+- By-module/roster unify **by convention, not one table fragment** (columns legitimately differ): always a list, first col `mod-row` blue name, `branch-current` selected. Retire `.subnav.module-filter` as a breakdown.
+
+### Priorities
+
+- **P0 (predictability — the reconcile core):** D1 flag/branch → subnav dropdowns + kill pill bar; D3 fold Flaky/Clusters into Tests; D5 canonical entity links (esp. Timing slowest name → test history, folded-flaky name → test history); D6 empty/first-run states everywhere; fix tile/latest-line order.
+- **P1 (dead-ends + drift):** D4 coverage inline-expand + file→Run L5 (and de-blue non-links); extract `trend.js` + the four fragments; Coverage "Recent reports" list (reach older coverage runs); drop Coverage's redundant time/run toggle.
+- **P2 (consumer depth):** failures spine (KPI failures tile → Run.Newly-failing; L0 red card "broken-since" → Run.Failures); cluster member → test history + onset commit; flaky "known vs new" signal; per-test sparkline + retry count in roster.
+- **P3 (beyond reconciliation — net-new):** annotated file-coverage detail (L4) + source/blame/rerun links; Load-tests percentile selector, SLA threshold lines, baseline selector, per-label trend (L4) + perf Compare; Timing "got-slower" Δ column.
+
+### Unresolved tensions (your call)
+
+- **Decision T — does Test timing stay a tab? → RESOLVED: keep it a tab.** (The Restraint Skeptic argued it's just *Tests sorted by duration* → merge, six tabs become four; the Performance Engineer kept them distinct as different subjects. Per epic #390's framing — "unify the four tabs," not delete one — Test timing stays its own tab and conforms to the canonical skeleton.)
+- **Flaky management surface placement** — folded summary lives in Tests; where does the full **state-management roster** live — an in-Tests "manage flaky" expansion, or a Manage-group tab? (Competitor says keep it a real surface either way.)
+- **Per-test status vocabulary** — rosters hand-roll a `.badge`; runs use `statusPill`. Unify to one, or keep `.badge` for denser per-test rows (documented)?

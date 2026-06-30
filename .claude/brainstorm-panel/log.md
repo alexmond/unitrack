@@ -106,3 +106,12 @@ Evidence from past panels in this repo. Bias future proposals with it; it's not 
 - Restraint (held the line, 8×+): reject B/C as tab-sprawl; the fix is labeling + linking + unify the 3 deep-dives; a 7th tab must retire one. The rename satisfies this (addition-free).
 - Overlap fix = direction of links: Overview tiles/sections deep-link DOWN into each metric page ("how healthy, across metrics" → "why, within one metric"). Flaky + Failure clusters become slices cross-linked from Tests.
 - Mockups updated (static, real app.css): all 4 + the renamed Tests deep-dive; sent for review. Open follow-up: the all-tests **roster + search** is a small new read-side feature (widen slowest-tests → all tests + filter), beyond pure layout — scope it into the Tests-page phase.
+
+## 2026-06-30 — UI data-map cross-tab reconciliation (improve existing artifact / IA)
+- Proposed: UX/IA (director), Frontend/design-system, Competitor analyst, QA, Restraint skeptic. User added: **Developer + Performance Engineer** ("data is also for them not just for testers") — for analytics/IA targets here, seat consumer-advocate roles for each audience, not just QA.
+- Style: swarm → director-led, 1 round (strong convergence; cap was 2, didn't need round 2).
+- User pre-steer at convene time: Flaky + Clusters are NOT separate tabs — sections of Tests; "nothing to drill → show inline." Director should make the IA the director (not visual designer) when the target is navigation structure, not visual polish.
+- Resolved unanimously: **flag/branch = persisted scope dropdowns in subnav; module/label = the one breakdown-list idiom; kill the pill bar** (Load tests). Perf eng's framing (flag=scenario=scope, label=transaction=breakdown) settled the long-open flag-vs-module question.
+- Real split surfaced for the user: **Restraint Skeptic wants Test timing MERGED into Tests** ("Tests sorted by duration") → 6 tabs→4; Perf eng kept them distinct. Director recommended keep-as-tab (epic #390 = unify four, not delete) but flagged as user decision T.
+- Competitor nuance worth keeping: fold flaky/cluster *summaries* into Tests but DON'T delete the flaky state-management roster / cluster detail (Datadog flaky-mgmt, Allure Categories are first-class) — "inline entry point, full surface as drill."
+- Recurring (3rd UI target): the "skeleton = slots that may be empty/absent" + first-run/empty-state discipline keeps coming up; and "blue name ⇔ real drill" (never fake-blue a dead-end) is now a standing repo rule.
