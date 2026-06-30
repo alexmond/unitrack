@@ -103,6 +103,10 @@ public class SecurityConfig {
 					if (!props.isRequireIngestToken()) {
 						auth.requestMatchers(HttpMethod.POST, "/api/v1/ingest").permitAll();
 					}
+					// SCM webhooks authenticate by their own signature/token (verified in
+					// the
+					// controller), not by a session or API token.
+					auth.requestMatchers(HttpMethod.POST, "/api/v1/webhooks/**").permitAll();
 					auth.requestMatchers(HttpMethod.POST, "/**").authenticated();
 					auth.requestMatchers(HttpMethod.PUT, "/**").authenticated();
 					auth.requestMatchers(HttpMethod.DELETE, "/**").authenticated();

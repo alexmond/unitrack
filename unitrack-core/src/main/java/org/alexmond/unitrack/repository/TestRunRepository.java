@@ -152,6 +152,16 @@ public interface TestRunRepository extends JpaRepository<TestRun, Long> {
 			+ "where t.project.id = :projectId and t.prNumber is not null order by t.prNumber desc")
 	List<Integer> findDistinctPrNumbers(@Param("projectId") Long projectId);
 
+	/**
+	 * Ids of every run on a branch — for hard-deleting a removed/expired branch (#400).
+	 */
+	@Query("select t.id from TestRun t where t.project.id = :projectId and t.branch = :branch")
+	List<Long> findIdsByProjectIdAndBranch(@Param("projectId") Long projectId, @Param("branch") String branch);
+
+	/** The id of a project's single most recent run — kept as a safety during expiry. */
+	@Query("select t.id from TestRun t where t.project.id = :projectId order by t.createdAt desc limit 1")
+	Long findLatestRunId(@Param("projectId") Long projectId);
+
 	/** All runs belonging to one pull/merge request, newest first (the PR timeline). */
 	List<TestRun> findByProjectIdAndPrNumberOrderByCreatedAtDesc(Long projectId, Integer prNumber);
 
