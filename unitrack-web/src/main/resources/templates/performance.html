@@ -1,49 +1,80 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout}">
-<head><title th:text="'UniTrack — ' + ${project.name} + ' performance'">UniTrack</title></head>
+<head><title th:text="'UniTrack — ' + ${project.name} + ' test timing'">UniTrack</title></head>
 <body>
 
 <main class="container" layout:fragment="content">
     <p class="crumbs">
         <a th:href="@{/}">Projects</a> /
         <a th:href="@{/projects/{id}(id=${project.id})}" th:text="${project.name}">project</a> /
-        <span>Performance</span>
+        <span>Test timing</span>
     </p>
-    <h1 th:text="${project.name} + ' — performance'">project — performance</h1>
+    <h1 th:text="${project.name} + ' — test timing'">project — test timing</h1>
     <nav th:replace="~{fragments/common :: subnav(${project.id}, 'timing')}"></nav>
 
-    <h2>Suite-time trend <span class="muted">(seconds per run)</span></h2>
-    <div class="chart-wrap">
-        <canvas id="suiteChart" height="90"></canvas>
-        <p class="muted" th:if="${slowest.isEmpty()}">No runs yet.</p>
-    </div>
-
-    <h2>Slowest tests
-        <span class="muted" th:if="${latestRunId != null}">
-            (latest run <a th:href="@{/runs/{id}(id=${latestRunId})}" th:text="'#' + ${latestRunId}">#0</a>)
-        </span>
-    </h2>
+    <!-- Empty state: no timing data yet. -->
     <div th:if="${slowest.isEmpty()}" class="empty">
         <i class="bi bi-stopwatch empty-icon" aria-hidden="true"></i>
         <h3>No test timings yet</h3>
-        <p>Per-test durations appear here once runs are uploaded.</p>
+        <p>Suite time and per-test durations appear here once runs are uploaded.</p>
     </div>
-    <table class="table table-hover align-middle" th:unless="${slowest.isEmpty()}">
-        <thead>
-        <tr><th>Test</th><th>Suite</th><th class="num">Duration</th><th>Status</th><th></th></tr>
-        </thead>
-        <tbody>
-        <tr th:each="t : ${slowest}">
-            <td><code class="mono" th:text="${t.className()} + ' › ' + ${t.name()}">Test › method</code></td>
-            <td class="muted" th:text="${t.suiteName()}">suite</td>
-            <td class="num" th:text="${#numbers.formatInteger(t.durationMs(), 1, 'COMMA')} + ' ms'">0 ms</td>
-            <td><span class="badge"
-                      th:classappend="${t.status() == 'PASSED'} ? 'pass' : (${t.status() == 'SKIPPED'} ? '' : 'fail')"
-                      th:text="${t.status()}">PASSED</span></td>
-            <td><a th:href="@{/projects/{id}/test(id=${project.id},className=${t.className()},name=${t.name()})}">trend &rarr;</a></td>
-        </tr>
-        </tbody>
-    </table>
+
+    <th:block th:unless="${slowest.isEmpty()}">
+        <!-- KPI tiles — latest run's suite time (with change vs previous run), slowest test, runs tracked. -->
+        <div class="stat-row">
+            <div class="stat">
+                <div class="label">Suite time</div>
+                <div class="value"
+                     th:text="${curSuiteMs != null} ? ${#numbers.formatDecimal(curSuiteMs / 1000.0,1,1)} + 's' : '—'">0s</div>
+                <div th:if="${suiteDeltaMs != null}" class="delta"
+                     th:with="d=${suiteDeltaMs / 1000.0}"
+                     th:classappend="${d > 0.05} ? 'down' : (${d < -0.05} ? 'up' : 'flat')"
+                     th:text="(${d >= 0} ? '+' : '') + ${#numbers.formatDecimal(d,1,1)} + 's'">+0.0s</div>
+            </div>
+            <div class="stat" th:with="top=${slowest[0]}">
+                <div class="label">Slowest test</div>
+                <div class="value" th:text="${#numbers.formatInteger(top.durationMs(), 1, 'COMMA')} + ' ms'">0 ms</div>
+                <div class="delta flat" th:text="${top.name()}" th:title="${top.className()} + ' › ' + ${top.name()}">test</div>
+            </div>
+            <div class="stat">
+                <div class="label">Runs tracked</div>
+                <div class="value" th:text="${runsTracked}">0</div>
+            </div>
+        </div>
+
+        <div class="trend-head">
+            <h2>Suite-time trend <span class="muted">(seconds per run)</span></h2>
+            <div id="trendModeToggle" class="seg" role="group" aria-label="Trend x-axis mode">
+                <button type="button" data-mode="time" class="active">Over time</button>
+                <button type="button" data-mode="run">By run</button>
+            </div>
+        </div>
+        <div class="chart-wrap">
+            <canvas id="suiteChart" height="90"></canvas>
+        </div>
+
+        <h2>Slowest tests
+            <span class="muted" th:if="${latestRunId != null}">
+                (latest run <a th:href="@{/runs/{id}(id=${latestRunId})}" th:text="'#' + ${latestRunId}">#0</a>)
+            </span>
+        </h2>
+        <table class="table table-hover align-middle">
+            <thead>
+            <tr><th>Test</th><th>Suite</th><th class="num">Duration</th><th>Status</th><th></th></tr>
+            </thead>
+            <tbody>
+            <tr th:each="t : ${slowest}">
+                <td><code class="mono" th:text="${t.className()} + ' › ' + ${t.name()}">Test › method</code></td>
+                <td class="muted" th:text="${t.suiteName()}">suite</td>
+                <td class="num" th:text="${#numbers.formatInteger(t.durationMs(), 1, 'COMMA')} + ' ms'">0 ms</td>
+                <td><span class="badge"
+                          th:classappend="${t.status() == 'PASSED'} ? 'pass' : (${t.status() == 'SKIPPED'} ? '' : 'fail')"
+                          th:text="${t.status()}">PASSED</span></td>
+                <td><a th:href="@{/projects/{id}/test(id=${project.id},className=${t.className()},name=${t.name()})}">history &rarr;</a></td>
+            </tr>
+            </tbody>
+        </table>
+    </th:block>
 </main>
 <th:block layout:fragment="scripts">
 
@@ -52,39 +83,99 @@
     const labels = JSON.parse(/*[[${trendLabels}]]*/ '[]');
     const seconds = JSON.parse(/*[[${trendSeconds}]]*/ '[]');
     const runIds = JSON.parse(/*[[${trendRunIds}]]*/ '[]');
-    // Click a point to investigate: open it vs the PREVIOUS run (the prior point) so you see
-    // which tests changed; the first point (no previous) opens the run itself.
-    function openCompare(chart, evt, ids) {
+    const times = JSON.parse(/*[[${trendTimes}]]*/ '[]');
+    let suiteChartInstance;
+    let trendMode = 'time';
+
+    function fmtDate(ms) { return new Date(ms).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); }
+    function fmtDateTime(ms) {
+        return new Date(ms).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    }
+    function xAt(i) { return trendMode === 'time' ? times[i] : i; }
+    function pts(arr) { return arr.map(function (v, i) { return { x: xAt(i), y: v }; }); }
+    // Click a point: open it vs the previous run to see which tests changed; first point opens the run.
+    function openCompare(chart, evt) {
         const hit = chart.getElementsAtEventForMode(evt, 'nearest', { intersect: false }, true);
         if (!hit.length) { return; }
         const i = hit[0].index;
-        const id = ids[i];
+        const id = runIds[i];
         if (id == null) { return; }
-        const prev = (i > 0) ? ids[i - 1] : null;
+        const prev = (i > 0) ? runIds[i - 1] : null;
         window.location = (prev != null) ? ('/compare?base=' + prev + '&head=' + id) : ('/runs/' + id);
     }
+
     if (labels.length > 0 && window.Chart) {
         const css = getComputedStyle(document.documentElement);
         const muted = css.getPropertyValue('--muted').trim() || '#8b98a5';
         const text = css.getPropertyValue('--text').trim() || '#e6edf3';
         const grid = css.getPropertyValue('--border').trim() || '#2c343d';
-        window.__chart(document.getElementById('suiteChart'), {
+
+        function xTick(value) {
+            if (trendMode === 'time') { return fmtDate(value); }
+            const i = Math.round(value);
+            return (i >= 0 && i < labels.length) ? labels[i] : '';
+        }
+        function xBounds() {
+            if (trendMode !== 'time') { return { min: undefined, max: undefined }; }
+            const ts = times.filter(function (t) { return t != null; });
+            if (!ts.length) { return { min: undefined, max: undefined }; }
+            const t0 = Math.min.apply(null, ts), tN = Math.max.apply(null, ts);
+            const span = tN - t0;
+            const pad = span > 0 ? Math.max(span * 0.02, 3600000) : 43200000;
+            return { min: t0 - pad, max: tN + pad };
+        }
+        const initBounds = xBounds();
+
+        suiteChartInstance = window.__chart(document.getElementById('suiteChart'), {
             type: 'line',
             data: {
-                labels: labels,
                 datasets: [
-                    { label: 'Suite time (s)', data: seconds, borderColor: '#d29922',
-                      backgroundColor: 'rgba(210,153,34,.15)', tension: .25, spanGaps: true }
+                    { label: 'Suite time (s)', data: pts(seconds), borderColor: '#d29922',
+                      backgroundColor: 'rgba(210,153,34,.15)', tension: .25, spanGaps: true, fill: true,
+                      pointRadius: 2, borderWidth: 2 }
                 ]
             },
             options: {
-                onClick: function (e, els, chart) { openCompare(chart, e, runIds); },
+                onClick: function (e, els, chart) { openCompare(chart, e); },
                 onHover: function (e, els) { e.native.target.style.cursor = els.length ? 'pointer' : 'default'; },
+                parsing: false,
                 scales: { y: { beginAtZero: true, ticks: { color: muted }, grid: { color: grid } },
-                          x: { ticks: { color: muted }, grid: { color: grid } } },
-                plugins: { legend: { labels: { color: text } } }
+                          x: { type: 'linear', offset: true, min: initBounds.min, max: initBounds.max,
+                               ticks: { color: muted, autoSkip: true, maxRotation: 0, maxTicksLimit: 8,
+                                        callback: function (v) { return xTick(v); } },
+                               grid: { color: grid } } },
+                plugins: { legend: { labels: { color: text } },
+                           tooltip: { callbacks: { title: function (items) {
+                               const i = items[0].dataIndex;
+                               const sha = labels[i];
+                               const when = (times[i] != null) ? fmtDateTime(times[i]) : null;
+                               if (!when) { return sha; }
+                               return (sha && sha !== '—') ? (sha + ' · ' + when) : when;
+                           } } } }
             }
         });
+
+        function redrawTrend() {
+            if (!suiteChartInstance) { return; }
+            suiteChartInstance.data.datasets[0].data = pts(seconds);
+            const b = xBounds();
+            suiteChartInstance.options.scales.x.min = b.min;
+            suiteChartInstance.options.scales.x.max = b.max;
+            suiteChartInstance.update();
+        }
+
+        const toggle = document.getElementById('trendModeToggle');
+        if (toggle) {
+            toggle.addEventListener('click', function (e) {
+                const btn = e.target.closest('button[data-mode]');
+                if (!btn) { return; }
+                trendMode = btn.getAttribute('data-mode');
+                toggle.querySelectorAll('button[data-mode]').forEach(function (b) {
+                    b.classList.toggle('active', b.getAttribute('data-mode') === trendMode);
+                });
+                redrawTrend();
+            });
+        }
     }
 </script>
 </th:block>

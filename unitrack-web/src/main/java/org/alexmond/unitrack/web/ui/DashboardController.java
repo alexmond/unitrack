@@ -333,14 +333,21 @@ public class DashboardController {
 	public String performance(@PathVariable Long id, Model model) {
 		Project project = access.requireReadProject(id);
 		PerformanceSummary summary = performance.summary(id, TREND_FLAG, PERF_SLOW_LIMIT, TREND_LIMIT);
+		List<DurationPoint> suiteTrend = summary.suiteTimeTrend();
+		DurationPoint curPt = suiteTrend.isEmpty() ? null : suiteTrend.get(suiteTrend.size() - 1);
+		DurationPoint prevPt = (suiteTrend.size() > 1) ? suiteTrend.get(suiteTrend.size() - 2) : null;
 		model.addAttribute("project", project);
 		model.addAttribute("slowest", summary.slowestInLatestRun());
 		model.addAttribute("latestRunId", summary.latestRunId());
-		model.addAttribute("trendLabels",
-				toJson(labels(summary.suiteTimeTrend().stream().map(DurationPoint::shortSha).toList())));
+		model.addAttribute("curSuiteMs", (curPt != null) ? curPt.durationMs() : null);
+		model.addAttribute("suiteDeltaMs",
+				(curPt != null && prevPt != null) ? curPt.durationMs() - prevPt.durationMs() : null);
+		model.addAttribute("runsTracked", suiteTrend.size());
+		model.addAttribute("trendLabels", toJson(labels(suiteTrend.stream().map(DurationPoint::shortSha).toList())));
 		model.addAttribute("trendSeconds",
-				toJson(summary.suiteTimeTrend().stream().map((p) -> round(p.durationMs() / 1000.0)).toList()));
-		model.addAttribute("trendRunIds", toJson(summary.suiteTimeTrend().stream().map(DurationPoint::runId).toList()));
+				toJson(suiteTrend.stream().map((p) -> round(p.durationMs() / 1000.0)).toList()));
+		model.addAttribute("trendRunIds", toJson(suiteTrend.stream().map(DurationPoint::runId).toList()));
+		model.addAttribute("trendTimes", toJson(suiteTrend.stream().map((p) -> p.createdAt().toEpochMilli()).toList()));
 		return "performance";
 	}
 
