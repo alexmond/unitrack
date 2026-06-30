@@ -131,7 +131,7 @@ public class IngestController {
 			@RequestParam(required = false) String commit, @RequestParam(required = false) String buildUrl,
 			@RequestParam(required = false) String buildName, @RequestParam(required = false) String ciProvider,
 			@RequestParam(required = false) String runKey, @RequestParam(required = false) String baseBranch,
-			@RequestParam(required = false) Integer prNumber,
+			@RequestParam(required = false) Integer prNumber, @RequestParam(required = false) String module,
 			@RequestParam(name = "junit", required = false) List<MultipartFile> junit,
 			@RequestParam(name = "jacoco", required = false) List<MultipartFile> jacoco,
 			@RequestParam(name = "perf", required = false) List<MultipartFile> perf,
@@ -156,7 +156,7 @@ public class IngestController {
 		boolean newProject = (existing == null);
 
 		IngestRequest meta = new IngestRequest(project, repoUrl, branch, flag, commit, buildUrl, buildName, ciProvider,
-				runKey, baseBranch, prNumber);
+				runKey, baseBranch, prNumber, module);
 		long reportLimit = ingestProperties.maxReportBytesValue();
 		long perfLimit = ingestProperties.maxPerfBytesValue();
 
