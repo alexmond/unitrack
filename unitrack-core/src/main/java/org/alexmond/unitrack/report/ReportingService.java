@@ -355,6 +355,47 @@ public class ReportingService {
 		return cases.findByRunIdOrderByStatusAscClassNameAscNameAsc(runId);
 	}
 
+	/**
+	 * The module label of each case in {@code cases} (explicit uploader module, else
+	 * package-derived) in input order — exposed for module-scoped Tests views so a caller
+	 * can filter the roster and KPI tiles to one module without re-deriving the prefix.
+	 */
+	public List<String> moduleOf(List<TestCaseResult> cases) {
+		return moduleOfEach(cases);
+	}
+
+	/**
+	 * Per-run {@code [passed, failed+errors]} counts for a single module across the given
+	 * runs (kept in input order), so clicking a "Tests by module" row can scope the whole
+	 * Tests page — the trend graph included. Module resolution matches
+	 * {@link #testModules}. NB: this loads each run's cases (one query per run); fine for
+	 * the on-demand module-scoped view, but a SQL aggregate would scale better on large
+	 * histories.
+	 */
+	public List<int[]> testModuleTrend(List<Long> runIds, String module) {
+		List<int[]> out = new ArrayList<>(runIds.size());
+		for (Long runId : runIds) {
+			List<TestCaseResult> all = cases.findByRunIdOrderByStatusAscClassNameAscNameAsc(runId);
+			List<String> mods = moduleOfEach(all);
+			int passed = 0;
+			int failed = 0;
+			for (int i = 0; i < all.size(); i++) {
+				if (!module.equals(mods.get(i))) {
+					continue;
+				}
+				TestStatus st = all.get(i).getStatus();
+				if (st == TestStatus.PASSED) {
+					passed++;
+				}
+				else if (st == TestStatus.FAILED || st == TestStatus.ERROR) {
+					failed++;
+				}
+			}
+			out.add(new int[] { passed, failed });
+		}
+		return out;
+	}
+
 	public Optional<CoverageReport> coverageFor(Long runId) {
 		return coverageReports.findByRunId(runId);
 	}
