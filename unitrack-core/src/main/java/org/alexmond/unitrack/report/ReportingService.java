@@ -296,6 +296,33 @@ public class ReportingService {
 	}
 
 	/**
+	 * Per-module suite-time totals for a run, for the Test timing page. Same module
+	 * resolution as {@link #testModules} (explicit uploader module, else
+	 * package-derived); empty for a single-module project so the caller can hide the
+	 * section.
+	 */
+	public List<TestModuleTiming> testModuleTiming(Long runId) {
+		List<TestCaseResult> all = cases.findByRunIdOrderByStatusAscClassNameAscNameAsc(runId);
+		if (all.isEmpty()) {
+			return List.of();
+		}
+		List<String> modules = moduleOfEach(all);
+		Map<String, long[]> byModule = new TreeMap<>();
+		for (int i = 0; i < all.size(); i++) {
+			long[] a = byModule.computeIfAbsent(modules.get(i), (k) -> new long[2]);
+			a[0]++;
+			a[1] += all.get(i).getDurationMs();
+		}
+		if (byModule.size() <= 1) {
+			return List.of();
+		}
+		return byModule.entrySet()
+			.stream()
+			.map((e) -> new TestModuleTiming(e.getKey(), (int) e.getValue()[0], e.getValue()[1]))
+			.toList();
+	}
+
+	/**
 	 * The module of each test case, in order: the explicit uploader-supplied module
 	 * (#393) when any case carries one, otherwise the package-derived module (segment
 	 * after the longest common package prefix).

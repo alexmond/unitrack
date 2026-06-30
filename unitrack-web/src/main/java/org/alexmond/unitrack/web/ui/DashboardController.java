@@ -339,6 +339,8 @@ public class DashboardController {
 		model.addAttribute("project", project);
 		model.addAttribute("slowest", summary.slowestInLatestRun());
 		model.addAttribute("latestRunId", summary.latestRunId());
+		model.addAttribute("timingModules",
+				(summary.latestRunId() != null) ? reporting.testModuleTiming(summary.latestRunId()) : List.of());
 		model.addAttribute("curSuiteMs", (curPt != null) ? curPt.durationMs() : null);
 		model.addAttribute("suiteDeltaMs",
 				(curPt != null && prevPt != null) ? curPt.durationMs() - prevPt.durationMs() : null);
