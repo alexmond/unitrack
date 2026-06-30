@@ -250,6 +250,12 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 /* numeric data cells in monospace for column alignment (headers stay in the label font) */
 td.num { font-family: var(--font-mono); font-size: var(--fs-sm); }
 
+/* Sortable tables: headers are clickable; the active column shows a direction caret. */
+.table.sortable thead tr th { cursor: pointer; user-select: none; }
+.table.sortable thead tr th:hover { color: var(--text); }
+.table.sortable thead tr th[aria-sort="ascending"]::after { content: " \2191"; }
+.table.sortable thead tr th[aria-sort="descending"]::after { content: " \2193"; }
+
 /* Tinted chip with a hue-matched border (color-mix derives the tint per theme, so light
    mode reads correctly too — replaces the hard-coded rgba fills). */
 .badge {

@@ -133,6 +133,8 @@ model the others converge on.
 | D4 | **Coverage file/package dead-ends** | **Phase it.** Now: package rows **expand inline**, file rows **link to the latest Run's `#coverage-by-file` (existing L5)** — no new screen; non-drilling names stay **non-blue**. Later (Phase 3): a real annotated **file-coverage detail (L4)** — Codecov table-stakes. |
 | D5 | **Shared-entity paths** | One canonical path each: **Run** ← any run reference; **Compare** ← any trend point; **Test history** ← any blue test name (Tests roster / Timing slowest / folded Flaky); **Perf-run** ← any perf point/row; **PR** ← any PR row. Same kind of thing = same color = same destination. |
 | D6 | **Skeleton = contract of slots** | The shared skeleton is *slots that may be empty or absent*, **not** five sections bolted onto every tab. By-module list renders only when `modules > 1`; empty KPI tiles are suppressed (not "—"); a 1-point trend is an empty state, not a chart; regression overlays/banners are hidden with no baseline. |
+| D7 | **Breakdown click = scope the whole tab** | Clicking a breakdown (by-module / by-label) row **scopes the entire tab** — KPI tiles, the primary trend graph, *and* the roster — to that group, not just an in-page roster filter. Server-driven (`?module=…`), the selected row is highlighted (`branch-current`), and a **chip + "← All tests" returns to the unscoped view**. "Bring me to the group, graph included; give me a way back." |
+| D8 | **Roster default = the rows that matter** | The detail roster never opens as a flat full dump. Default = **failing + flaky** (a one-glance counts strip above), with passing/skipped folded behind **"Show all N tests"**; **search reaches every test**; **columns are sortable**. No competitor opens with a 1200-row list (Datadog: failed→flaky→slowest + paging; Allure: collapsible suites tree; Codecov Test Analytics: top-N). See the roster-slot spec below. |
 
 ### Canonical analytics-tab skeleton (top → bottom)
 
@@ -140,8 +142,8 @@ model the others converge on.
 2. **KPI tile row** (`.stat-row`) — 3–4 tiles, each `value + Δ vs prev run`, color-coded. Δ suppressed on first run. Empty tiles suppressed.
 3. **Latest run/report line** (`.muted`) — blue → **Run (L4)**. (Order fixed: tiles *then* this line, on every tab — Coverage currently has it above; move it down.)
 4. **Primary trend** — time/run toggle, regression-since overlay, points → **Compare (L4)**. One trend per tab (Load keeps its 3 charts sharing one toggle). 1-point → "needs ≥2 runs" empty state.
-5. **Breakdown list** (`.table`, never pills) — "By module" / "By transaction" rows; first col `tr.mod-row` blue `code.mono`; row-click filters the rosters below in-page; `branch-current` = selected. Hidden when only one group.
-6. **Detail roster(s)** — search box; **blue entity names → L4 entity**. Always the bottom slot.
+5. **Breakdown list** (`.table`, never pills) — "By module" / "By transaction" rows; first col `tr.mod-row` blue `code.mono`; **row-click scopes the whole tab** (KPI tiles + trend + roster) to that group via `?module=…` — server-driven, `branch-current` = selected, chip + "← All tests" returns (D7). Hidden when only one group.
+6. **Detail roster(s)** — **search-first** header (reaches every entity); default shows only **failing + flaky** with a counts strip, the rest behind **"Show all N"**; **sortable columns**; **blue entity names → L4 entity**. Always the bottom slot (D8).
 7. **Consistent empty state** (`.empty`) per section.
 
 ### Final tab list & L0–L5 path (after folding Flaky + Clusters into Tests)
@@ -167,6 +169,34 @@ model the others converge on.
 - **P1 (dead-ends + drift):** D4 coverage inline-expand + file→Run L5 (and de-blue non-links); extract `trend.js` + the four fragments; Coverage "Recent reports" list (reach older coverage runs); drop Coverage's redundant time/run toggle.
 - **P2 (consumer depth):** failures spine (KPI failures tile → Run.Newly-failing; L0 red card "broken-since" → Run.Failures); cluster member → test history + onset commit; flaky "known vs new" signal; per-test sparkline + retry count in roster.
 - **P3 (beyond reconciliation — net-new):** annotated file-coverage detail (L4) + source/blame/rerun links; Load-tests percentile selector, SLA threshold lines, baseline selector, per-label trend (L4) + perf Compare; Timing "got-slower" Δ column.
+
+### All-tests roster slot — panel spec (2026-06-30)
+
+A 6-role panel (UX/IA director, QA, Developer, Competitive analyst, Frontend/design-system,
+Restraint skeptic) stress-tested the bottom roster slot. Convergence: **a flat 1200-row dump
+has no job** — it duplicates the folded Flaky/Clusters sections and the Test-timing tab, and
+no competitor opens with one. The roster's *unique* job on this tab is two things: **"what
+failed in this run that isn't a cluster/known flake"** + **"find a test by name → its
+history."** The Skeptic argued cut-to-typeahead; director resolved **shrink** because a
+singleton non-recurring failure appears in neither folded section, so the failures-first
+roster is the only on-tab "what just broke."
+
+- **P0 (done on `new-tests`):** default to the **matters-view** — failing + flaky rows, with a
+  one-glance counts strip (`X failing · Y flaky · Z skipped · W passed`); passing/skipped folded
+  behind **"Show all N tests"**; **search-first** header reaches every test; **sortable columns**;
+  D7 module-scoping (tiles + trend + roster) with chip + back-to-all. Blue name → test history;
+  flaky badge = read-only anchor to the Flaky section (no quarantine action in rows).
+- **P1:** htmx-lazy "show all" (don't ship 1200 `<tr>` + duplicated `data-search`; server-filter
+  on expand); **novelty marker** (NEW regression / STILL-FAILING ×n / FIXED — cheap, prev run
+  already loaded) + **Δduration vs prev** on regressed rows; promote the module-scoped trend to a
+  SQL aggregate (it currently loads each run's cases).
+- **P2:** inline one-line failure-message snippet + "cluster" anchor on failed rows (the *why*
+  without a navigation; full trace stays on test.html/run).
+- **P3 (aspirational, likely infeasible):** per-test coverage cell (the "row Datadog + Codecov
+  each show half of") — coverage is per-run/per-file, **not per-test**, in the data model.
+- **Guardrails (Restraint, adopted):** no quarantine/fail-rate/flaky-commit columns (Flaky section
+  owns those); no per-test sparkline in rows (test.html owns that); don't rebuild the Timing tab
+  as a sortable duration view; no speculative paging infra.
 
 ### Unresolved tensions (your call)
 

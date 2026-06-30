@@ -10,6 +10,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -74,6 +75,22 @@ class NewTestsPageIntegrationTest {
 			.andExpect(content().string(containsString("Internal preview")))
 			.andExpect(content().string(containsString("id=\"flaky-section\"")))
 			.andExpect(content().string(containsString("id=\"clusters-section\"")));
+	}
+
+	/**
+	 * An unknown {@code module} scope falls back to "all tests" (the page renders the
+	 * full roster, no module chip) rather than erroring — the page is never a dead end.
+	 */
+	@Test
+	void unknownModuleFallsBackToAllTests() throws Exception {
+		MockMvc mvc = mvc();
+		long projectId = ingest(mvc, "new-tests-module");
+
+		mvc.perform(get("/projects/{id}/new-tests", projectId).param("module", "does-not-exist")
+			.with(user("admin").roles("ADMIN")))
+			.andExpect(status().isOk())
+			.andExpect(content().string(containsString("All tests")))
+			.andExpect(content().string(not(containsString("Module: <code"))));
 	}
 
 }

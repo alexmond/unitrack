@@ -4,6 +4,7 @@ import org.alexmond.unitrack.domain.CoverageReport;
 import org.alexmond.unitrack.domain.Project;
 import org.alexmond.unitrack.domain.TestCaseResult;
 import org.alexmond.unitrack.domain.TestRun;
+import org.alexmond.unitrack.domain.TestStatus;
 import org.alexmond.unitrack.report.BlameService;
 import org.alexmond.unitrack.report.BranchService;
 import org.alexmond.unitrack.report.BranchSummary;
@@ -28,6 +29,7 @@ import org.alexmond.unitrack.report.PullRequestService;
 import org.alexmond.unitrack.report.QualityGateService;
 import org.alexmond.unitrack.report.ReportingService;
 import org.alexmond.unitrack.report.TestRegressionService;
+import org.alexmond.unitrack.report.TestModuleRow;
 import org.alexmond.unitrack.report.TestRosterRow;
 import org.alexmond.unitrack.report.TriageService;
 import org.alexmond.unitrack.web.account.MembershipService;
@@ -444,7 +446,8 @@ public class DashboardController {
 	 * are untouched.
 	 */
 	@GetMapping("/projects/{id}/new-tests")
-	public String newTests(@PathVariable Long id, @RequestParam(required = false) String flag, Model model) {
+	public String newTests(@PathVariable Long id, @RequestParam(required = false) String flag,
+			@RequestParam(required = false) String module, Model model) {
 		if (access.currentUsername() == null) {
 			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Sign in to preview the new Tests page");
 		}
@@ -460,20 +463,36 @@ public class DashboardController {
 		java.util.Set<String> flakyKeys = flakyViews.stream()
 			.map((v) -> testKey(v.className(), v.name()))
 			.collect(java.util.stream.Collectors.toSet());
-		List<TestRosterRow> roster = (cur != null) ? reporting.allCasesFor(cur.getId())
-			.stream()
-			.map((c) -> new TestRosterRow(c.getClassName(), c.getName(), c.getStatus().name(), c.getDurationMs(),
-					flakyKeys.contains(testKey(c.getClassName(), c.getName()))))
-			.toList() : List.of();
 
-		// Failure clusters, folded in (same split as the standalone clusters page): a
-		// real
-		// cluster spans >1 distinct test; a single test failing repeatedly is a recurring
-		// failure (minus those already flagged flaky, which live in the Flaky section).
-		List<FailureCluster> allClusters = clustering.cluster(id);
-		java.util.Set<String> flakyDisplay = flakyViews.stream()
-			.map(FlakyTestView::displayName)
+		// By-module breakdown (empty for single-module projects). Clicking a row scopes
+		// the
+		// whole page to that module via ?module=; an unknown value falls back to "all".
+		List<TestModuleRow> modules = (cur != null) ? reporting.testModules(cur.getId()) : List.of();
+		java.util.Set<String> moduleNames = modules.stream()
+			.map(TestModuleRow::name)
 			.collect(java.util.stream.Collectors.toSet());
+		String selectedModule = (module != null && moduleNames.contains(module)) ? module : null;
+		boolean scoped = selectedModule != null;
+
+		// The latest run's cases + each one's module label, so both the roster and the
+		// KPI
+		// tiles can be filtered to the selected module in one place.
+		List<TestCaseResult> curCases = (cur != null) ? reporting.allCasesFor(cur.getId()) : List.of();
+		List<String> curMods = reporting.moduleOf(curCases);
+		List<TestRosterRow> roster = new ArrayList<>();
+		for (int i = 0; i < curCases.size(); i++) {
+			if (scoped && !selectedModule.equals(curMods.get(i))) {
+				continue;
+			}
+			TestCaseResult c = curCases.get(i);
+			roster.add(new TestRosterRow(c.getClassName(), c.getName(), c.getStatus().name(), c.getDurationMs(),
+					flakyKeys.contains(testKey(c.getClassName(), c.getName()))));
+		}
+
+		// KPI tiles: the run's stored aggregates when unscoped, computed from the
+		// module's
+		// cases (incl. the prev-run deltas) when scoped to one module.
+		addTileStats(model, scoped, cur, prev, curCases, curMods, selectedModule);
 
 		model.addAttribute("project", project);
 		model.addAttribute("flags", flags);
@@ -481,21 +500,141 @@ public class DashboardController {
 		model.addAttribute("cur", cur);
 		model.addAttribute("prev", prev);
 		model.addAttribute("roster", roster);
-		model.addAttribute("testModules", (cur != null) ? reporting.testModules(cur.getId()) : List.of());
+		model.addAttribute("rosterFlaky", roster.stream().filter(TestRosterRow::flaky).count());
+		model.addAttribute("testModules", modules);
+		model.addAttribute("selectedModule", selectedModule);
+		model.addAttribute("scoped", scoped);
 		model.addAttribute("flakyList", flakyViews);
+		model.addAttribute("aiEnabled", aiAnalyzer.enabled());
+		addFoldedClusterAttrs(model, id, flakyViews);
+		addTrendAttrs(model, trend, scoped, selectedModule);
+		return "new-tests";
+	}
+
+	/**
+	 * Folded Failure-clusters section attributes: a real cluster spans &gt;1 distinct
+	 * test; a single test failing repeatedly is a recurring failure (minus ones already
+	 * flagged flaky, which live in the Flaky section).
+	 */
+	private void addFoldedClusterAttrs(Model model, Long id, List<FlakyTestView> flakyViews) {
+		List<FailureCluster> allClusters = clustering.cluster(id);
+		java.util.Set<String> flakyDisplay = flakyViews.stream()
+			.map(FlakyTestView::displayName)
+			.collect(java.util.stream.Collectors.toSet());
 		model.addAttribute("clusters", allClusters.stream().filter((c) -> c.distinctTests() > 1).toList());
 		model.addAttribute("recurringFailures",
 				allClusters.stream()
 					.filter((c) -> c.distinctTests() == 1 && !flakyDisplay.contains(c.tests().get(0)))
 					.toList());
-		model.addAttribute("aiEnabled", aiAnalyzer.enabled());
+	}
+
+	/**
+	 * Pass/fail trend model attributes — scoped to the selected module when one is
+	 * picked, so the graph follows the breakdown click ("bring me to the group, graph
+	 * included").
+	 */
+	private void addTrendAttrs(Model model, List<TestRun> trend, boolean scoped, String selectedModule) {
 		model.addAttribute("hasTrend", !trend.isEmpty());
 		model.addAttribute("trendLabels", toJson(labels(trend.stream().map(TestRun::getShortSha).toList())));
 		model.addAttribute("trendRunIds", toJson(trend.stream().map(TestRun::getId).toList()));
 		model.addAttribute("trendTimes", toJson(trend.stream().map(DashboardController::epochMilli).toList()));
-		model.addAttribute("trendPassed", toJson(trend.stream().map(TestRun::getPassed).toList()));
-		model.addAttribute("trendFailed", toJson(trend.stream().map((r) -> r.getFailed() + r.getErrors()).toList()));
-		return "new-tests";
+		if (scoped) {
+			List<int[]> mt = reporting.testModuleTrend(trend.stream().map(TestRun::getId).toList(), selectedModule);
+			model.addAttribute("trendPassed", toJson(mt.stream().map((a) -> a[0]).toList()));
+			model.addAttribute("trendFailed", toJson(mt.stream().map((a) -> a[1]).toList()));
+		}
+		else {
+			model.addAttribute("trendPassed", toJson(trend.stream().map(TestRun::getPassed).toList()));
+			model.addAttribute("trendFailed",
+					toJson(trend.stream().map((r) -> r.getFailed() + r.getErrors()).toList()));
+		}
+	}
+
+	/**
+	 * Populate the KPI-tile model attributes ({@code statTests/statFailures/statSkipped/
+	 * statDurationMs/statPassRate} + the {@code prev*} deltas). Unscoped reads the run's
+	 * stored aggregates (authoritative); module-scoped sums the module's cases for both
+	 * the current and previous run so the tiles and their deltas track the selected
+	 * module.
+	 */
+	private void addTileStats(Model model, boolean scoped, TestRun cur, TestRun prev, List<TestCaseResult> curCases,
+			List<String> curMods, String selectedModule) {
+		if (cur == null) {
+			return;
+		}
+		if (scoped) {
+			long[] s = scopeStat(curCases, curMods, selectedModule);
+			model.addAttribute("statTests", s[0]);
+			model.addAttribute("statFailures", s[2]);
+			model.addAttribute("statSkipped", s[3]);
+			model.addAttribute("statDurationMs", s[4]);
+			model.addAttribute("statPassRate", scopePassRate(s));
+			if (prev != null) {
+				List<TestCaseResult> pc = reporting.allCasesFor(prev.getId());
+				long[] p = scopeStat(pc, reporting.moduleOf(pc), selectedModule);
+				model.addAttribute("hasPrev", p[0] > 0);
+				model.addAttribute("prevTests", p[0]);
+				model.addAttribute("prevFailures", p[2]);
+				model.addAttribute("prevDurationMs", p[4]);
+				model.addAttribute("prevPassRate", scopePassRate(p));
+			}
+			else {
+				model.addAttribute("hasPrev", false);
+			}
+			return;
+		}
+		model.addAttribute("statTests", (long) cur.getTotalTests());
+		model.addAttribute("statFailures", (long) (cur.getFailed() + cur.getErrors()));
+		model.addAttribute("statSkipped", (long) cur.getSkipped());
+		model.addAttribute("statDurationMs", cur.getDurationMs());
+		model.addAttribute("statPassRate", cur.passRate());
+		model.addAttribute("hasPrev", prev != null);
+		if (prev != null) {
+			model.addAttribute("prevTests", (long) prev.getTotalTests());
+			model.addAttribute("prevFailures", (long) (prev.getFailed() + prev.getErrors()));
+			model.addAttribute("prevDurationMs", prev.getDurationMs());
+			model.addAttribute("prevPassRate", prev.passRate());
+		}
+	}
+
+	/**
+	 * Sum {@code [tests, passed, failed+errors, skipped, durationMs]} over a module's
+	 * cases (null module = all).
+	 */
+	private static long[] scopeStat(List<TestCaseResult> cases, List<String> mods, String module) {
+		long tests = 0;
+		long passed = 0;
+		long failed = 0;
+		long skipped = 0;
+		long durMs = 0;
+		for (int i = 0; i < cases.size(); i++) {
+			if (module != null && !module.equals(mods.get(i))) {
+				continue;
+			}
+			TestCaseResult c = cases.get(i);
+			tests++;
+			durMs += c.getDurationMs();
+			TestStatus st = c.getStatus();
+			if (st == TestStatus.PASSED) {
+				passed++;
+			}
+			else if (st == TestStatus.SKIPPED) {
+				skipped++;
+			}
+			else {
+				failed++;
+			}
+		}
+		return new long[] { tests, passed, failed, skipped, durMs };
+	}
+
+	/**
+	 * Pass rate (skipped excluded from the denominator, matching
+	 * {@link TestRun#passRate()}).
+	 */
+	private static double scopePassRate(long[] stat) {
+		long considered = stat[0] - stat[3];
+		return (considered <= 0) ? 100.0 : stat[1] * 100.0 / considered;
 	}
 
 	private static String testKey(String className, String name) {
