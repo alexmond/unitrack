@@ -112,26 +112,70 @@ class UploadCommand implements Callable<Integer> {
 					+ "plus a merged rollup — so a multi-module project shows per-module tests, coverage and gates.")
 	boolean splitByModule;
 
+	@Option(names = "--module",
+			description = "Build module these reports belong to; tags results so the Tests/Coverage by-module "
+					+ "breakdown uses it instead of guessing from package names.")
+	String module;
+
+	@Option(names = "--scan",
+			description = "Auto-discover known report files under --scan-root (Surefire/JUnit, JaCoCo/Cobertura/LCOV/"
+					+ "OpenCover, JMeter JTL), confirm each one's format, and upload them — no globs needed.")
+	boolean scan;
+
+	@Option(names = "--scan-root", defaultValue = ".",
+			description = "Root directory for --scan (default: current directory).")
+	String scanRoot;
+
+	@Option(names = "--include", split = ",",
+			description = "Ant-style glob(s) to discover instead of the conventional locations "
+					+ "(comma-separated or repeatable); relative to --scan-root.")
+	List<String> include = new ArrayList<>();
+
+	@Option(names = "--exclude", split = ",",
+			description = "Ant-style glob(s) to exclude from --scan (comma-separated or repeatable), on top of the "
+					+ "built-in excludes (node_modules, .git, vendor, .venv).")
+	List<String> exclude = new ArrayList<>();
+
 	private final UploadClient client;
 
 	private final ReportResolver resolver;
 
 	private final CiMetadataDetector detector;
 
-	UploadCommand(UploadClient client, ReportResolver resolver, CiMetadataDetector detector) {
+	private final ReportDiscovery discovery;
+
+	UploadCommand(UploadClient client, ReportResolver resolver, CiMetadataDetector detector,
+			ReportDiscovery discovery) {
 		this.client = client;
 		this.resolver = resolver;
 		this.detector = detector;
+		this.discovery = discovery;
 	}
 
 	@Override
 	public Integer call() {
-		List<Resource> junitFiles = this.resolver.resolve(this.junit);
-		List<Resource> jacocoFiles = this.resolver.resolve(this.jacoco);
-		List<Resource> perfFiles = this.resolver.resolve(this.perf);
+		List<Resource> junitFiles = new ArrayList<>(this.resolver.resolve(this.junit));
+		List<Resource> jacocoFiles = new ArrayList<>(this.resolver.resolve(this.jacoco));
+		List<Resource> perfFiles = new ArrayList<>(this.resolver.resolve(this.perf));
+		// --scan augments the explicit globs with auto-discovered, format-confirmed
+		// reports.
+		boolean scanned = this.scan;
+		if (this.scan) {
+			ReportDiscovery.Discovered found = this.discovery.discover(this.scanRoot, this.include, this.exclude);
+			addNew(junitFiles, found.junit());
+			addNew(jacocoFiles, found.coverage());
+			addNew(perfFiles, found.perf());
+			System.out.printf("Scanned %s — found %d junit, %d coverage, %d perf report(s).%n", this.scanRoot,
+					found.junit().size(), found.coverage().size(), found.perf().size());
+			for (String s : found.skipped()) {
+				System.out.println("  skipped " + s);
+			}
+		}
 		int total = junitFiles.size() + jacocoFiles.size() + perfFiles.size();
-		System.out.printf("Resolved %d junit, %d jacoco, %d perf file(s).%n", junitFiles.size(), jacocoFiles.size(),
-				perfFiles.size());
+		if (!scanned) {
+			System.out.printf("Resolved %d junit, %d jacoco, %d perf file(s).%n", junitFiles.size(), jacocoFiles.size(),
+					perfFiles.size());
+		}
 		if (total == 0 && !this.allowEmpty) {
 			System.err.println(
 					"error: no report files matched the given globs " + "(use --allow-empty to upload metadata only).");
@@ -153,7 +197,57 @@ class UploadCommand implements Callable<Integer> {
 		if (this.splitByModule) {
 			return uploadPerModule(resolvedProject, ci, junitFiles, jacocoFiles, perfFiles);
 		}
+		// A scan spans the whole tree, so tag each report with its module and merge into
+		// one
+		// run — that's what lights up the Tests/Coverage by-module breakdown.
+		if (scanned) {
+			return uploadByDetectedModule(resolvedProject, ci, junitFiles, jacocoFiles, perfFiles);
+		}
 		return uploadFileSet(buildFields(resolvedProject, ci), junitFiles, jacocoFiles, perfFiles);
+	}
+
+	private static void addNew(List<Resource> target, List<Resource> extra) {
+		for (Resource r : extra) {
+			if (!target.contains(r)) {
+				target.add(r);
+			}
+		}
+	}
+
+	/**
+	 * Uploads a multi-module set as a SINGLE run: groups every report by its module (the
+	 * directory before {@code /target/} or {@code /build/}) and uploads each group under
+	 * the same run key, tagged with its {@code module}. The uploads merge server-side
+	 * into one run whose per-module breakdown is driven by the explicit module rather
+	 * than a package heuristic. A single-module set is just a normal upload tagged with
+	 * that module.
+	 */
+	private Integer uploadByDetectedModule(String project, CiMetadata ci, List<Resource> junit, List<Resource> jacoco,
+			List<Resource> perf) {
+		Map<String, ModuleGroup> byModule = groupByModule(junit, jacoco, perf);
+		if (byModule.size() <= 1) {
+			Map<String, String> fields = buildFields(project, ci);
+			if (byModule.size() == 1 && blankToNull(fields.get("module")) == null) {
+				fields.put("module", byModule.keySet().iterator().next());
+			}
+			return uploadFileSet(fields, junit, jacoco, perf);
+		}
+		String mergeKey = coalesce(this.runKey, ci.runKey());
+		if (blankToNull(mergeKey) == null) {
+			mergeKey = "scan-" + System.nanoTime();
+		}
+		System.out.printf("Detected %d modules — uploading as one run (key '%s'), each tagged with its module.%n",
+				byModule.size(), mergeKey);
+		int worst = ExitCodes.OK;
+		for (Map.Entry<String, ModuleGroup> e : byModule.entrySet()) {
+			ModuleGroup g = e.getValue();
+			Map<String, String> fields = buildFields(project, ci);
+			fields.put("module", e.getKey());
+			fields.put("runKey", mergeKey);
+			System.out.printf("→ module '%s'%n", e.getKey());
+			worst = Math.max(worst, uploadFileSet(fields, g.junit(), g.jacoco(), g.perf()));
+		}
+		return worst;
 	}
 
 	/**
@@ -229,6 +323,7 @@ class UploadCommand implements Callable<Integer> {
 			ModuleGroup g = e.getValue();
 			Map<String, String> fields = buildFields(project, ci);
 			fields.put("flag", module);
+			fields.put("module", module);
 			fields.put("runKey", (base != null) ? base + "::" + module : null);
 			System.out.printf("→ module '%s'%n", module);
 			worst = Math.max(worst, uploadFileSet(fields, g.junit(), g.jacoco(), g.perf()));
@@ -260,7 +355,8 @@ class UploadCommand implements Callable<Integer> {
 	}
 
 	/**
-	 * The module name for a report: the path segment immediately before {@code /target/}.
+	 * The module name for a report: the path segment immediately before the build-output
+	 * directory ({@code /target/} for Maven, {@code /build/} for Gradle).
 	 */
 	static String moduleOf(Resource r) {
 		String path;
@@ -274,13 +370,16 @@ class UploadCommand implements Callable<Integer> {
 			return "(root)";
 		}
 		path = path.replace('\\', '/');
-		int target = path.indexOf("/target/");
-		if (target < 0) {
+		int marker = path.indexOf("/target/");
+		if (marker < 0) {
+			marker = path.indexOf("/build/");
+		}
+		if (marker < 0) {
 			return "(root)";
 		}
-		String beforeTarget = path.substring(0, target);
-		int slash = beforeTarget.lastIndexOf('/');
-		String module = (slash >= 0) ? beforeTarget.substring(slash + 1) : beforeTarget;
+		String beforeMarker = path.substring(0, marker);
+		int slash = beforeMarker.lastIndexOf('/');
+		String module = (slash >= 0) ? beforeMarker.substring(slash + 1) : beforeMarker;
 		return module.isBlank() ? "(root)" : module;
 	}
 
@@ -439,6 +538,7 @@ class UploadCommand implements Callable<Integer> {
 		fields.put("flag", this.flag);
 		fields.put("runKey", coalesce(this.runKey, ci.runKey()));
 		fields.put("ciProvider", coalesce(this.ciProvider, ci.ciProvider()));
+		fields.put("module", this.module);
 		return fields;
 	}
 

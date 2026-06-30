@@ -31,7 +31,8 @@ class UploadCommandTest {
 	}
 
 	private UploadCommand command(CiMetadataDetector detector) {
-		UploadCommand c = new UploadCommand(this.client, new ReportResolver(), detector);
+		ReportResolver resolver = new ReportResolver();
+		UploadCommand c = new UploadCommand(this.client, resolver, detector, new ReportDiscovery(resolver));
 		c.url = "http://unitrack.test";
 		c.project = "demo";
 		return c;
@@ -111,6 +112,29 @@ class UploadCommandTest {
 		c.junit = List.of(dir + "/TEST-*.xml");
 
 		assertThat(c.call()).isEqualTo(ExitCodes.OK);
+	}
+
+	@Test
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	void scanDiscoversReportsAndTagsEachModule(@TempDir Path root) throws IOException {
+		Files.createDirectories(root.resolve("alpha/target/surefire-reports"));
+		Files.writeString(root.resolve("alpha/target/surefire-reports/TEST-a.xml"), "<testsuite name=\"a\"/>");
+		Files.createDirectories(root.resolve("beta/target/surefire-reports"));
+		Files.writeString(root.resolve("beta/target/surefire-reports/TEST-b.xml"), "<testsuite name=\"b\"/>");
+		given(this.client.ingest(any(), any(), any(), any(), any())).willReturn(new IngestResponse(1L));
+
+		UploadCommand c = command();
+		c.scan = true;
+		c.scanRoot = root.toString();
+		c.runKey = "rk-scan";
+
+		assertThat(c.call()).isEqualTo(ExitCodes.OK);
+
+		ArgumentCaptor<Map> fields = ArgumentCaptor.forClass(Map.class);
+		verify(this.client, times(2)).ingest(any(), any(), any(), fields.capture(), any());
+		List<Object> modules = fields.getAllValues().stream().map((f) -> f.get("module")).toList();
+		assertThat(modules).containsExactlyInAnyOrder("alpha", "beta");
+		assertThat(fields.getAllValues()).allMatch((f) -> "rk-scan".equals(f.get("runKey")));
 	}
 
 	@Test
