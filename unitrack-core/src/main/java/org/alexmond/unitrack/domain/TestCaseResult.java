@@ -67,6 +67,13 @@ public class TestCaseResult {
 	@Column(length = 8000)
 	private String attachments;
 
+	/**
+	 * Explicit build module from the uploader (#393), or null to fall back to package
+	 * derivation.
+	 */
+	@Column(name = "module")
+	private String module;
+
 	public TestCaseResult(TestRun run, String suiteName, String className, String name, TestStatus status,
 			long durationMs) {
 		this.run = run;
@@ -75,6 +82,10 @@ public class TestCaseResult {
 		this.name = name;
 		this.status = status;
 		this.durationMs = durationMs;
+	}
+
+	public void setModule(String module) {
+		this.module = module;
 	}
 
 	public void setFailure(String failureType, String failureMessage, String failureStacktrace) {

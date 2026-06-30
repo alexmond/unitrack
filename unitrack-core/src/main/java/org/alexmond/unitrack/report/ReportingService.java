@@ -260,26 +260,22 @@ public class ReportingService {
 	}
 
 	/**
-	 * Per-module test totals for a run, for the Tests page. Surefire/JUnit XML carries no
-	 * module concept, so the module is derived from each test's package exactly as
+	 * Per-module test totals for a run, for the Tests page. The module is the explicit
+	 * one the uploader sent (#393) when present; otherwise — since Surefire/JUnit XML
+	 * carries no module — it's derived from each test's package exactly as
 	 * {@link #moduleCoverage} derives coverage modules (segment after the longest common
-	 * package prefix) — so Tests-by-module and Coverage-by-module line up. Returns empty
-	 * for a single-module project so the caller can hide the section. (The real fix — an
-	 * explicit module carried by the uploader, since the report formats can't — is
-	 * tracked separately.)
+	 * package prefix), so the two breakdowns line up. Returns empty for a single-module
+	 * project so the caller can hide the section.
 	 */
 	public List<TestModuleRow> testModules(Long runId) {
 		List<TestCaseResult> all = cases.findByRunIdOrderByStatusAscClassNameAscNameAsc(runId);
 		if (all.isEmpty()) {
 			return List.of();
 		}
-		List<String[]> segments = all.stream().map((c) -> splitPackage(packageOf(c.getClassName()))).toList();
-		int prefix = commonPrefixLength(segments);
+		List<String> modules = moduleOfEach(all);
 		Map<String, int[]> byModule = new TreeMap<>();
 		for (int i = 0; i < all.size(); i++) {
-			String[] s = segments.get(i);
-			String module = (s.length > prefix) ? s[prefix] : "(root)";
-			int[] a = byModule.computeIfAbsent(module, (k) -> new int[3]);
+			int[] a = byModule.computeIfAbsent(modules.get(i), (k) -> new int[3]);
 			a[0]++;
 			TestStatus st = all.get(i).getStatus();
 			if (st == TestStatus.PASSED) {
@@ -297,6 +293,23 @@ public class ReportingService {
 			.map((e) -> new TestModuleRow(e.getKey(), e.getValue()[0], e.getValue()[1],
 					e.getValue()[0] - e.getValue()[1] - e.getValue()[2], e.getValue()[2]))
 			.toList();
+	}
+
+	/**
+	 * The module of each test case, in order: the explicit uploader-supplied module
+	 * (#393) when any case carries one, otherwise the package-derived module (segment
+	 * after the longest common package prefix).
+	 */
+	private static List<String> moduleOfEach(List<TestCaseResult> cases) {
+		boolean hasExplicit = cases.stream().anyMatch((c) -> c.getModule() != null && !c.getModule().isBlank());
+		if (hasExplicit) {
+			return cases.stream()
+				.map((c) -> (c.getModule() != null && !c.getModule().isBlank()) ? c.getModule() : "(none)")
+				.toList();
+		}
+		List<String[]> segments = cases.stream().map((c) -> splitPackage(packageOf(c.getClassName()))).toList();
+		int prefix = commonPrefixLength(segments);
+		return segments.stream().map((s) -> (s.length > prefix) ? s[prefix] : "(root)").toList();
 	}
 
 	/**
