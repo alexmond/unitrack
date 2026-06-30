@@ -53,17 +53,40 @@
             <canvas id="suiteChart" height="90"></canvas>
         </div>
 
-        <h2>Slowest tests
-            <span class="muted" th:if="${latestRunId != null}">
-                (latest run <a th:href="@{/runs/{id}(id=${latestRunId})}" th:text="'#' + ${latestRunId}">#0</a>)
-            </span>
-        </h2>
+        <!-- Timing by module — same design as Tests/Coverage by module, with time as the data.
+             Click a module to filter the slowest-tests list below. -->
+        <div th:if="${!timingModules.isEmpty()}">
+            <h2>Timing by module <span class="muted">(latest run)</span></h2>
+            <table class="table table-hover align-middle">
+                <thead>
+                <tr><th>Module</th><th class="num">Tests</th><th class="num">Total time</th><th class="num">Avg</th></tr>
+                </thead>
+                <tbody>
+                <tr th:each="m : ${timingModules}" class="mod-row"
+                    th:attr="data-module=${#strings.toLowerCase(m.name())}">
+                    <td><code class="mono" th:text="${m.name()}">core</code></td>
+                    <td class="num" th:text="${m.tests()}">0</td>
+                    <td class="num" th:text="${#numbers.formatDecimal(m.totalMs() / 1000.0,1,1)} + 's'">0s</td>
+                    <td class="num muted" th:text="${#numbers.formatInteger(m.avgMs(), 1, 'COMMA')} + ' ms'">0 ms</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="trend-head">
+            <h2>Slowest tests
+                <span class="muted" th:if="${latestRunId != null}">
+                    (latest run <a th:href="@{/runs/{id}(id=${latestRunId})}" th:text="'#' + ${latestRunId}">#0</a>)
+                </span>
+            </h2>
+            <a href="#" id="timing-clear" class="muted" style="display:none;font-size:13px">show all modules</a>
+        </div>
         <table class="table table-hover align-middle">
             <thead>
             <tr><th>Test</th><th>Suite</th><th class="num">Duration</th><th>Status</th><th></th></tr>
             </thead>
-            <tbody>
-            <tr th:each="t : ${slowest}">
+            <tbody id="slowest-body">
+            <tr th:each="t : ${slowest}" th:attr="data-search=${#strings.toLowerCase(t.className() + ' ' + t.name())}">
                 <td><code class="mono" th:text="${t.className()} + ' › ' + ${t.name()}">Test › method</code></td>
                 <td class="muted" th:text="${t.suiteName()}">suite</td>
                 <td class="num" th:text="${#numbers.formatInteger(t.durationMs(), 1, 'COMMA')} + ' ms'">0 ms</td>
@@ -77,6 +100,29 @@
     </th:block>
 </main>
 <th:block layout:fragment="scripts">
+
+<script>
+    // Click a "Timing by module" row to filter the slowest-tests list to that module.
+    (function () {
+        var rows = Array.prototype.slice.call(document.querySelectorAll('#slowest-body tr'));
+        var clear = document.getElementById('timing-clear');
+        if (!rows.length) { return; }
+        function apply(module) {
+            var q = (module || '').toLowerCase();
+            rows.forEach(function (tr) {
+                var hit = !q || (tr.getAttribute('data-search') || '').indexOf(q) !== -1;
+                tr.style.display = hit ? '' : 'none';
+            });
+            if (clear) { clear.style.display = q ? '' : 'none'; }
+        }
+        document.querySelectorAll('tr.mod-row').forEach(function (r) {
+            r.addEventListener('click', function () { apply(r.getAttribute('data-module')); });
+        });
+        if (clear) {
+            clear.addEventListener('click', function (e) { e.preventDefault(); apply(''); });
+        }
+    })();
+</script>
 
 <script th:src="@{/webjars/chart.js/4.4.1/dist/chart.umd.js}"></script>
 <script th:inline="javascript">
