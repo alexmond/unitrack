@@ -69,6 +69,27 @@ On a supported CI, the metadata is auto-detected, so the command collapses to ju
 java -jar unitrack-cli.jar upload --junit "target/surefire-reports/*.xml" --jacoco "target/site/jacoco/jacoco.xml"
 ----
 
+=== Auto-discovery (`--scan`)
+
+Sonar-style zero-config: `--scan` walks the tree under `--scan-root` (default the current
+directory) for well-known report locations — Surefire/Failsafe and Gradle `test-results`,
+JaCoCo/Cobertura/LCOV/OpenCover, JMeter `.jtl` — *confirms each file's format by sniffing its
+content* (a stray XML in a reports directory is skipped, not mis-uploaded), and uploads them. No
+globs needed:
+
+[source,bash]
+----
+java -jar unitrack-cli.jar upload --project myapp --scan
+----
+
+* Each report is tagged with its **module** (the directory before `/target/` or `/build/`), and a
+  multi-module tree is uploaded as a *single run* whose per-module Tests/Coverage breakdown is then
+  driven by the real module — not guessed from package names.
+* `--include` / `--exclude` take ant-style globs (comma-separated or repeatable), relative to
+  `--scan-root`; `--include` replaces the conventional locations, `--exclude` adds to the built-in
+  excludes (`node_modules`, `.git`, `vendor`, `.venv`).
+* `--module <name>` tags an ordinary (non-scan) upload explicitly.
+
 * `--url` defaults to `UNITRACK_URL` (or `http://localhost:8080`); `--token` to `UNITRACK_TOKEN`
   (sent as a Bearer header).
 * `--junit`, `--jacoco`, `--perf` accept glob patterns and may be repeated. Coverage format is
