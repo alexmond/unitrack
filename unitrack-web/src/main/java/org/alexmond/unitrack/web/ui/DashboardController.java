@@ -369,6 +369,8 @@ public class DashboardController {
 		model.addAttribute("trendP99", toJson(trend.stream().map((p) -> round(p.p99Ms())).toList()));
 		model.addAttribute("trendThroughput", toJson(trend.stream().map((p) -> round(p.throughputRps())).toList()));
 		model.addAttribute("trendError", toJson(trend.stream().map((p) -> round(p.errorPct())).toList()));
+		model.addAttribute("trendRunIds", toJson(trend.stream().map(PerfTrendPoint::runId).toList()));
+		model.addAttribute("trendTimes", toJson(trend.stream().map((p) -> p.createdAt().toEpochMilli()).toList()));
 		return "perf";
 	}
 
