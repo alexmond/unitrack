@@ -29,6 +29,37 @@
             to chart latency, throughput and errors.</p>
     </div>
 
+    <!-- KPI tiles — latest run on this series, with change vs the previous run. -->
+    <div th:if="${hasPerf and !perfRuns.isEmpty()}" class="stat-row"
+         th:with="cur=${perfRuns[0]}, prev=${perfRuns.size() > 1 ? perfRuns[1] : null}">
+        <div class="stat">
+            <div class="label">p95 latency</div>
+            <div class="value" th:text="${#numbers.formatDecimal(cur.p95Ms,1,0)} + ' ms'">0 ms</div>
+            <div th:if="${prev != null}" class="delta" th:with="d=${cur.p95Ms - prev.p95Ms}"
+                 th:classappend="${d > 0.5} ? 'down' : (${d < -0.5} ? 'up' : 'flat')"
+                 th:text="(${d >= 0} ? '+' : '') + ${#numbers.formatDecimal(d,1,0)} + ' ms'">+0 ms</div>
+        </div>
+        <div class="stat">
+            <div class="label">Throughput</div>
+            <div class="value" th:text="${#numbers.formatDecimal(cur.throughputRps,1,1)} + ' rps'">0 rps</div>
+            <div th:if="${prev != null}" class="delta" th:with="d=${cur.throughputRps - prev.throughputRps}"
+                 th:classappend="${d > 0.05} ? 'up' : (${d < -0.05} ? 'down' : 'flat')"
+                 th:text="(${d >= 0} ? '+' : '') + ${#numbers.formatDecimal(d,1,1)} + ' rps'">+0 rps</div>
+        </div>
+        <div class="stat">
+            <div class="label">Error rate</div>
+            <div class="value" th:classappend="${cur.errorPct > 0} ? 'lvl-bad' : 'lvl-good'"
+                 th:text="${#numbers.formatDecimal(cur.errorPct,1,2)} + '%'">0%</div>
+            <div th:if="${prev != null}" class="delta" th:with="d=${cur.errorPct - prev.errorPct}"
+                 th:classappend="${d > 0.005} ? 'down' : (${d < -0.005} ? 'up' : 'flat')"
+                 th:text="(${d >= 0} ? '+' : '') + ${#numbers.formatDecimal(d,1,2)} + ' pp'">+0 pp</div>
+        </div>
+        <div class="stat">
+            <div class="label">Samples</div>
+            <div class="value" th:text="${#numbers.formatInteger(cur.sampleCount, 1, 'COMMA')}">0</div>
+        </div>
+    </div>
+
     <!-- Change-point detection (#379): a sustained p95 step on this series, with onset + depth. -->
     <div th:if="${perfStep != null}" class="gate" style="border-left-color: var(--c-fail); margin-bottom:18px">
         <strong><i class="bi bi-graph-down-arrow" aria-hidden="true"></i> p95 latency regressed</strong>
@@ -41,7 +72,13 @@
     </div>
 
     <div th:if="${hasPerf}">
-        <h2>Latency <span class="muted">(p50 / p90 / p99, ms)</span></h2>
+        <div class="trend-head">
+            <h2>Latency <span class="muted">(p50 / p90 / p99, ms)</span></h2>
+            <div id="trendModeToggle" class="seg" role="group" aria-label="Trend x-axis mode">
+                <button type="button" data-mode="time" class="active">Over time</button>
+                <button type="button" data-mode="run">By run</button>
+            </div>
+        </div>
         <div class="chart-wrap"><canvas id="latencyChart" height="90"></canvas></div>
 
         <h2>Throughput <span class="muted">(req/s)</span></h2>
@@ -85,36 +122,113 @@
     const p99 = JSON.parse(/*[[${trendP99}]]*/ '[]');
     const throughput = JSON.parse(/*[[${trendThroughput}]]*/ '[]');
     const errorPct = JSON.parse(/*[[${trendError}]]*/ '[]');
+    const runIds = JSON.parse(/*[[${trendRunIds}]]*/ '[]');
+    const times = JSON.parse(/*[[${trendTimes}]]*/ '[]');
+    let trendMode = 'time';
+    const charts = [];
+
+    function fmtDate(ms) { return new Date(ms).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); }
+    function fmtDateTime(ms) {
+        return new Date(ms).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    }
+    function xAt(i) { return trendMode === 'time' ? times[i] : i; }
+    function pts(arr) { return arr.map(function (v, i) { return { x: xAt(i), y: v }; }); }
+    // Click a point to open that perf run's detail.
+    function openRun(chart, evt) {
+        const hit = chart.getElementsAtEventForMode(evt, 'nearest', { intersect: false }, true);
+        if (!hit.length) { return; }
+        const id = runIds[hit[0].index];
+        if (id != null) { window.location = '/perf-runs/' + id; }
+    }
+
     if (labels.length > 0 && window.Chart) {
         const css = getComputedStyle(document.documentElement);
         const muted = css.getPropertyValue('--muted').trim() || '#8b98a5';
         const text = css.getPropertyValue('--text').trim() || '#e6edf3';
         const grid = css.getPropertyValue('--border').trim() || '#2c343d';
-        const axes = { y: { beginAtZero: true, ticks: { color: muted }, grid: { color: grid } },
-                       x: { ticks: { color: muted }, grid: { color: grid } } };
-        const legend = { plugins: { legend: { labels: { color: text } } } };
-        window.__chart(document.getElementById('latencyChart'), {
+
+        function xTick(value) {
+            if (trendMode === 'time') { return fmtDate(value); }
+            const i = Math.round(value);
+            return (i >= 0 && i < labels.length) ? labels[i] : '';
+        }
+        function xBounds() {
+            if (trendMode !== 'time') { return { min: undefined, max: undefined }; }
+            const ts = times.filter(function (t) { return t != null; });
+            if (!ts.length) { return { min: undefined, max: undefined }; }
+            const t0 = Math.min.apply(null, ts), tN = Math.max.apply(null, ts);
+            const span = tN - t0;
+            const pad = span > 0 ? Math.max(span * 0.02, 3600000) : 43200000;
+            return { min: t0 - pad, max: tN + pad };
+        }
+        function axes() {
+            const b = xBounds();
+            return { y: { beginAtZero: true, ticks: { color: muted }, grid: { color: grid } },
+                     x: { type: 'linear', offset: true, min: b.min, max: b.max,
+                          ticks: { color: muted, autoSkip: true, maxRotation: 0, maxTicksLimit: 8,
+                                   callback: function (v) { return xTick(v); } },
+                          grid: { color: grid } } };
+        }
+        const common = {
+            onClick: function (e, els, chart) { openRun(chart, e); },
+            onHover: function (e, els) { e.native.target.style.cursor = els.length ? 'pointer' : 'default'; },
+            parsing: false,
+            plugins: { legend: { labels: { color: text } },
+                       tooltip: { callbacks: { title: function (items) {
+                           const i = items[0].dataIndex;
+                           const sha = labels[i];
+                           const when = (times[i] != null) ? fmtDateTime(times[i]) : null;
+                           if (!when) { return sha; }
+                           return (sha && sha !== '—') ? (sha + ' · ' + when) : when;
+                       } } } }
+        };
+
+        charts.push(window.__chart(document.getElementById('latencyChart'), {
             type: 'line',
-            data: { labels: labels, datasets: [
-                { label: 'p50', data: p50, borderColor: '#2ea043', tension: .25, spanGaps: true },
-                { label: 'p90', data: p90, borderColor: '#d29922', tension: .25, spanGaps: true },
-                { label: 'p99', data: p99, borderColor: '#f85149', tension: .25, spanGaps: true } ] },
-            options: { scales: axes, ...legend }
-        });
-        window.__chart(document.getElementById('throughputChart'), {
+            data: { datasets: [
+                { label: 'p50', data: pts(p50), borderColor: '#2ea043', tension: .25, spanGaps: true, pointRadius: 2 },
+                { label: 'p90', data: pts(p90), borderColor: '#d29922', tension: .25, spanGaps: true, pointRadius: 2 },
+                { label: 'p99', data: pts(p99), borderColor: '#f85149', tension: .25, spanGaps: true, pointRadius: 2 } ] },
+            options: { scales: axes(), ...common }
+        }));
+        charts.push(window.__chart(document.getElementById('throughputChart'), {
             type: 'line',
-            data: { labels: labels, datasets: [
-                { label: 'req/s', data: throughput, borderColor: '#4493f8',
-                  backgroundColor: 'rgba(68,147,248,.12)', tension: .25, spanGaps: true } ] },
-            options: { scales: axes, ...legend }
-        });
-        window.__chart(document.getElementById('errorChart'), {
+            data: { datasets: [
+                { label: 'req/s', data: pts(throughput), borderColor: '#4493f8',
+                  backgroundColor: 'rgba(68,147,248,.12)', tension: .25, spanGaps: true, fill: true, pointRadius: 2 } ] },
+            options: { scales: axes(), ...common }
+        }));
+        charts.push(window.__chart(document.getElementById('errorChart'), {
             type: 'line',
-            data: { labels: labels, datasets: [
-                { label: 'error %', data: errorPct, borderColor: '#f85149',
-                  backgroundColor: 'rgba(248,81,73,.12)', tension: .25, spanGaps: true } ] },
-            options: { scales: axes, ...legend }
-        });
+            data: { datasets: [
+                { label: 'error %', data: pts(errorPct), borderColor: '#f85149',
+                  backgroundColor: 'rgba(248,81,73,.12)', tension: .25, spanGaps: true, fill: true, pointRadius: 2 } ] },
+            options: { scales: axes(), ...common }
+        }));
+
+        const seriesByChart = [ [p50, p90, p99], [throughput], [errorPct] ];
+        function redrawTrend() {
+            const b = xBounds();
+            charts.forEach(function (chart, ci) {
+                seriesByChart[ci].forEach(function (arr, di) { chart.data.datasets[di].data = pts(arr); });
+                chart.options.scales.x.min = b.min;
+                chart.options.scales.x.max = b.max;
+                chart.update();
+            });
+        }
+
+        const toggle = document.getElementById('trendModeToggle');
+        if (toggle) {
+            toggle.addEventListener('click', function (e) {
+                const btn = e.target.closest('button[data-mode]');
+                if (!btn) { return; }
+                trendMode = btn.getAttribute('data-mode');
+                toggle.querySelectorAll('button[data-mode]').forEach(function (b) {
+                    b.classList.toggle('active', b.getAttribute('data-mode') === trendMode);
+                });
+                redrawTrend();
+            });
+        }
     }
 </script>
 </th:block>
