@@ -128,46 +128,6 @@
             </table>
         </div>
 
-        <!-- All tests in the latest run (scoped to the module when one is selected). The default
-             view is the rows that need attention — failing + flaky — with passing/skipped folded
-             behind "Show all"; search reaches every test. Blue name → per-test history.
-             Columns are sortable (click a header). -->
-        <div class="trend-head">
-            <h2>All tests <span class="muted" th:text="'(' + ${roster.size()} + ')'">(0)</span></h2>
-            <input type="search" id="testSearch" class="form-control form-control-sm" style="max-width:280px"
-                   placeholder="Search every test…" aria-label="Search tests">
-        </div>
-        <!-- One-glance counts: a green run reads here without expanding anything. -->
-        <p class="muted" style="margin:0 0 8px"
-           th:with="passed=${statTests - statFailures - statSkipped}">
-            <span th:text="${statFailures}">0</span> failing ·
-            <span th:text="${rosterFlaky}">0</span> flaky ·
-            <span th:text="${statSkipped}">0</span> skipped ·
-            <span th:text="${passed}">0</span> passed
-        </p>
-        <table class="table table-hover align-middle sortable">
-            <thead>
-            <tr><th>Test</th><th>Status</th><th class="num">Duration</th><th>Flaky</th></tr>
-            </thead>
-            <tbody id="roster-body">
-            <tr th:each="t : ${roster}" th:attr="data-search=${#strings.toLowerCase(t.displayName())},
-                    data-attention=${(t.status() != 'PASSED' and t.status() != 'SKIPPED') or t.flaky()} ? '1' : '0'"
-                th:classappend="${t.status() != 'PASSED' and t.status() != 'SKIPPED'} ? 'row-fail'">
-                <td><a th:href="@{/projects/{id}/test(id=${project.id},className=${t.className()},name=${t.name()})}">
-                    <code class="mono" th:text="${t.displayName()}">Test › method</code></a></td>
-                <td><span class="badge"
-                          th:classappend="${t.status() == 'PASSED'} ? 'pass' : (${t.status() == 'SKIPPED'} ? '' : 'fail')"
-                          th:text="${t.status()}">PASSED</span></td>
-                <td class="num" th:attr="data-sort=${t.durationMs()}"
-                    th:text="${#numbers.formatInteger(t.durationMs(), 1, 'COMMA')} + ' ms'">0 ms</td>
-                <td th:attr="data-sort=${t.flaky()} ? '1' : '0'"><a th:if="${t.flaky()}" href="#flaky-section"
-                       class="badge tag"><i class="bi bi-arrow-repeat" aria-hidden="true"></i> flaky</a></td>
-            </tr>
-            </tbody>
-        </table>
-        <p class="muted" id="noMatches" style="display:none">No tests match your search.</p>
-        <button type="button" id="rosterToggle" class="btn btn-sm btn-secondary" style="display:none"
-                aria-expanded="false" aria-controls="roster-body"></button>
     </th:block>
 
     <!-- ============ Folded-in section: Flaky tests (was its own tab) ============ -->
@@ -282,6 +242,55 @@
             </div>
         </div>
     </section>
+
+    <!-- All tests in the latest run — kept BELOW the Flaky + Failure-clusters attention sections
+         (scoped to the module when one is selected). Default view is the rows that need attention —
+         failing + flaky — with passing/skipped folded behind "Show all"; search reaches every test.
+         Blue name → per-test history. Columns are sortable (click a header). -->
+    <th:block th:if="${cur != null}">
+        <div class="trend-head" style="margin-top:34px">
+            <div style="display:flex;gap:12px;align-items:center">
+                <h2 style="margin:0">All tests <span class="muted" th:text="'(' + ${roster.size()} + ')'">(0)</span></h2>
+                <!-- Disclosure beside the title: default view is failing + flaky; this reveals the rest. -->
+                <button type="button" id="rosterToggle" class="btn btn-sm btn-secondary" style="display:none"
+                        aria-expanded="false" aria-controls="roster-body"></button>
+            </div>
+            <input type="search" id="testSearch" class="form-control form-control-sm" style="max-width:280px"
+                   placeholder="Search every test…" aria-label="Search tests">
+        </div>
+        <!-- One-glance counts: a green run reads here without expanding anything. -->
+        <p class="muted" style="margin:0 0 8px"
+           th:with="passed=${statTests - statFailures - statSkipped}">
+            <span th:text="${statFailures}">0</span> failing ·
+            <span th:text="${rosterFlaky}">0</span> flaky ·
+            <span th:if="${rosterFixed > 0}"><span th:text="${rosterFixed}">0</span> fixed · </span>
+            <span th:text="${statSkipped}">0</span> skipped ·
+            <span th:text="${passed}">0</span> passed
+        </p>
+        <table class="table table-hover align-middle sortable">
+            <thead>
+            <tr><th>Test</th><th>Status</th><th class="num">Duration</th><th>Flaky</th></tr>
+            </thead>
+            <tbody id="roster-body">
+            <tr th:each="t : ${roster}" th:attr="data-search=${#strings.toLowerCase(t.displayName())},
+                    data-attention=${(t.status() != 'PASSED' and t.status() != 'SKIPPED') or t.flaky() or t.fixed()} ? '1' : '0'"
+                th:classappend="${t.status() != 'PASSED' and t.status() != 'SKIPPED'} ? 'row-fail'">
+                <td><a th:href="@{/projects/{id}/test(id=${project.id},className=${t.className()},name=${t.name()})}">
+                    <code class="mono" th:text="${t.displayName()}">Test › method</code></a></td>
+                <td><span class="badge"
+                          th:classappend="${t.status() == 'PASSED'} ? 'pass' : (${t.status() == 'SKIPPED'} ? '' : 'fail')"
+                          th:text="${t.status()}">PASSED</span>
+                    <span th:if="${t.fixed()}" class="badge pass"
+                          title="Failing in the previous run, passing now">fixed</span></td>
+                <td class="num" th:attr="data-sort=${t.durationMs()}"
+                    th:text="${#numbers.formatInteger(t.durationMs(), 1, 'COMMA')} + ' ms'">0 ms</td>
+                <td th:attr="data-sort=${t.flaky()} ? '1' : '0'"><a th:if="${t.flaky()}" href="#flaky-section"
+                       class="badge tag"><i class="bi bi-arrow-repeat" aria-hidden="true"></i> flaky</a></td>
+            </tr>
+            </tbody>
+        </table>
+        <p class="muted" id="noMatches" style="display:none">No tests match your search.</p>
+    </th:block>
 </main>
 <th:block layout:fragment="scripts">
 
