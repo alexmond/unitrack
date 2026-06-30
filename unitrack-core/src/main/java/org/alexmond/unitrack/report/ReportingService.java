@@ -346,14 +346,44 @@ public class ReportingService {
 		if (module == null || module.isBlank()) {
 			return coverageFiles(reportId, limit);
 		}
+		if (coverageFiles.existsByReportIdAndModuleIsNotNull(reportId)) {
+			List<CoverageFileEntry> inModule = coverageFiles.findByReportIdAndStoredModule(reportId, storedKey(module));
+			return (inModule.size() > limit) ? inModule.subList(0, limit) : inModule;
+		}
 		List<CoverageFileEntry> inModule = filterByModule(
 				coverageFiles.findByReportIdOrderByLineMissedDescPackageNameAsc(reportId), module,
 				CoverageFileEntry::getPackageName);
 		return (inModule.size() > limit) ? inModule.subList(0, limit) : inModule;
 	}
 
+	/** Display label for an explicit module: {@code (none)} for untagged files. */
+	private static String moduleLabel(String module) {
+		return (module == null || module.isBlank()) ? "(none)" : module;
+	}
+
+	/**
+	 * Inverse of {@link #moduleLabel}: the {@code (none)} label maps back to a null
+	 * module.
+	 */
+	private static String storedKey(String moduleLabel) {
+		return "(none)".equals(moduleLabel) ? null : moduleLabel;
+	}
+
 	/** Per-package coverage within one module (null/blank = all packages). */
 	public List<CoveragePackage> coveragePackages(Long reportId, String module) {
+		if (module != null && !module.isBlank() && coverageFiles.existsByReportIdAndModuleIsNotNull(reportId)) {
+			Map<String, long[]> byPackage = new TreeMap<>();
+			for (PackageCoverage p : coverageFiles.aggregateByPackageForModule(reportId, storedKey(module))) {
+				String pkg = (p.getPackageName() == null || p.getPackageName().isBlank()) ? "(default)"
+						: p.getPackageName();
+				byPackage.merge(pkg, sums(p), ReportingService::addSums);
+			}
+			return byPackage.entrySet()
+				.stream()
+				.map((e) -> new CoveragePackage(e.getKey(), (int) e.getValue()[0], (int) e.getValue()[1],
+						(int) e.getValue()[2], (int) e.getValue()[3]))
+				.toList();
+		}
 		return filterByModule(coveragePackages(reportId), module, CoveragePackage::packageName);
 	}
 
@@ -404,13 +434,23 @@ public class ReportingService {
 	}
 
 	/**
-	 * Per-module line/branch totals for a coverage report. A multi-module project is
-	 * uploaded flat (no module concept), so the module is derived from the package tree:
-	 * the segment that follows the longest package prefix common to every package (e.g.
-	 * {@code …builder/<module>/…}). Returns at most one entry for a single-module
-	 * project, so callers can hide the view. Aggregated per package in SQL, not per file.
+	 * Per-module line/branch totals for a coverage report. When the uploader attached
+	 * explicit modules (#393) those are used directly; otherwise — for a flat
+	 * multi-module upload with no module concept — the module is derived from the package
+	 * tree (the segment that follows the longest package prefix common to every package,
+	 * e.g. {@code …builder/<module>/…}). Returns at most one entry for a single-module
+	 * project, so callers can hide the view. Aggregated in SQL, not per file.
 	 */
 	public List<ModuleCoverage> moduleCoverage(Long reportId) {
+		if (coverageFiles.existsByReportIdAndModuleIsNotNull(reportId)) {
+			return coverageFiles.aggregateByModule(reportId)
+				.stream()
+				.map((m) -> new ModuleCoverage(moduleLabel(m.getModule()), (int) m.getLineCovered(),
+						(int) m.getLineMissed(), (int) m.getBranchCovered(), (int) m.getBranchMissed(),
+						(int) m.getFiles()))
+				.sorted(Comparator.comparing(ModuleCoverage::name))
+				.toList();
+		}
 		List<PackageCoverage> packages = coverageFiles.aggregateByPackage(reportId);
 		if (packages.isEmpty()) {
 			return List.of();
