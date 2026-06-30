@@ -32,7 +32,10 @@
             <div class="stat"><div class="label">Line</div>
                 <div class="value"
                      th:classappend="${coverage.linePct >= 80} ? 'lvl-good' : (${coverage.linePct >= 50} ? 'lvl-warn' : 'lvl-bad')"
-                     th:text="${#numbers.formatDecimal(coverage.linePct,1,1)} + '%'">0%</div></div>
+                     th:text="${#numbers.formatDecimal(coverage.linePct,1,1)} + '%'">0%</div>
+                <div th:if="${lineDelta != null}" class="delta"
+                     th:classappend="${lineDelta > 0.05} ? 'up' : (${lineDelta < -0.05} ? 'down' : 'flat')"
+                     th:text="(${lineDelta >= 0} ? '+' : '') + ${#numbers.formatDecimal(lineDelta,1,1)} + ' pp'">+0.0 pp</div></div>
             <div class="stat"><div class="label">Branch</div>
                 <div class="value"
                      th:classappend="${coverage.branchPct >= 80} ? 'lvl-good' : (${coverage.branchPct >= 50} ? 'lvl-warn' : 'lvl-bad')"
@@ -47,7 +50,13 @@
                      th:text="${#numbers.formatDecimal(coverage.methodPct,1,1)} + '%'">0%</div></div>
         </div>
 
-        <h2>Line-coverage trend</h2>
+        <div class="trend-head">
+            <h2>Line-coverage trend</h2>
+            <div id="trendModeToggle" class="seg" role="group" aria-label="Trend x-axis mode">
+                <button type="button" data-mode="time" class="active">Over time</button>
+                <button type="button" data-mode="run">By run</button>
+            </div>
+        </div>
         <div class="chart-wrap">
             <canvas id="coverageChart" height="80"></canvas>
         </div>
@@ -115,26 +124,100 @@
 <script th:inline="javascript">
     const labels = JSON.parse(/*[[${trendLabels}]]*/ '[]');
     const coverage = JSON.parse(/*[[${trendCoverage}]]*/ '[]');
+    const runIds = JSON.parse(/*[[${trendRunIds}]]*/ '[]');
+    const times = JSON.parse(/*[[${trendTimes}]]*/ '[]');
+    let coverageChartInstance;
+    let trendMode = 'time';
+
+    function fmtDate(ms) { return new Date(ms).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); }
+    function fmtDateTime(ms) {
+        return new Date(ms).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    }
+    function xAt(i) { return trendMode === 'time' ? times[i] : i; }
+    function pts(arr) { return arr.map(function (v, i) { return { x: xAt(i), y: v }; }); }
+    // Click a point: open it vs the previous run to see what changed; first point opens the run.
+    function openCompare(chart, evt) {
+        const hit = chart.getElementsAtEventForMode(evt, 'nearest', { intersect: false }, true);
+        if (!hit.length) { return; }
+        const i = hit[0].index;
+        const id = runIds[i];
+        if (id == null) { return; }
+        const prev = (i > 0) ? runIds[i - 1] : null;
+        window.location = (prev != null) ? ('/compare?base=' + prev + '&head=' + id) : ('/runs/' + id);
+    }
+
     if (labels.length > 0 && window.Chart) {
         const css = getComputedStyle(document.documentElement);
         const muted = css.getPropertyValue('--muted').trim() || '#8b98a5';
         const text = css.getPropertyValue('--text').trim() || '#e6edf3';
         const grid = css.getPropertyValue('--border').trim() || '#2c343d';
-        window.__chart(document.getElementById('coverageChart'), {
+
+        function xTick(value) {
+            if (trendMode === 'time') { return fmtDate(value); }
+            const i = Math.round(value);
+            return (i >= 0 && i < labels.length) ? labels[i] : '';
+        }
+        function xBounds() {
+            if (trendMode !== 'time') { return { min: undefined, max: undefined }; }
+            const ts = times.filter(function (t) { return t != null; });
+            if (!ts.length) { return { min: undefined, max: undefined }; }
+            const t0 = Math.min.apply(null, ts), tN = Math.max.apply(null, ts);
+            const span = tN - t0;
+            const pad = span > 0 ? Math.max(span * 0.02, 3600000) : 43200000;
+            return { min: t0 - pad, max: tN + pad };
+        }
+        const initBounds = xBounds();
+
+        coverageChartInstance = window.__chart(document.getElementById('coverageChart'), {
             type: 'line',
             data: {
-                labels: labels,
                 datasets: [
-                    { label: 'Line coverage %', data: coverage, borderColor: '#4493f8',
-                      backgroundColor: 'rgba(68,147,248,.12)', tension: .25, spanGaps: true, fill: true }
+                    { label: 'Line coverage %', data: pts(coverage), borderColor: '#4493f8',
+                      backgroundColor: 'rgba(68,147,248,.12)', tension: .25, spanGaps: true, fill: true,
+                      pointRadius: 2, borderWidth: 2 }
                 ]
             },
             options: {
+                onClick: function (e, els, chart) { openCompare(chart, e); },
+                onHover: function (e, els) { e.native.target.style.cursor = els.length ? 'pointer' : 'default'; },
+                parsing: false,
                 scales: { y: { min: 0, max: 100, ticks: { color: muted }, grid: { color: grid } },
-                          x: { ticks: { color: muted }, grid: { color: grid } } },
-                plugins: { legend: { labels: { color: text } } }
+                          x: { type: 'linear', offset: true, min: initBounds.min, max: initBounds.max,
+                               ticks: { color: muted, autoSkip: true, maxRotation: 0, maxTicksLimit: 8,
+                                        callback: function (v) { return xTick(v); } },
+                               grid: { color: grid } } },
+                plugins: { legend: { labels: { color: text } },
+                           tooltip: { callbacks: { title: function (items) {
+                               const i = items[0].dataIndex;
+                               const sha = labels[i];
+                               const when = (times[i] != null) ? fmtDateTime(times[i]) : null;
+                               if (!when) { return sha; }
+                               return (sha && sha !== '—') ? (sha + ' · ' + when) : when;
+                           } } } }
             }
         });
+
+        function redrawTrend() {
+            if (!coverageChartInstance) { return; }
+            coverageChartInstance.data.datasets[0].data = pts(coverage);
+            const b = xBounds();
+            coverageChartInstance.options.scales.x.min = b.min;
+            coverageChartInstance.options.scales.x.max = b.max;
+            coverageChartInstance.update();
+        }
+
+        const toggle = document.getElementById('trendModeToggle');
+        if (toggle) {
+            toggle.addEventListener('click', function (e) {
+                const btn = e.target.closest('button[data-mode]');
+                if (!btn) { return; }
+                trendMode = btn.getAttribute('data-mode');
+                toggle.querySelectorAll('button[data-mode]').forEach(function (b) {
+                    b.classList.toggle('active', b.getAttribute('data-mode') === trendMode);
+                });
+                redrawTrend();
+            });
+        }
     }
 </script>
 </th:block>

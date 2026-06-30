@@ -199,7 +199,10 @@ public class DashboardController {
 			model.addAttribute("worstFiles", reporting.coverageFiles(c.getId(), selectedModule, COVERAGE_FILE_LIMIT));
 			List<TestRun> trend = reporting.trendRuns(id, null, TREND_FLAG, TREND_LIMIT);
 			model.addAttribute("trendLabels", toJson(labels(trend.stream().map(TestRun::getShortSha).toList())));
+			model.addAttribute("trendRunIds", toJson(trend.stream().map(TestRun::getId).toList()));
+			model.addAttribute("trendTimes", toJson(trend.stream().map(DashboardController::epochMilli).toList()));
 			model.addAttribute("trendCoverage", toJson(trend.stream().map(TestRun::getLineCoveragePct).toList()));
+			model.addAttribute("lineDelta", lineCoverageDelta(trend));
 		});
 		return "coverage";
 	}
@@ -424,6 +427,22 @@ public class DashboardController {
 
 	private static String testKey(String className, String name) {
 		return ((className != null) ? className : "") + "#" + name;
+	}
+
+	/**
+	 * Change in line coverage between the latest run carrying coverage and the previous
+	 * one, or null.
+	 */
+	private static Double lineCoverageDelta(List<TestRun> trendOldestFirst) {
+		Double cur = null;
+		Double prev = null;
+		for (TestRun r : trendOldestFirst) {
+			if (r.getLineCoveragePct() != null) {
+				prev = cur;
+				cur = r.getLineCoveragePct();
+			}
+		}
+		return (cur != null && prev != null) ? cur - prev : null;
 	}
 
 	/**
