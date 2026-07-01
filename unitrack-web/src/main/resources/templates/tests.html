@@ -21,8 +21,9 @@
     </div>
 
     <!-- Empty state: no test runs for this flag yet. -->
-    <div th:unless="${page.hasRun}"
-         th:replace="~{fragments/analytics :: emptyState(${page.empty.icon}, ${page.empty.title}, ${page.empty.message})}"></div>
+    <th:block th:unless="${page.hasRun}">
+        <div th:replace="~{fragments/analytics :: emptyState(${page.empty.icon}, ${page.empty.title}, ${page.empty.message})}"></div>
+    </th:block>
 
     <th:block th:if="${page.hasRun}">
         <!-- Shared analytics skeleton: KPI tiles → latest-run line → trend → by-module breakdown.
