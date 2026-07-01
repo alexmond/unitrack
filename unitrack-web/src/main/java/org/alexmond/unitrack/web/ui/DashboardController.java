@@ -308,9 +308,9 @@ public class DashboardController {
 	 */
 	@GetMapping("/projects/{id}/performance")
 	public String performance(@PathVariable Long id, @RequestParam(required = false) String flag,
-			@RequestParam(required = false) String module, Model model) {
+			@RequestParam(required = false) String branch, @RequestParam(required = false) String module, Model model) {
 		Project project = access.requireReadProject(id);
-		model.addAttribute("page", timingPage.build(project, id, flag, module));
+		model.addAttribute("page", timingPage.build(project, id, flag, branch, module));
 		return "performance";
 	}
 
@@ -348,12 +348,16 @@ public class DashboardController {
 	 */
 	@GetMapping("/projects/{id}/tests")
 	public String tests(@PathVariable Long id, @RequestParam(required = false) String flag,
-			@RequestParam(required = false) String module, Model model) {
+			@RequestParam(required = false) String branch, @RequestParam(required = false) String module, Model model) {
 		Project project = access.requireReadProject(id);
 		List<String> flags = reporting.testFlags(id);
 		String selectedFlag = pickFlag(flag, flags);
+		List<String> branches = branchService.list(id).stream().map(BranchSummary::branch).toList();
+		// null/unknown branch = all branches (the non-breaking default); a valid one
+		// scopes the tab.
+		String selectedBranch = (branch != null && branches.contains(branch)) ? branch : null;
 
-		List<TestRun> trend = reporting.trendRuns(id, null, selectedFlag, TREND_LIMIT);
+		List<TestRun> trend = reporting.trendRuns(id, selectedBranch, selectedFlag, TREND_LIMIT);
 		TestRun cur = trend.isEmpty() ? null : trend.get(trend.size() - 1);
 		TestRun prev = (trend.size() > 1) ? trend.get(trend.size() - 2) : null;
 
@@ -399,7 +403,8 @@ public class DashboardController {
 				roster, (tiles != null) ? tiles.failures() : 0, roster.stream().filter(TestRosterRow::flaky).count(),
 				roster.stream().filter(TestRosterRow::fixed).count(), (tiles != null) ? tiles.skipped() : 0,
 				(tiles != null) ? tiles.passed() : 0, flakyViews, aiAnalyzer.enabled(), cs.clusters(), cs.recurring(),
-				new ScopeBar("/projects/" + id + "/tests", flags, selectedFlag, selectedModule));
+				new ScopeBar("/projects/" + id + "/tests", flags, selectedFlag, branches, selectedBranch,
+						selectedModule));
 		model.addAttribute("page", page);
 		return "tests";
 	}
