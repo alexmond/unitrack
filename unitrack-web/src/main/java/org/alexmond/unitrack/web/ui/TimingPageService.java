@@ -11,8 +11,6 @@ import lombok.RequiredArgsConstructor;
 import org.alexmond.unitrack.domain.Project;
 import org.alexmond.unitrack.domain.TestCaseResult;
 import org.alexmond.unitrack.domain.TestRun;
-import org.alexmond.unitrack.report.BranchService;
-import org.alexmond.unitrack.report.BranchSummary;
 import org.alexmond.unitrack.report.ReportingService;
 import org.alexmond.unitrack.report.TestModuleTiming;
 import org.alexmond.unitrack.web.ui.view.BreakdownCell;
@@ -50,13 +48,12 @@ class TimingPageService {
 
 	private final ReportingService reporting;
 
-	private final BranchService branchService;
-
 	TimingPage build(Project project, Long id, String flag, String branch, String module) {
 		String all = "/projects/" + id + "/performance";
 		List<String> flags = reporting.testFlags(id);
 		String selectedFlag = selectedFlag(flag, flags);
-		List<String> branches = branchService.list(id).stream().map(BranchSummary::branch).toList();
+		// Names only (one query) — avoid BranchService.list's per-branch N+1 (#314) here.
+		List<String> branches = reporting.branchNames(id);
 		// null/unknown branch = all branches (the non-breaking default); a valid one
 		// scopes the tab.
 		String selectedBranch = (branch != null && branches.contains(branch)) ? branch : null;

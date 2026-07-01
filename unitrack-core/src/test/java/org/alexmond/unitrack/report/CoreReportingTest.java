@@ -130,6 +130,10 @@ class CoreReportingTest {
 		assertThat(reporting.latestRunByCommit(projectId, "c2", null)).isPresent();
 		assertThat(reporting.latestRunByBranch(projectId, "main", "default")).isPresent();
 		assertThat(reporting.flagSummaries(projectId)).isNotEmpty();
+		// branchNames = the one-query name list for the analytics scope dropdown (no
+		// per-branch
+		// N+1); must include the seeded branch.
+		assertThat(reporting.branchNames(projectId)).contains("main");
 		assertThat(reporting.suitesFor(currentId)).isNotEmpty();
 		List<TestCaseResult> failures = reporting.failedCasesFor(currentId);
 		assertThat(failures).isNotEmpty();

@@ -260,6 +260,16 @@ public class ReportingService {
 	}
 
 	/**
+	 * Distinct branch names (alphabetical) a project has runs for — for the analytics
+	 * scope dropdown. One query, unlike {@link BranchService#list} which also computes
+	 * each branch's latest-run status/coverage/count (a per-branch N+1); use that only
+	 * when the summary columns are actually shown (the Overview branches list).
+	 */
+	public List<String> branchNames(Long projectId) {
+		return runs.findDistinctBranches(projectId);
+	}
+
+	/**
 	 * Per-module test totals for a run, for the Tests page. The module is the explicit
 	 * one the uploader sent (#393) when present; otherwise — since Surefire/JUnit XML
 	 * carries no module — it's derived from each test's package exactly as
