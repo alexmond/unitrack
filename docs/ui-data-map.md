@@ -55,11 +55,12 @@ The whole-project summary (mixes tests + coverage + branches + runs).
 - **L3 — Failure clusters** (folded section): clusters (grouped current failures) · recurring failures · AI root-cause analyze (logged-in)
 - *Gap:* no flag scope yet (locked to default rollup flag) — #405
 
-### Coverage (`/projects/{id}/coverage`, `coverage.html`)
-- **L2 summary:** KPI tiles (line +Δ · branch · instruction · method) · latest-report line → **Run** (L4) · **trend** (line-cov %; time/run toggle; point → Compare L4)
-- **L3 — Coverage by module:** module · line% · lines · files — *click scopes the tables below (`?module`)*
-- **L3 — By package:** package · line% · bar · branch% · lines  *(not linked deeper)*
-- **L3 — Worst-covered files:** file · line% · bar · covered · missed  *(not linked deeper — no file-detail screen)*
+### Coverage (`/projects/{id}/coverage`, `coverage.html`) — reconciled onto the shared model
+Same `AnalyticsPage` model + `fragments/analytics` skeleton + `trend.js`/`roster.js` as Tests/Timing (composition).
+- **L2 summary:** KPI tiles (line +Δ · branch · instruction · method) · latest-report line → **Run** (L4) · **trend** (line-cov %, 0–100 axis; time/run toggle; point → Compare L4)
+- **L3 — Coverage by module:** module · line% · lines · files — *click scopes the tab (`?module=`); back-to-all chip* (shared breakdown)
+- **L3 — By package:** package · line% · bar · branch% · lines — *sortable (not linked deeper)*
+- **L3 — Worst-covered files:** file · line% · bar · covered · missed — *sortable + searchable (not linked deeper — no file-detail screen)*
 
 ### Test timing (`/projects/{id}/performance`, `performance.html`) — reconciled onto the shared model
 Same `AnalyticsPage` model + `fragments/analytics` skeleton + `trend.js`/`roster.js` as Tests (composition), so the two can't drift.
