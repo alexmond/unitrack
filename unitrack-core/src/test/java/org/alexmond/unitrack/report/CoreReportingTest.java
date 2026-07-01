@@ -200,11 +200,16 @@ class CoreReportingTest {
 		// Failure clustering.
 		assertThat(clustering.cluster(projectId)).isNotNull();
 
-		// Triage rules + run categorisation.
+		// Triage rules + run categorisation. Rule patterns are compiled once per batch
+		// (not per
+		// case); a valid regex categorizes the AssertionError failure, and an invalid
+		// regex must
+		// degrade to a literal contains rather than throw.
 		triage.addRule(projectId, "assertions", "product-bug", "AssertionError", 1);
+		triage.addRule(projectId, "broken", "other", "unmatched[", 2);
 		assertThat(triage.listRules(projectId)).isNotEmpty();
-		assertThat(triage.triageRun(currentId)).isNotNull();
-		assertThat(triage.categoryByCaseId(projectId, failures)).isNotNull();
+		assertThat(triage.triageRun(currentId).failures()).anyMatch((cc) -> "product-bug".equals(cc.category()));
+		assertThat(triage.categoryByCaseId(projectId, failures).values()).contains("product-bug");
 
 		// Per-project settings: effective config + persistence.
 		assertThat(settings.globals().baseBranch()).isEqualTo("main");

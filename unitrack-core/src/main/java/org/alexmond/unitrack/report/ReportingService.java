@@ -36,6 +36,12 @@ import java.util.function.Function;
 @RequiredArgsConstructor
 public class ReportingService {
 
+	/**
+	 * Package-segment separator (dot or slash), compiled once — {@code splitPackage} is
+	 * per-case.
+	 */
+	private static final java.util.regex.Pattern PKG_SEPARATOR = java.util.regex.Pattern.compile("[./]+");
+
 	private final ProjectRepository projects;
 
 	private final TestRunRepository runs;
@@ -589,7 +595,7 @@ public class ReportingService {
 	}
 
 	private static String[] splitPackage(String pkg) {
-		return (pkg == null || pkg.isBlank()) ? new String[0] : pkg.split("[./]+");
+		return (pkg == null || pkg.isBlank()) ? new String[0] : PKG_SEPARATOR.split(pkg);
 	}
 
 	/** The number of leading package segments shared by every file. */
