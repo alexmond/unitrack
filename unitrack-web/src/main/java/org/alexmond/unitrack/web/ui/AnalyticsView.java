@@ -4,6 +4,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -86,13 +87,48 @@ final class AnalyticsView {
 		return (d > eps) ? "down" : ((d < -eps) ? "up" : "flat");
 	}
 
-	/** One trend series descriptor for {@link #trendConfig}. */
+	/** One trend series descriptor for {@link #trendConfig} (primary Y axis). */
 	static Map<String, Object> series(String label, String color, List<? extends Number> data) {
 		Map<String, Object> s = new HashMap<>();
 		s.put("label", label);
 		s.put("color", color);
 		s.put("data", data);
 		return s;
+	}
+
+	/**
+	 * A trend series on a specific axis ({@code "y"} or {@code "y2"} for the secondary
+	 * axis).
+	 */
+	static Map<String, Object> series(String label, String color, List<? extends Number> data, String axis) {
+		Map<String, Object> s = series(label, color, data);
+		s.put("axis", axis);
+		return s;
+	}
+
+	/** Epoch-millis of a run's creation, or null. */
+	static Long epochMilli(TestRun run) {
+		return (run.getCreatedAt() != null) ? run.getCreatedAt().toEpochMilli() : null;
+	}
+
+	/**
+	 * Trend X labels for a run list, duplicate SHAs disambiguated (a re-run of the same
+	 * commit).
+	 */
+	static List<String> trendLabelsFrom(List<TestRun> runs) {
+		return labels(runs.stream().map(TestRun::getShortSha).toList());
+	}
+
+	/** Trend X labels with duplicate SHAs disambiguated. */
+	static List<String> labels(List<String> shas) {
+		Map<String, Integer> seen = new HashMap<>();
+		List<String> out = new ArrayList<>(shas.size());
+		for (String s : shas) {
+			String label = (s == null || s.isBlank()) ? "—" : s;
+			int n = seen.merge(label, 1, Integer::sum);
+			out.add((n == 1) ? label : label + " ·" + n);
+		}
+		return out;
 	}
 
 	/**

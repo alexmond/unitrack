@@ -396,6 +396,29 @@ public class ReportingService {
 		return out;
 	}
 
+	/**
+	 * Per-run {@code [sumDurationMs, testCount]} for one module across the given runs —
+	 * the module-scoped Test-timing trend (suite time and how many tests produced it).
+	 */
+	public List<long[]> moduleTimingTrend(List<Long> runIds, String module) {
+		List<long[]> out = new ArrayList<>(runIds.size());
+		for (Long runId : runIds) {
+			List<TestCaseResult> all = cases.findByRunIdOrderByStatusAscClassNameAscNameAsc(runId);
+			List<String> mods = moduleOfEach(all);
+			long sumMs = 0;
+			long count = 0;
+			for (int i = 0; i < all.size(); i++) {
+				if (!module.equals(mods.get(i))) {
+					continue;
+				}
+				sumMs += all.get(i).getDurationMs();
+				count++;
+			}
+			out.add(new long[] { sumMs, count });
+		}
+		return out;
+	}
+
 	public Optional<CoverageReport> coverageFor(Long runId) {
 		return coverageReports.findByRunId(runId);
 	}
