@@ -26,6 +26,16 @@ import javax.xml.stream.XMLStreamReader;
  */
 final class StaxXml {
 
+	/**
+	 * The hardened factory, built once. {@code XMLInputFactory.newFactory()} runs a
+	 * ServiceLoader jar-scan, so creating it per parse showed up as
+	 * {@code ZipFile.getEntryPos} churn on the ingest path (jvmlens). The factory is only
+	 * read after construction ({@code
+	 * createXMLStreamReader}), which is thread-safe, so a single shared instance is
+	 * correct.
+	 */
+	private static final XMLInputFactory FACTORY = hardenedFactory();
+
 	private StaxXml() {
 	}
 
@@ -44,7 +54,7 @@ final class StaxXml {
 	}
 
 	static XMLStreamReader open(InputStream in) throws XMLStreamException {
-		return hardenedFactory().createXMLStreamReader(in);
+		return FACTORY.createXMLStreamReader(in);
 	}
 
 	/** Advances to the first START_ELEMENT (the root) and returns its local name. */
@@ -96,26 +106,52 @@ final class StaxXml {
 	 */
 	static XmlNode readSubtree(XMLStreamReader reader) throws XMLStreamException {
 		String name = reader.getLocalName();
-		Map<String, String> attrs = new HashMap<>();
-		for (int i = 0; i < reader.getAttributeCount(); i++) {
-			attrs.put(reader.getAttributeLocalName(i), reader.getAttributeValue(i));
+		int attrCount = reader.getAttributeCount();
+		Map<String, String> attrs;
+		if (attrCount == 0) {
+			attrs = Map.of();
 		}
-		List<XmlNode> children = new ArrayList<>();
-		StringBuilder text = new StringBuilder();
+		else {
+			attrs = HashMap.newHashMap(attrCount);
+			for (int i = 0; i < attrCount; i++) {
+				attrs.put(reader.getAttributeLocalName(i), reader.getAttributeValue(i));
+			}
+		}
+		// Leaf elements (most testcases / coverage counters) have no child elements and
+		// no text —
+		// allocate the child list and text buffer only when there's actually something to
+		// hold.
+		List<XmlNode> children = null;
+		StringBuilder text = null;
 		while (reader.hasNext()) {
 			int event = reader.next();
 			switch (event) {
-				case XMLStreamConstants.START_ELEMENT -> children.add(readSubtree(reader));
-				case XMLStreamConstants.CHARACTERS, XMLStreamConstants.CDATA -> text.append(reader.getText());
+				case XMLStreamConstants.START_ELEMENT -> {
+					if (children == null) {
+						children = new ArrayList<>();
+					}
+					children.add(readSubtree(reader));
+				}
+				case XMLStreamConstants.CHARACTERS, XMLStreamConstants.CDATA -> {
+					if (text == null) {
+						text = new StringBuilder();
+					}
+					text.append(reader.getText());
+				}
 				case XMLStreamConstants.END_ELEMENT -> {
-					return new XmlNode(name, attrs, children, text.toString());
+					return node(name, attrs, children, text);
 				}
 				default -> {
 					// comments / processing instructions / whitespace — ignored
 				}
 			}
 		}
-		return new XmlNode(name, attrs, children, text.toString());
+		return node(name, attrs, children, text);
+	}
+
+	private static XmlNode node(String name, Map<String, String> attrs, List<XmlNode> children, StringBuilder text) {
+		return new XmlNode(name, attrs, (children != null) ? children : List.of(),
+				(text != null) ? text.toString() : "");
 	}
 
 }

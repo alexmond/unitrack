@@ -19,6 +19,13 @@ spring:
       hibernate:
         jdbc:
           time_zone: UTC
+          # Batch the many same-type inserts an ingest emits (test cases, coverage files) into
+          # multi-row JDBC batches — one ingest can persist hundreds of rows, and un-batched that
+          # is a network round-trip each on Postgres. order_inserts groups them by type so the
+          # batch isn't broken up. (#314-class: dev H2 is in-process so this shows on Postgres.)
+          batch_size: 50
+        order_inserts: true
+        order_updates: true
 
   flyway:
     enabled: true
