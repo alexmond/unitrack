@@ -9,7 +9,6 @@ import org.alexmond.unitrack.report.BlameService;
 import org.alexmond.unitrack.report.BranchService;
 import org.alexmond.unitrack.report.BranchSummary;
 import org.alexmond.unitrack.report.CoverageDiffService;
-import org.alexmond.unitrack.report.DurationPoint;
 import org.alexmond.unitrack.report.FailureCluster;
 import org.alexmond.unitrack.report.FailureClusteringService;
 import org.alexmond.unitrack.report.FlakyTestService;
@@ -20,7 +19,6 @@ import org.alexmond.unitrack.report.PerfRunDetailService;
 import org.alexmond.unitrack.report.PerfStepDetectionService;
 import org.alexmond.unitrack.report.PerfTrendPoint;
 import org.alexmond.unitrack.report.PerformanceService;
-import org.alexmond.unitrack.report.PerformanceSummary;
 import org.alexmond.unitrack.report.OwnershipService;
 import org.alexmond.unitrack.report.ProjectHealth;
 import org.alexmond.unitrack.report.ProjectHealthService;
@@ -55,9 +53,7 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 /** Server-rendered dashboard (Thymeleaf). */
@@ -79,8 +75,6 @@ public class DashboardController {
 	private static final int COVERAGE_FILE_LIMIT = 200;
 
 	private static final int SLOWEST_IN_RUN_LIMIT = 10;
-
-	private static final int PERF_SLOW_LIMIT = 25;
 
 	private final ReportingService reporting;
 
@@ -123,6 +117,8 @@ public class DashboardController {
 	private final ShareLinkService shareLinks;
 
 	private final AiAnalyzer aiAnalyzer;
+
+	private final TimingPageService timingPage;
 
 	private final io.micrometer.observation.ObservationRegistry observationRegistry;
 
@@ -180,9 +176,10 @@ public class DashboardController {
 		model.addAttribute("flags", reporting.flagSummaries(id));
 		model.addAttribute("modules",
 				reporting.latestCoverage(id).map((c) -> reporting.moduleCoverage(c.getId())).orElse(List.of()));
-		model.addAttribute("trendLabels", toJson(labels(trend.stream().map(TestRun::getShortSha).toList())));
+		model.addAttribute("trendLabels",
+				toJson(AnalyticsView.labels(trend.stream().map(TestRun::getShortSha).toList())));
 		model.addAttribute("trendRunIds", toJson(trend.stream().map(TestRun::getId).toList()));
-		model.addAttribute("trendTimes", toJson(trend.stream().map(DashboardController::epochMilli).toList()));
+		model.addAttribute("trendTimes", toJson(trend.stream().map(AnalyticsView::epochMilli).toList()));
 		model.addAttribute("trendPassed", toJson(trend.stream().map(TestRun::getPassed).toList()));
 		model.addAttribute("trendFailed", toJson(trend.stream().map((r) -> r.getFailed() + r.getErrors()).toList()));
 		model.addAttribute("trendSkipped", toJson(trend.stream().map(TestRun::getSkipped).toList()));
@@ -206,9 +203,10 @@ public class DashboardController {
 			model.addAttribute("packages", reporting.coveragePackages(c.getId(), selectedModule));
 			model.addAttribute("worstFiles", reporting.coverageFiles(c.getId(), selectedModule, COVERAGE_FILE_LIMIT));
 			List<TestRun> trend = reporting.trendRuns(id, null, TREND_FLAG, TREND_LIMIT);
-			model.addAttribute("trendLabels", toJson(labels(trend.stream().map(TestRun::getShortSha).toList())));
+			model.addAttribute("trendLabels",
+					toJson(AnalyticsView.labels(trend.stream().map(TestRun::getShortSha).toList())));
 			model.addAttribute("trendRunIds", toJson(trend.stream().map(TestRun::getId).toList()));
-			model.addAttribute("trendTimes", toJson(trend.stream().map(DashboardController::epochMilli).toList()));
+			model.addAttribute("trendTimes", toJson(trend.stream().map(AnalyticsView::epochMilli).toList()));
 			model.addAttribute("trendCoverage", toJson(trend.stream().map(TestRun::getLineCoveragePct).toList()));
 			model.addAttribute("lineDelta", lineCoverageDelta(trend));
 		});
@@ -310,27 +308,17 @@ public class DashboardController {
 		return "run";
 	}
 
+	/**
+	 * The Test-timing aspect on the shared analytics skeleton (same as Tests): KPI tiles,
+	 * a suite-time + test-count trend (test count on a second axis, since test growth
+	 * drives timing), a by-module breakdown with a Δ-vs-previous-run time column that
+	 * scopes the tab, and a slowest-tests roster whose rows carry a Δ-vs-previous-run.
+	 * Clicking a module row re-enters with {@code ?module=}.
+	 */
 	@GetMapping("/projects/{id}/performance")
-	public String performance(@PathVariable Long id, Model model) {
+	public String performance(@PathVariable Long id, @RequestParam(required = false) String module, Model model) {
 		Project project = access.requireReadProject(id);
-		PerformanceSummary summary = performance.summary(id, TREND_FLAG, PERF_SLOW_LIMIT, TREND_LIMIT);
-		List<DurationPoint> suiteTrend = summary.suiteTimeTrend();
-		DurationPoint curPt = suiteTrend.isEmpty() ? null : suiteTrend.get(suiteTrend.size() - 1);
-		DurationPoint prevPt = (suiteTrend.size() > 1) ? suiteTrend.get(suiteTrend.size() - 2) : null;
-		model.addAttribute("project", project);
-		model.addAttribute("slowest", summary.slowestInLatestRun());
-		model.addAttribute("latestRunId", summary.latestRunId());
-		model.addAttribute("timingModules",
-				(summary.latestRunId() != null) ? reporting.testModuleTiming(summary.latestRunId()) : List.of());
-		model.addAttribute("curSuiteMs", (curPt != null) ? curPt.durationMs() : null);
-		model.addAttribute("suiteDeltaMs",
-				(curPt != null && prevPt != null) ? curPt.durationMs() - prevPt.durationMs() : null);
-		model.addAttribute("runsTracked", suiteTrend.size());
-		model.addAttribute("trendLabels", toJson(labels(suiteTrend.stream().map(DurationPoint::shortSha).toList())));
-		model.addAttribute("trendSeconds",
-				toJson(suiteTrend.stream().map((p) -> round(p.durationMs() / 1000.0)).toList()));
-		model.addAttribute("trendRunIds", toJson(suiteTrend.stream().map(DurationPoint::runId).toList()));
-		model.addAttribute("trendTimes", toJson(suiteTrend.stream().map((p) -> p.createdAt().toEpochMilli()).toList()));
+		model.addAttribute("page", timingPage.build(project, id, module));
 		return "performance";
 	}
 
@@ -346,7 +334,8 @@ public class DashboardController {
 		model.addAttribute("perfRuns", reporting.recentPerfRuns(id, selectedFlag, RUN_LIST_LIMIT));
 		model.addAttribute("perfStep", perfStepDetection.detectLatencyStep(id, selectedFlag).orElse(null));
 		model.addAttribute("hasPerf", !trend.isEmpty());
-		model.addAttribute("trendLabels", toJson(labels(trend.stream().map(PerfTrendPoint::shortSha).toList())));
+		model.addAttribute("trendLabels",
+				toJson(AnalyticsView.labels(trend.stream().map(PerfTrendPoint::shortSha).toList())));
 		model.addAttribute("trendP50", toJson(trend.stream().map((p) -> round(p.p50Ms())).toList()));
 		model.addAttribute("trendP90", toJson(trend.stream().map((p) -> round(p.p90Ms())).toList()));
 		model.addAttribute("trendP99", toJson(trend.stream().map((p) -> round(p.p99Ms())).toList()));
@@ -529,8 +518,9 @@ public class DashboardController {
 			passed = trend.stream().map(TestRun::getPassed).toList();
 			failed = trend.stream().map((r) -> r.getFailed() + r.getErrors()).toList();
 		}
-		String config = AnalyticsView.trendConfig(labels(trend.stream().map(TestRun::getShortSha).toList()), runIds,
-				trend.stream().map(DashboardController::epochMilli).toList(),
+		String config = AnalyticsView.trendConfig(
+				AnalyticsView.labels(trend.stream().map(TestRun::getShortSha).toList()), runIds,
+				trend.stream().map(AnalyticsView::epochMilli).toList(),
 				List.of(AnalyticsView.series("Passed", "#2ea043", passed),
 						AnalyticsView.series("Failed", "#e5534b", failed)),
 				1, "tests", null);
@@ -694,7 +684,8 @@ public class DashboardController {
 		model.addAttribute("name", name);
 		model.addAttribute("timeline", timeline);
 		model.addAttribute("blame", blame.firstFailingForTest(id, className, name).orElse(null));
-		model.addAttribute("trendLabels", toJson(labels(timeline.stream().map(TestTimelinePoint::shortSha).toList())));
+		model.addAttribute("trendLabels",
+				toJson(AnalyticsView.labels(timeline.stream().map(TestTimelinePoint::shortSha).toList())));
 		model.addAttribute("trendMs", toJson(timeline.stream().map(TestTimelinePoint::durationMs).toList()));
 		return "test";
 	}
@@ -721,23 +712,6 @@ public class DashboardController {
 		return "java -jar unitrack-cli.jar upload \\\n" + "  --url " + base + " \\\n" + "  --project \"" + projectName
 				+ "\" \\\n" + "  --junit \"target/surefire-reports/*.xml\" \\\n"
 				+ "  --jacoco \"target/site/jacoco/jacoco.xml\"";
-	}
-
-	/** Run timestamp as epoch millis for the time-based trend x-axis (null-safe). */
-	private static Long epochMilli(TestRun run) {
-		return (run.getCreatedAt() != null) ? run.getCreatedAt().toEpochMilli() : null;
-	}
-
-	/** Trend X labels with duplicate SHAs disambiguated (a re-run of the same commit). */
-	private static List<String> labels(List<String> shas) {
-		Map<String, Integer> seen = new HashMap<>();
-		List<String> out = new ArrayList<>(shas.size());
-		for (String s : shas) {
-			String label = (s == null || s.isBlank()) ? "—" : s;
-			int n = seen.merge(label, 1, Integer::sum);
-			out.add((n == 1) ? label : label + " ·" + n);
-		}
-		return out;
 	}
 
 	/** Serializes a list of Strings/Numbers/nulls to a JSON array for the trend chart. */

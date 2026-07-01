@@ -61,12 +61,12 @@ The whole-project summary (mixes tests + coverage + branches + runs).
 - **L3 — By package:** package · line% · bar · branch% · lines  *(not linked deeper)*
 - **L3 — Worst-covered files:** file · line% · bar · covered · missed  *(not linked deeper — no file-detail screen)*
 
-### Test timing (`/projects/{id}/performance`, `performance.html`)
-- **L2 summary:** KPI tiles (suite time +Δ · slowest test · runs tracked) · **trend** (suite-time; time/run toggle; point → Compare L4)
-- **L3 — Timing by module:** module · tests · total time · avg — *click filters the slowest list (in-page)*
-- **L3 — Slowest tests:** test · suite · duration · status
+### Test timing (`/projects/{id}/performance`, `performance.html`) — reconciled onto the shared model
+Same `AnalyticsPage` model + `fragments/analytics` skeleton + `trend.js`/`roster.js` as Tests (composition), so the two can't drift.
+- **L2 summary:** KPI tiles (suite time +Δ · tests +Δ · slowest test) · **trend** — *two series: suite time (seconds, left axis) + **test count** (right axis), since test growth drives timing*; time/run toggle; point → Compare L4
+- **L3 — Timing by module:** module · tests · total time · avg · **Δ total** (vs previous run) — *click scopes the whole tab (`?module=`), graph included; back-to-all chip* (D7)
+- **L3 — Slowest tests:** test · suite · duration · **Δ prev** (vs previous run, colored) · status — sortable + searchable (`roster.js`)
   - **L4 — Single test history** via the test link → *see Shared entities*
-- *Gap:* no flag scope
 
 ### Load tests (`/projects/{id}/perf`, `perf.html`)
 - **L2 summary:** perf-flag **pill bar** (filter) · p95-regression banner (onset commit/date · baseline→recent · σ) · KPI tiles (p95 · throughput · error rate · samples, +Δ)
