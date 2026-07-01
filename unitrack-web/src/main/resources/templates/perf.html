@@ -23,8 +23,9 @@
     </div>
 
     <!-- Empty state: no perf data yet. -->
-    <div th:unless="${page.hasRun}"
-         th:replace="~{fragments/analytics :: emptyState(${page.empty.icon}, ${page.empty.title}, ${page.empty.message})}"></div>
+    <th:block th:unless="${page.hasRun}">
+        <div th:replace="~{fragments/analytics :: emptyState(${page.empty.icon}, ${page.empty.title}, ${page.empty.message})}"></div>
+    </th:block>
 
     <th:block th:if="${page.hasRun}">
         <!-- Shared KPI tiles (p95 +Δ, throughput +Δ, error +Δ, samples). -->
@@ -42,18 +43,24 @@
             <span class="muted">(+<span th:text="${#numbers.formatDecimal(page.regression.depthZ(),1,1)}">4.2</span>σ vs its own noise)</span>
         </div>
 
-        <!-- Latency = the shared primary trend (renders #trendChart + #trendModeToggle). -->
-        <div th:replace="~{fragments/analytics :: trend(${page.trend.present}, ${page.trend.title}, ${page.trend.subtitle})}"></div>
+        <!-- Single-run state: the trends need ≥2 runs, so show a hint instead of one-dot charts (D6). -->
+        <p th:unless="${page.trend.present}" class="muted" style="margin-top:14px">
+            First run — the latency, throughput and error trends appear once there are at least two runs.</p>
 
-        <!-- Throughput + error share the one toggle above (driven by the same trend.js). -->
-        <h2>Throughput <span class="muted">(req/s)</span></h2>
-        <div class="chart-wrap"><canvas id="throughputChart" height="80"></canvas></div>
+        <th:block th:if="${page.trend.present}">
+            <!-- Latency = the shared primary trend (renders #trendChart + #trendModeToggle). -->
+            <div th:replace="~{fragments/analytics :: trend(${page.trend.present}, ${page.trend.title}, ${page.trend.subtitle})}"></div>
 
-        <h2>Error rate <span class="muted">(%)</span></h2>
-        <div class="chart-wrap"><canvas id="errorChart" height="70"></canvas></div>
-    </th:block>
+            <!-- Throughput + error share the one toggle above (driven by the same trend.js). -->
+            <h2>Throughput <span class="muted">(req/s)</span></h2>
+            <div class="chart-wrap"><canvas id="throughputChart" height="80"></canvas></div>
 
-    <!-- Recent perf runs — sortable + searchable via the shared roster.js. -->
+            <h2>Error rate <span class="muted">(%)</span></h2>
+            <div class="chart-wrap"><canvas id="errorChart" height="70"></canvas></div>
+        </th:block>
+
+    <!-- Recent perf runs — sortable + searchable via the shared roster.js. Inside the hasRun
+         guard so it can't render alongside the empty state (perfRuns is a separate query). -->
     <div class="trend-head" style="margin-top:24px" th:unless="${page.perfRuns.isEmpty()}">
         <h2 style="margin:0">Recent perf runs</h2>
         <input type="search" class="form-control form-control-sm" style="max-width:280px"
@@ -83,6 +90,7 @@
         </tbody>
     </table>
     <p class="muted" data-roster-empty="perf-body" style="display:none">No perf runs match your search.</p>
+    </th:block>
 </main>
 <th:block layout:fragment="scripts">
 
@@ -90,9 +98,9 @@
 <script th:src="@{/js/roster.js}"></script>
 
 <!-- Three charts, one shared time/run toggle, all via the shared trend.js. Points → perf-run detail. -->
-<script th:if="${page.hasRun}" th:src="@{/webjars/chart.js/4.4.1/dist/chart.umd.js}"></script>
-<script th:if="${page.hasRun}" th:src="@{/js/trend.js}"></script>
-<script th:if="${page.hasRun}" th:inline="javascript">
+<script th:if="${page.trend.present}" th:src="@{/webjars/chart.js/4.4.1/dist/chart.umd.js}"></script>
+<script th:if="${page.trend.present}" th:src="@{/js/trend.js}"></script>
+<script th:if="${page.trend.present}" th:inline="javascript">
     window.__trendChart('trendChart', 'trendModeToggle', JSON.parse(/*[[${page.trend.configJson}]]*/ '{}'));
     window.__trendChart('throughputChart', 'trendModeToggle', JSON.parse(/*[[${page.throughputTrend.configJson}]]*/ '{}'));
     window.__trendChart('errorChart', 'trendModeToggle', JSON.parse(/*[[${page.errorTrend.configJson}]]*/ '{}'));

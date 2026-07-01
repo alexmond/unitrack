@@ -7,9 +7,14 @@ package org.alexmond.unitrack.report;
  */
 public record TestModuleRow(String name, int tests, int passed, int failed, int skipped) {
 
-	/** Pass rate as a percentage (empty module counts as 100%). */
+	/**
+	 * Pass rate over <em>executed</em> tests (skipped excluded), matching
+	 * {@code TestRun#passRate()} and the scoped-KPI {@code passRate} so a module reads
+	 * the same in the breakdown row and after you click into it. Nothing executed → 0.0.
+	 */
 	public double passRate() {
-		return (this.tests == 0) ? 100.0 : this.passed * 100.0 / this.tests;
+		int considered = this.tests - this.skipped;
+		return (considered <= 0) ? 0.0 : this.passed * 100.0 / considered;
 	}
 
 }

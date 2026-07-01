@@ -65,7 +65,12 @@ class TestsPageIntegrationTest {
 			.andExpect(status().isOk())
 			.andExpect(content().string(containsString("All tests")))
 			.andExpect(content().string(containsString("id=\"flaky-section\"")))
-			.andExpect(content().string(containsString("id=\"clusters-section\"")));
+			.andExpect(content().string(containsString("id=\"clusters-section\"")))
+			// With runs present the empty state must NOT render. Guards a Thymeleaf
+			// precedence trap: th:replace (100) runs before th:unless (300) on the same
+			// element, so the empty-state guard must live on a wrapper, not the replaced
+			// div.
+			.andExpect(content().string(not(containsString("No test runs yet"))));
 	}
 
 	/**

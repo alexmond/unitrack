@@ -28,6 +28,7 @@ import org.alexmond.unitrack.report.TestRegressionService;
 import org.alexmond.unitrack.report.TestModuleRow;
 import org.alexmond.unitrack.report.TestRosterRow;
 import org.alexmond.unitrack.report.TriageService;
+import org.alexmond.unitrack.web.ui.view.BreakdownCell;
 import org.alexmond.unitrack.web.ui.view.BreakdownRow;
 import org.alexmond.unitrack.web.ui.view.BreakdownTable;
 import org.alexmond.unitrack.web.ui.view.EmptyState;
@@ -426,8 +427,10 @@ public class DashboardController {
 			List<TestModuleRow> modules) {
 		return AnalyticsView.moduleBreakdown(selectedModule, modules.stream()
 			.map((m) -> new BreakdownRow(m.name(), AnalyticsView.scopeUrl("tests", id, flag, m.name()), m.failed() > 0,
-					List.of(String.valueOf(m.tests()), AnalyticsView.fmt1(m.passRate()) + "%",
-							String.valueOf(m.failed()), String.valueOf(m.skipped()))))
+					List.of(BreakdownCell.of(String.valueOf(m.tests())),
+							BreakdownCell.of(AnalyticsView.fmt1(m.passRate()) + "%"),
+							BreakdownCell.of(String.valueOf(m.failed())),
+							BreakdownCell.of(String.valueOf(m.skipped())))))
 			.toList(), "Tests by module", List.of("Module", "Tests", "Pass %", "Failures", "Skipped"));
 	}
 
@@ -489,7 +492,9 @@ public class DashboardController {
 						AnalyticsView.series("Failed", "#e5534b", failed)),
 				1, "tests", null);
 		String subtitle = (scoped) ? ("(" + selectedModule + " — pass/fail per run)") : "(pass/fail per run)";
-		return new TrendView(!trend.isEmpty(), "Test results trend", subtitle, config);
+		// A single point is not a trend — gate on >=2 runs so the first run shows the
+		// hint, not a dot.
+		return new TrendView(trend.size() >= 2, "Test results trend", subtitle, config);
 	}
 
 	/**
@@ -596,12 +601,14 @@ public class DashboardController {
 	}
 
 	/**
-	 * Pass rate (skipped excluded from the denominator, matching
-	 * {@link TestRun#passRate()}).
+	 * Pass rate, skipped excluded from the denominator — matching
+	 * {@link TestRun#passRate()} and {@code TestModuleRow#passRate()} so the whole-run
+	 * KPI, a module's breakdown row, and that module's scoped KPI all agree. Nothing
+	 * executed → 0.0 (same convention as those).
 	 */
 	private static double scopePassRate(long[] stat) {
 		long considered = stat[0] - stat[3];
-		return (considered <= 0) ? 100.0 : stat[1] * 100.0 / considered;
+		return (considered <= 0) ? 0.0 : stat[1] * 100.0 / considered;
 	}
 
 	private static String testKey(String className, String name) {

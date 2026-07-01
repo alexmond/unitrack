@@ -13,6 +13,7 @@ import org.alexmond.unitrack.domain.TestCaseResult;
 import org.alexmond.unitrack.domain.TestRun;
 import org.alexmond.unitrack.report.ReportingService;
 import org.alexmond.unitrack.report.TestModuleTiming;
+import org.alexmond.unitrack.web.ui.view.BreakdownCell;
 import org.alexmond.unitrack.web.ui.view.BreakdownRow;
 import org.alexmond.unitrack.web.ui.view.BreakdownTable;
 import org.alexmond.unitrack.web.ui.view.EmptyState;
@@ -168,7 +169,9 @@ class TimingPageService {
 				null, "seconds", "tests");
 		String subtitle = (scoped) ? ("(" + module + " — suite time & test count per run)")
 				: "(suite time & test count per run)";
-		return new TrendView(true, "Suite-time trend", subtitle, cfg);
+		// A single point is not a trend — gate on >=2 runs so a first run shows the hint,
+		// not a dot.
+		return new TrendView(trend.size() >= 2, "Suite-time trend", subtitle, cfg);
 	}
 
 	/** Timing by module with a Δ-total-time column vs the previous run. */
@@ -182,10 +185,16 @@ class TimingPageService {
 		List<BreakdownRow> rows = new ArrayList<>();
 		for (TestModuleTiming m : reporting.testModuleTiming(cur.getId())) {
 			Long was = prevTotal.get(m.name());
-			String delta = (was != null) ? (AnalyticsView.signed1((m.totalMs() - was) / 1000.0) + "s") : "new";
+			// Δ total time vs the previous run — coloured like the roster Δ (slower =
+			// down/red).
+			BreakdownCell deltaCell = (was != null)
+					? new BreakdownCell(AnalyticsView.signed1((m.totalMs() - was) / 1000.0) + "s",
+							"delta " + AnalyticsView.upIsBad((m.totalMs() - was) / 1000.0, 0.05))
+					: BreakdownCell.of("new");
 			rows.add(new BreakdownRow(m.name(), "/projects/" + id + "/performance?module=" + enc(m.name()), false,
-					List.of(String.valueOf(m.tests()), AnalyticsView.fmt1(m.totalMs() / 1000.0) + "s", fmtMs(m.avgMs()),
-							delta)));
+					List.of(BreakdownCell.of(String.valueOf(m.tests())),
+							BreakdownCell.of(AnalyticsView.fmt1(m.totalMs() / 1000.0) + "s"),
+							BreakdownCell.of(fmtMs(m.avgMs())), deltaCell)));
 		}
 		return AnalyticsView.moduleBreakdown(selected, rows, "Timing by module",
 				List.of("Module", "Tests", "Total", "Avg", "Δ total"));

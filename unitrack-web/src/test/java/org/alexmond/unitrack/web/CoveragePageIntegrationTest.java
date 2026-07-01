@@ -10,6 +10,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -67,7 +68,10 @@ class CoveragePageIntegrationTest {
 			.andExpect(content().string(containsString("com/acme/web")))
 			.andExpect(content().string(containsString("Worst-covered files")))
 			.andExpect(content().string(containsString("Bad.java")))
-			.andExpect(content().string(containsString("Good.java")));
+			.andExpect(content().string(containsString("Good.java")))
+			// With a report present the empty state must NOT render (th:replace/th:unless
+			// precedence trap — the guard belongs on a wrapper, not the replaced div).
+			.andExpect(content().string(not(containsString("No coverage yet"))));
 	}
 
 	@Test

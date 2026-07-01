@@ -17,12 +17,13 @@
     <div th:if="${page.scoped}" style="display:flex;align-items:center;gap:10px;margin:10px 0">
         <span class="badge tag"><i class="bi bi-diagram-3" aria-hidden="true"></i>
             Module: <code class="mono" th:text="${page.selectedModule}">web</code></span>
-        <a th:href="${page.allUrl}"><i class="bi bi-arrow-left" aria-hidden="true"></i> All tests</a>
+        <a th:href="${page.allUrl}"><i class="bi bi-arrow-left" aria-hidden="true"></i> All modules</a>
     </div>
 
     <!-- Empty state: no test runs for this flag yet. -->
-    <div th:unless="${page.hasRun}"
-         th:replace="~{fragments/analytics :: emptyState(${page.empty.icon}, ${page.empty.title}, ${page.empty.message})}"></div>
+    <th:block th:unless="${page.hasRun}">
+        <div th:replace="~{fragments/analytics :: emptyState(${page.empty.icon}, ${page.empty.title}, ${page.empty.message})}"></div>
+    </th:block>
 
     <th:block th:if="${page.hasRun}">
         <!-- Shared analytics skeleton: KPI tiles → latest-run line → trend → by-module breakdown.

@@ -9,7 +9,7 @@
         <a th:href="@{/projects/{id}(id=${page.project.id})}" th:text="${page.project.name}">project</a> /
         Coverage
     </p>
-    <h1>Coverage</h1>
+    <h1 th:text="${page.project.name} + ' — coverage'">project — coverage</h1>
     <nav th:replace="~{fragments/common :: subnav(${page.project.id}, ${page.tab})}"></nav>
 
     <!-- Module scope chip + a way back to all (clicking a "by module" row scopes the package +
@@ -21,14 +21,18 @@
     </div>
 
     <!-- Empty state: no coverage report yet. -->
-    <div th:unless="${page.hasRun}"
-         th:replace="~{fragments/analytics :: emptyState(${page.empty.icon}, ${page.empty.title}, ${page.empty.message})}"></div>
+    <th:block th:unless="${page.hasRun}">
+        <div th:replace="~{fragments/analytics :: emptyState(${page.empty.icon}, ${page.empty.title}, ${page.empty.message})}"></div>
+    </th:block>
 
     <th:block th:if="${page.hasRun}">
         <!-- Shared analytics skeleton: KPI tiles → latest-report line → trend → by-module breakdown. -->
         <div th:replace="~{fragments/analytics :: kpiRow(${page.kpis})}"></div>
         <div th:replace="~{fragments/analytics :: latestRunLine(${page.latestRun})}"></div>
         <div th:replace="~{fragments/analytics :: trend(${page.trend.present}, ${page.trend.title}, ${page.trend.subtitle})}"></div>
+        <!-- Single-run state: a trend needs ≥2 runs (D6). Not shown under module scope (not a first run). -->
+        <p th:if="${page.hasRun and !page.trend.present and !page.scoped}" class="muted" style="margin-top:14px">
+            First run — the line-coverage trend appears once there are at least two runs.</p>
         <div th:replace="~{fragments/analytics :: breakdown(${page.breakdown})}"></div>
 
         <!-- By package (module-scoped). Sortable columns (shared roster.js). -->
