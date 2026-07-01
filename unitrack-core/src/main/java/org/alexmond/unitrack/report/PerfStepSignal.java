@@ -11,7 +11,9 @@ import java.time.Instant;
  * @param depthZ depth of the shift as a robust z-score
  * @param baselineMedian the prior stable level (ms)
  * @param recentMedian the current level (ms)
+ * @param onsetRunId id of the perf-run where the step began (for a direct drill to its
+ * detail)
  */
 public record PerfStepSignal(String onsetCommit, Instant onsetAt, double depthZ, double baselineMedian,
-		double recentMedian) {
+		double recentMedian, Long onsetRunId) {
 }

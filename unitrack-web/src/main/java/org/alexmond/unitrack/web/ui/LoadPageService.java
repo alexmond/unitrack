@@ -49,8 +49,10 @@ class LoadPageService {
 		List<PerfTrendPoint> trend = reporting.perfTrend(id, selectedFlag, TREND_LIMIT);
 		List<PerfRun> perfRuns = reporting.recentPerfRuns(id, selectedFlag, RUN_LIST_LIMIT);
 		PerfStepSignal step = perfStepDetection.detectLatencyStep(id, selectedFlag).orElse(null);
+		String base = AnalyticsView.repoBase(project.getRepoUrl());
+		String repoCommitBase = (base != null) ? (base + "/commit/") : null;
 		return new LoadPage(project, !trend.isEmpty(), kpis(perfRuns), EMPTY, latency(trend), throughput(trend),
-				error(trend), step, perfRuns, flags, selectedFlag);
+				error(trend), step, perfRuns, flags, selectedFlag, repoCommitBase);
 	}
 
 	private static List<KpiTile> kpis(List<PerfRun> perfRuns) {
@@ -74,14 +76,18 @@ class LoadPageService {
 	}
 
 	private static TrendView latency(List<PerfTrendPoint> t) {
+		// p95 is the headline metric (KPI tile + regression banner), so it's plotted here
+		// too —
+		// otherwise the one line the alert is about wouldn't appear on its own chart.
 		String cfg = AnalyticsView.perfTrendConfig(labels(t), ids(t), times(t),
 				List.of(AnalyticsView.series("p50", "#2ea043", t.stream().map(PerfTrendPoint::p50Ms).toList()),
 						AnalyticsView.series("p90", "#d29922", t.stream().map(PerfTrendPoint::p90Ms).toList()),
+						AnalyticsView.series("p95", "#58a6ff", t.stream().map(PerfTrendPoint::p95Ms).toList()),
 						AnalyticsView.series("p99", "#f85149", t.stream().map(PerfTrendPoint::p99Ms).toList())),
 				"ms");
 		// A single point is not a trend — gate on >=2 runs so a first run shows the hint,
 		// not a dot.
-		return new TrendView(t.size() >= 2, "Latency", "(p50 / p90 / p99, ms)", cfg);
+		return new TrendView(t.size() >= 2, "Latency", "(p50 / p90 / p95 / p99, ms)", cfg);
 	}
 
 	private static TrendView throughput(List<PerfTrendPoint> t) {

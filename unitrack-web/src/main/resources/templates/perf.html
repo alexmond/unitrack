@@ -36,7 +36,10 @@
              style="border-left-color: var(--c-fail); margin-bottom:18px">
             <strong><i class="bi bi-graph-down-arrow" aria-hidden="true"></i> p95 latency regressed</strong>
             — since
-            <code class="mono" th:text="${page.regression.onsetCommit() != null ? #strings.abbreviate(page.regression.onsetCommit(),9) : '—'}">abc1234</code>
+            <a th:if="${page.regression.onsetRunId() != null}" th:href="@{/perf-runs/{id}(id=${page.regression.onsetRunId()})}"><code
+                    class="mono" th:text="${page.regression.onsetCommit() != null ? #strings.abbreviate(page.regression.onsetCommit(),9) : '#' + page.regression.onsetRunId()}">abc1234</code></a>
+            <code th:unless="${page.regression.onsetRunId() != null}" class="mono"
+                  th:text="${page.regression.onsetCommit() != null ? #strings.abbreviate(page.regression.onsetCommit(),9) : '—'}">abc1234</code>
             <span class="muted" th:text="'(' + ${#temporals.format(page.regression.onsetAt(),'MMM dd')} + ')'">(Jun 20)</span>:
             <span th:text="${#numbers.formatDecimal(page.regression.baselineMedian(),1,0)}">120</span> →
             <span th:text="${#numbers.formatDecimal(page.regression.recentMedian(),1,0)}">180</span> ms
@@ -76,7 +79,13 @@
             th:attr="data-search=${#strings.toLowerCase((r.commitSha != null ? r.commitSha : '') + ' ' + r.flag)}">
             <td class="muted" th:text="${#temporals.format(r.createdAt, 'MMM dd HH:mm')}">when</td>
             <td><code class="mono" th:text="${r.flag}">default</code></td>
-            <td><code class="mono" th:text="${r.commitSha != null ? #strings.abbreviate(r.commitSha,9) : '—'}">sha</code></td>
+            <td>
+                <a th:if="${page.repoCommitBase != null and r.commitSha != null}"
+                   th:href="${page.repoCommitBase + r.commitSha}" target="_blank" rel="noopener"><code class="mono"
+                        th:text="${#strings.abbreviate(r.commitSha,9)}">sha</code></a>
+                <code th:unless="${page.repoCommitBase != null and r.commitSha != null}" class="mono"
+                      th:text="${r.commitSha != null ? #strings.abbreviate(r.commitSha,9) : '—'}">sha</code>
+            </td>
             <td class="muted" th:text="${r.format}">jmeter</td>
             <td class="num" th:attr="data-sort=${r.sampleCount}" th:text="${r.sampleCount}">0</td>
             <td class="num" th:attr="data-sort=${r.p95Ms}" th:text="${#numbers.formatDecimal(r.p95Ms,1,0)} + ' ms'">0 ms</td>

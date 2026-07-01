@@ -26,10 +26,12 @@ import org.alexmond.unitrack.report.PerfStepSignal;
  * @param perfRuns the recent perf runs (table → perf-run detail)
  * @param flags the perf flags/series (scope control)
  * @param selectedFlag the currently-shown series
+ * @param repoCommitBase GitHub-style commit base ({@code <repo>/commit/}) for linking a
+ * perf-run's commit SHA, or null when the project has no repo URL
  */
 public record LoadPage(Project project, boolean hasRun, List<KpiTile> kpis, EmptyState empty, TrendView trend,
 		TrendView throughputTrend, TrendView errorTrend, PerfStepSignal regression, List<PerfRun> perfRuns,
-		List<String> flags, String selectedFlag) implements AnalyticsPage {
+		List<String> flags, String selectedFlag, String repoCommitBase) implements AnalyticsPage {
 
 	@Override
 	public String tab() {

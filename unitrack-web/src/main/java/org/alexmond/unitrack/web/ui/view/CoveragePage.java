@@ -24,10 +24,13 @@ import org.alexmond.unitrack.report.CoveragePackage;
  * @param empty the empty-state
  * @param packages the by-package rows (module-scoped)
  * @param worstFiles the worst-covered files (module-scoped)
+ * @param repoBlobBase GitHub-style blob base ({@code <repo>/blob/<sha>/}) for linking a
+ * worst-file path to its source, or null when the project has no repo URL
  */
 public record CoveragePage(Project project, boolean scoped, String selectedModule, String allUrl, boolean hasRun,
 		List<KpiTile> kpis, LatestRunLine latestRun, TrendView trend, BreakdownTable breakdown, EmptyState empty,
-		List<CoveragePackage> packages, List<CoverageFileEntry> worstFiles) implements AnalyticsPage {
+		List<CoveragePackage> packages, List<CoverageFileEntry> worstFiles,
+		String repoBlobBase) implements AnalyticsPage {
 
 	@Override
 	public String tab() {

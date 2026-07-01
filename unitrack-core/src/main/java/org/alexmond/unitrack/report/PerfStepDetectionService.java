@@ -44,7 +44,7 @@ public class PerfStepDetectionService {
 		}
 		PerfRun onset = ordered.get(result.onsetIndex());
 		return Optional.of(new PerfStepSignal(onset.getCommitSha(), onset.getCreatedAt(), result.depthZ(),
-				result.baselineMedian(), result.recentMedian()));
+				result.baselineMedian(), result.recentMedian(), onset.getId()));
 	}
 
 }
