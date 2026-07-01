@@ -38,7 +38,7 @@ public record TestsPage(Project project, boolean scoped, String selectedModule, 
 		List<KpiTile> kpis, LatestRunLine latestRun, TrendView trend, BreakdownTable breakdown, EmptyState empty,
 		List<TestRosterRow> roster, long failing, long flakyCount, long fixedCount, long skipped, long passed,
 		List<FlakyTestView> flaky, boolean aiEnabled, List<FailureCluster> clusters,
-		List<FailureCluster> recurringFailures) implements AnalyticsPage {
+		List<FailureCluster> recurringFailures, ScopeBar scope) implements AnalyticsPage {
 
 	@Override
 	public String tab() {

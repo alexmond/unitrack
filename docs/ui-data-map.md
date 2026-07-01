@@ -71,11 +71,11 @@ Same `AnalyticsPage` model + `fragments/analytics` skeleton + `trend.js`/`roster
 
 ### Load tests (`/projects/{id}/perf`, `perf.html`) — reconciled onto the shared model
 Reuses the shared pieces (`AnalyticsPage` model, `fragments/analytics` KPI + empty + primary-trend, `trend.js`, `roster.js`) while keeping Load tests' own shape.
-- **L2 summary:** perf-flag **pill bar** (filter) · p95-regression banner (onset commit/date · baseline→recent · σ) · shared KPI tiles (p95 +Δ · throughput +Δ · error rate +Δ · samples)
+- **L2 summary:** perf-flag **scope dropdown** (shared `scopeBar`, replaced the pill bar — same idiom now on Tests/Timing/Load) · p95-regression banner (onset commit/date · baseline→recent · σ) · shared KPI tiles (p95 +Δ · throughput +Δ · error rate +Δ · samples)
 - **L2 charts:** Latency (p50/p90/p99, the shared primary trend) · Throughput · Error rate — all three on the **one** time/run toggle via `trend.js`; point → **Perf-run** L4 (pointLink, not Compare)
 - **L3 — By transaction (latest run):** label · samples · p50 · p95 · **Δ p95 vs baseline** (coloured) · errors — *the per-transaction breakdown; shows which label regressed. Sortable + searchable*
 - **L3 — Recent perf runs:** when · flag · commit (→ GitHub) · format · samples · p95 · throughput · errors → **Perf-run** (L4) — *sortable + searchable* (shared roster.js)
-- *Note:* scopes by perf-**flag**, not module (so `breakdown()`/`latestRun()` are null); only tab still on a top pill bar
+- *Note:* scopes by perf-**flag** (now the shared dropdown), not module (so `latestRun()` is null); the per-transaction table is its breakdown
 
 ### Flaky tests — **folded into Tests** (`/projects/{id}/flaky` → 302 `…/tests#flaky-section`)
 ### Failure clusters — **folded into Tests** (`/projects/{id}/clusters` → 302 `…/tests#clusters-section`)

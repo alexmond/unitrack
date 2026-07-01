@@ -18,6 +18,7 @@ import org.alexmond.unitrack.web.ui.view.BreakdownRow;
 import org.alexmond.unitrack.web.ui.view.BreakdownTable;
 import org.alexmond.unitrack.web.ui.view.EmptyState;
 import org.alexmond.unitrack.web.ui.view.KpiTile;
+import org.alexmond.unitrack.web.ui.view.ScopeBar;
 import org.alexmond.unitrack.web.ui.view.TimingPage;
 import org.alexmond.unitrack.web.ui.view.TimingRosterRow;
 import org.alexmond.unitrack.web.ui.view.TrendView;
@@ -47,12 +48,15 @@ class TimingPageService {
 
 	private final ReportingService reporting;
 
-	TimingPage build(Project project, Long id, String module) {
-		List<TestRun> trend = reporting.trendRuns(id, null, TREND_FLAG, TREND_LIMIT);
+	TimingPage build(Project project, Long id, String flag, String module) {
 		String all = "/projects/" + id + "/performance";
+		List<String> flags = reporting.testFlags(id);
+		String selectedFlag = selectedFlag(flag, flags);
+		List<TestRun> trend = reporting.trendRuns(id, null, selectedFlag, TREND_LIMIT);
 		if (trend.isEmpty()) {
 			return new TimingPage(project, false, null, all, false, List.of(), null,
-					new TrendView(false, "Suite-time trend", null, "{}"), null, EMPTY, List.of());
+					new TrendView(false, "Suite-time trend", null, "{}"), null, EMPTY, List.of(),
+					new ScopeBar(all, flags, selectedFlag, null));
 		}
 		TestRun cur = trend.get(trend.size() - 1);
 		TestRun prev = (trend.size() > 1) ? trend.get(trend.size() - 2) : null;
@@ -68,7 +72,21 @@ class TimingPageService {
 
 		return new TimingPage(project, scoped, selected, all, true, kpis(curScope, prevScope, prev != null, roster),
 				AnalyticsView.latestRunLine(cur), trend(trend, scoped, selected), breakdown(id, cur, prev, selected),
-				EMPTY, roster);
+				EMPTY, roster, new ScopeBar(all, flags, selectedFlag, selected));
+	}
+
+	/**
+	 * The flag to show: the requested one if valid, else the {@code default} rollup, else
+	 * the first.
+	 */
+	private static String selectedFlag(String requested, List<String> flags) {
+		if (requested != null && !requested.isBlank() && flags.contains(requested)) {
+			return requested;
+		}
+		if (flags.contains(TREND_FLAG)) {
+			return TREND_FLAG;
+		}
+		return flags.isEmpty() ? null : flags.get(0);
 	}
 
 	/**

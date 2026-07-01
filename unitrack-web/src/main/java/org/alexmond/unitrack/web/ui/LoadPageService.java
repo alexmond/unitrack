@@ -16,6 +16,7 @@ import org.alexmond.unitrack.report.ReportingService;
 import org.alexmond.unitrack.web.ui.view.EmptyState;
 import org.alexmond.unitrack.web.ui.view.KpiTile;
 import org.alexmond.unitrack.web.ui.view.LoadPage;
+import org.alexmond.unitrack.web.ui.view.ScopeBar;
 import org.alexmond.unitrack.web.ui.view.TrendView;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -59,8 +60,9 @@ class LoadPageService {
 		// baseline).
 		List<PerfRunDetail.LabelRow> transactions = perfRuns.isEmpty() ? List.of()
 				: perfRunDetail.detail(perfRuns.get(0).getId()).map(PerfRunDetail::labels).orElse(List.of());
+		ScopeBar scope = new ScopeBar("/projects/" + id + "/perf", flags, selectedFlag, null);
 		return new LoadPage(project, !trend.isEmpty(), kpis(perfRuns), EMPTY, latency(trend), throughput(trend),
-				error(trend), step, perfRuns, flags, selectedFlag, repoCommitBase, transactions);
+				error(trend), step, perfRuns, flags, selectedFlag, repoCommitBase, transactions, scope);
 	}
 
 	private static List<KpiTile> kpis(List<PerfRun> perfRuns) {

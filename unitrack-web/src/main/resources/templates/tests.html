@@ -11,6 +11,7 @@
     </p>
     <h1 th:text="${page.project.name} + ' — tests'">project — tests</h1>
     <nav th:replace="~{fragments/common :: subnav(${page.project.id}, ${page.tab})}"></nav>
+    <div th:replace="~{fragments/common :: scopeBar(${page.scope})}"></div>
 
     <!-- Module scope chip + a way back to all tests (clicking a "by module" row scopes the
          whole page — tiles, trend, and roster — to that module). -->
@@ -211,6 +212,7 @@
 
 <!-- Shared table behaviour: sortable columns, module-row drill, roster search + collapse. -->
 <script th:src="@{/js/roster.js}"></script>
+<script th:src="@{/js/scope.js}"></script>
 
 <!-- Pass/fail trend via the shared chart (config assembled server-side, one shape for every tab). -->
 <script th:if="${page.trend.present}" th:src="@{/webjars/chart.js/4.4.1/dist/chart.umd.js}"></script>

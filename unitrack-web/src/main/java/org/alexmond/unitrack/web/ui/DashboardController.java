@@ -33,6 +33,7 @@ import org.alexmond.unitrack.web.ui.view.BreakdownRow;
 import org.alexmond.unitrack.web.ui.view.BreakdownTable;
 import org.alexmond.unitrack.web.ui.view.EmptyState;
 import org.alexmond.unitrack.web.ui.view.KpiTile;
+import org.alexmond.unitrack.web.ui.view.ScopeBar;
 import org.alexmond.unitrack.web.ui.view.TestsPage;
 import org.alexmond.unitrack.web.ui.view.TrendView;
 import org.alexmond.unitrack.web.account.MembershipService;
@@ -306,9 +307,10 @@ public class DashboardController {
 	 * Clicking a module row re-enters with {@code ?module=}.
 	 */
 	@GetMapping("/projects/{id}/performance")
-	public String performance(@PathVariable Long id, @RequestParam(required = false) String module, Model model) {
+	public String performance(@PathVariable Long id, @RequestParam(required = false) String flag,
+			@RequestParam(required = false) String module, Model model) {
 		Project project = access.requireReadProject(id);
-		model.addAttribute("page", timingPage.build(project, id, module));
+		model.addAttribute("page", timingPage.build(project, id, flag, module));
 		return "performance";
 	}
 
@@ -396,7 +398,8 @@ public class DashboardController {
 						"Upload Surefire/JUnit XML to start tracking results, the pass/fail trend, and per-test history."),
 				roster, (tiles != null) ? tiles.failures() : 0, roster.stream().filter(TestRosterRow::flaky).count(),
 				roster.stream().filter(TestRosterRow::fixed).count(), (tiles != null) ? tiles.skipped() : 0,
-				(tiles != null) ? tiles.passed() : 0, flakyViews, aiAnalyzer.enabled(), cs.clusters(), cs.recurring());
+				(tiles != null) ? tiles.passed() : 0, flakyViews, aiAnalyzer.enabled(), cs.clusters(), cs.recurring(),
+				new ScopeBar("/projects/" + id + "/tests", flags, selectedFlag, selectedModule));
 		model.addAttribute("page", page);
 		return "tests";
 	}
