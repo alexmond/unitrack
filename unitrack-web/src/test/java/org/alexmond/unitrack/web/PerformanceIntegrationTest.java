@@ -10,6 +10,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -80,7 +81,10 @@ class PerformanceIntegrationTest {
 		// The performance dashboard page renders.
 		mvc.perform(get("/projects/{id}/performance", projectId))
 			.andExpect(status().isOk())
-			.andExpect(content().string(containsString("Slowest tests")));
+			.andExpect(content().string(containsString("Slowest tests")))
+			// With runs present the empty state must NOT render (th:replace/th:unless
+			// precedence trap).
+			.andExpect(content().string(not(containsString("No test timings yet"))));
 	}
 
 	@Test

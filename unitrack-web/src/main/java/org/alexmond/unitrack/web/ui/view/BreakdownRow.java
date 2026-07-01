@@ -10,7 +10,7 @@ import java.util.List;
  * @param name the group name (rendered as the blue mono link)
  * @param href where clicking the row/name navigates (the tab scoped to this group)
  * @param failing whether to tint the row as failing
- * @param cells the formatted values for the non-name columns, in column order
+ * @param cells the formatted cells for the non-name columns, in column order
  */
-public record BreakdownRow(String name, String href, boolean failing, List<String> cells) {
+public record BreakdownRow(String name, String href, boolean failing, List<BreakdownCell> cells) {
 }

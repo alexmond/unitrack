@@ -9,6 +9,7 @@ import org.alexmond.unitrack.domain.Project;
 import org.alexmond.unitrack.domain.TestRun;
 import org.alexmond.unitrack.report.ModuleCoverage;
 import org.alexmond.unitrack.report.ReportingService;
+import org.alexmond.unitrack.web.ui.view.BreakdownCell;
 import org.alexmond.unitrack.web.ui.view.BreakdownRow;
 import org.alexmond.unitrack.web.ui.view.BreakdownTable;
 import org.alexmond.unitrack.web.ui.view.CoveragePage;
@@ -29,13 +30,11 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 class CoveragePageService {
 
-	private static final String TREND_FLAG = "default";
-
 	private static final int TREND_LIMIT = 30;
 
 	private static final int FILE_LIMIT = 200;
 
-	private static final EmptyState EMPTY = new EmptyState("bi-shield-slash", "No coverage yet",
+	private static final EmptyState EMPTY = new EmptyState("bi-shield-check", "No coverage yet",
 			"Attach a JaCoCo, Cobertura, LCOV or OpenCover report to an ingest and per-file coverage shows up here.");
 
 	private final ReportingService reporting;
@@ -49,10 +48,29 @@ class CoveragePageService {
 		}
 		List<ModuleCoverage> modules = reporting.moduleCoverage(c.getId());
 		String selected = validModule(module, modules);
-		List<TestRun> trend = reporting.trendRuns(id, null, TREND_FLAG, TREND_LIMIT);
-		return new CoveragePage(project, selected != null, selected, all, true, kpis(c, lineDelta(trend)),
-				AnalyticsView.latestRunLine(c.getRun()), trend(trend), breakdown(id, modules, selected), EMPTY,
-				reporting.coveragePackages(c.getId(), selected),
+		TestRun run = c.getRun();
+		// Anchor the Δ + trend to the SAME branch+flag series the headline report belongs
+		// to, so
+		// the "+X pp" delta and the trend tail match the tile value (not another flag's
+		// history).
+		List<TestRun> trend = reporting.trendRuns(id, run.getBranch(), run.getFlag(), TREND_LIMIT);
+		List<KpiTile> kpis;
+		TrendView trendView;
+		if (selected != null) {
+			// Module scope: the tiles + the by-package/file tables are this module's; a
+			// project-wide
+			// line-coverage trend would misrepresent one module, so it's dropped under
+			// scope.
+			ModuleCoverage mc = modules.stream().filter((m) -> m.name().equals(selected)).findFirst().orElse(null);
+			kpis = moduleKpis(mc);
+			trendView = new TrendView(false, "Line-coverage trend", null, "{}");
+		}
+		else {
+			kpis = kpis(c, lineDelta(trend));
+			trendView = trend(trend);
+		}
+		return new CoveragePage(project, selected != null, selected, all, true, kpis, AnalyticsView.latestRunLine(run),
+				trendView, breakdown(id, modules, selected), EMPTY, reporting.coveragePackages(c.getId(), selected),
 				reporting.coverageFiles(c.getId(), selected, FILE_LIMIT));
 	}
 
@@ -65,6 +83,17 @@ class CoveragePageService {
 				kpi("Method", c.getMethodPct()));
 	}
 
+	/**
+	 * Module-scoped tiles: only line + branch exist per module (no instruction/method),
+	 * no Δ.
+	 */
+	private static List<KpiTile> moduleKpis(ModuleCoverage mc) {
+		if (mc == null) {
+			return List.of();
+		}
+		return List.of(kpi("Line", mc.linePct()), kpi("Branch", mc.branchPct()));
+	}
+
 	private static KpiTile kpi(String label, double pct) {
 		return KpiTile.of(label, AnalyticsView.fmt1(pct) + "%", AnalyticsView.coverageLevel(pct));
 	}
@@ -74,7 +103,9 @@ class CoveragePageService {
 		String cfg = AnalyticsView.trendConfig(AnalyticsView.trendLabelsFrom(trend),
 				trend.stream().map(TestRun::getId).toList(), trend.stream().map(AnalyticsView::epochMilli).toList(),
 				List.of(AnalyticsView.series("Line coverage %", "#4493f8", line)), null, "% line", null, 0, 100);
-		return new TrendView(!trend.isEmpty(), "Line-coverage trend", null, cfg);
+		// A single point is not a trend — gate on >=2 runs so the first run shows the
+		// hint, not a dot.
+		return new TrendView(trend.size() >= 2, "Line-coverage trend", null, cfg);
 	}
 
 	/**
@@ -87,8 +118,9 @@ class CoveragePageService {
 		}
 		List<BreakdownRow> rows = modules.stream()
 			.map((m) -> new BreakdownRow(m.name(), "/projects/" + id + "/coverage?module=" + enc(m.name()), false,
-					List.of(AnalyticsView.fmt1(m.linePct()) + "%", m.lineCovered() + "/" + m.lineTotal(),
-							String.valueOf(m.files()))))
+					List.of(BreakdownCell.of(AnalyticsView.fmt1(m.linePct()) + "%"),
+							BreakdownCell.of(m.lineCovered() + "/" + m.lineTotal()),
+							BreakdownCell.of(String.valueOf(m.files())))))
 			.toList();
 		return AnalyticsView.moduleBreakdown(selected, rows, "Coverage by module",
 				List.of("Module", "Line %", "Lines", "Files"));

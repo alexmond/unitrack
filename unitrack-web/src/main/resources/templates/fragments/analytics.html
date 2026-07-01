@@ -51,7 +51,8 @@
             th:classappend="${r.name() == bt.selected()} ? 'branch-current' : (${r.failing()} ? 'row-fail' : '')"
             th:attr="data-href=${r.href()}">
             <td><a th:href="${r.href()}"><code class="mono" th:text="${r.name()}">module</code></a></td>
-            <td th:each="cell : ${r.cells()}" class="num" th:attr="data-sort=${cell}" th:text="${cell}">0</td>
+            <td th:each="cell : ${r.cells()}" th:class="'num ' + ${cell.cls()}"
+                th:attr="data-sort=${cell.text()}" th:text="${cell.text()}">0</td>
         </tr>
         </tbody>
     </table>

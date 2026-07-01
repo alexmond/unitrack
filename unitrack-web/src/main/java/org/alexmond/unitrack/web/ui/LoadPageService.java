@@ -79,7 +79,9 @@ class LoadPageService {
 						AnalyticsView.series("p90", "#d29922", t.stream().map(PerfTrendPoint::p90Ms).toList()),
 						AnalyticsView.series("p99", "#f85149", t.stream().map(PerfTrendPoint::p99Ms).toList())),
 				"ms");
-		return new TrendView(!t.isEmpty(), "Latency", "(p50 / p90 / p99, ms)", cfg);
+		// A single point is not a trend — gate on >=2 runs so a first run shows the hint,
+		// not a dot.
+		return new TrendView(t.size() >= 2, "Latency", "(p50 / p90 / p99, ms)", cfg);
 	}
 
 	private static TrendView throughput(List<PerfTrendPoint> t) {

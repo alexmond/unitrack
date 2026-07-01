@@ -10,6 +10,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -63,7 +64,10 @@ class PerfTrendIntegrationTest {
 			.andExpect(status().isOk())
 			.andExpect(content().string(containsString("load tests")))
 			.andExpect(content().string(containsString("trendChart")))
-			.andExpect(content().string(containsString("throughputChart")));
+			.andExpect(content().string(containsString("throughputChart")))
+			// With runs present the empty state must NOT render (th:replace/th:unless
+			// precedence trap).
+			.andExpect(content().string(not(containsString("No load tests yet"))));
 	}
 
 	@Test
