@@ -131,13 +131,28 @@ final class AnalyticsView {
 		return out;
 	}
 
+	/** Value CSS level for a coverage percentage (≥80 good, ≥50 warn, else bad). */
+	static String coverageLevel(double pct) {
+		return (pct >= 80) ? "lvl-good" : ((pct >= 50) ? "lvl-warn" : "lvl-bad");
+	}
+
 	/**
 	 * Assemble the JSON config for {@code window.__trendChart} (labels/runIds/times +
 	 * per-series data + overlay/axis titles) so every tab's trend data shape lives in one
-	 * place.
+	 * place. Y axis auto-scales.
 	 */
 	static String trendConfig(List<String> labels, List<Long> runIds, List<Long> times,
 			List<Map<String, Object>> series, Integer overlaySeries, String yTitle, String y2Title) {
+		return trendConfig(labels, runIds, times, series, overlaySeries, yTitle, y2Title, null, null);
+	}
+
+	/**
+	 * {@link #trendConfig} with explicit primary-Y bounds (e.g. 0–100 for a percentage
+	 * axis).
+	 */
+	static String trendConfig(List<String> labels, List<Long> runIds, List<Long> times,
+			List<Map<String, Object>> series, Integer overlaySeries, String yTitle, String y2Title, Integer yMin,
+			Integer yMax) {
 		Map<String, Object> cfg = new HashMap<>();
 		cfg.put("labels", labels);
 		cfg.put("runIds", runIds);
@@ -146,6 +161,8 @@ final class AnalyticsView {
 		cfg.put("overlaySeries", overlaySeries);
 		cfg.put("yTitle", yTitle);
 		cfg.put("y2Title", y2Title);
+		cfg.put("yMin", yMin);
+		cfg.put("yMax", yMax);
 		try {
 			return MAPPER.writeValueAsString(cfg);
 		}

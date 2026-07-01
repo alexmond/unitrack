@@ -120,6 +120,8 @@ public class DashboardController {
 
 	private final TimingPageService timingPage;
 
+	private final CoveragePageService coveragePage;
+
 	private final io.micrometer.observation.ObservationRegistry observationRegistry;
 
 	private final java.util.concurrent.ExecutorService pageRenderExecutor;
@@ -189,27 +191,16 @@ public class DashboardController {
 		return "project";
 	}
 
+	/**
+	 * The Coverage aspect on the shared analytics skeleton (same as Tests/Timing): KPI
+	 * tiles (line +Δ, branch, instruction, method), a line-coverage trend, a by-module
+	 * breakdown that scopes the tab, and the by-package + worst-covered-files tables
+	 * (module-scoped).
+	 */
 	@GetMapping("/projects/{id}/coverage")
 	public String coverage(@PathVariable Long id, @RequestParam(required = false) String module, Model model) {
 		Project project = access.requireReadProject(id);
-		String selectedModule = (module != null && !module.isBlank()) ? module : null;
-		model.addAttribute("project", project);
-		model.addAttribute("selectedModule", selectedModule);
-		Optional<CoverageReport> report = reporting.latestCoverage(id);
-		model.addAttribute("coverage", report.orElse(null));
-		report.ifPresent((c) -> {
-			model.addAttribute("run", c.getRun());
-			model.addAttribute("modules", reporting.moduleCoverage(c.getId()));
-			model.addAttribute("packages", reporting.coveragePackages(c.getId(), selectedModule));
-			model.addAttribute("worstFiles", reporting.coverageFiles(c.getId(), selectedModule, COVERAGE_FILE_LIMIT));
-			List<TestRun> trend = reporting.trendRuns(id, null, TREND_FLAG, TREND_LIMIT);
-			model.addAttribute("trendLabels",
-					toJson(AnalyticsView.labels(trend.stream().map(TestRun::getShortSha).toList())));
-			model.addAttribute("trendRunIds", toJson(trend.stream().map(TestRun::getId).toList()));
-			model.addAttribute("trendTimes", toJson(trend.stream().map(AnalyticsView::epochMilli).toList()));
-			model.addAttribute("trendCoverage", toJson(trend.stream().map(TestRun::getLineCoveragePct).toList()));
-			model.addAttribute("lineDelta", lineCoverageDelta(trend));
-		});
+		model.addAttribute("page", coveragePage.build(project, id, module));
 		return "coverage";
 	}
 
@@ -642,22 +633,6 @@ public class DashboardController {
 
 	private static String testKey(String className, String name) {
 		return ((className != null) ? className : "") + "#" + name;
-	}
-
-	/**
-	 * Change in line coverage between the latest run carrying coverage and the previous
-	 * one, or null.
-	 */
-	private static Double lineCoverageDelta(List<TestRun> trendOldestFirst) {
-		Double cur = null;
-		Double prev = null;
-		for (TestRun r : trendOldestFirst) {
-			if (r.getLineCoveragePct() != null) {
-				prev = cur;
-				cur = r.getLineCoveragePct();
-			}
-		}
-		return (cur != null && prev != null) ? cur - prev : null;
 	}
 
 	/**
