@@ -163,6 +163,27 @@ final class AnalyticsView {
 		cfg.put("y2Title", y2Title);
 		cfg.put("yMin", yMin);
 		cfg.put("yMax", yMax);
+		return write(cfg);
+	}
+
+	/**
+	 * Trend config for a Load-tests chart: each point links straight to its perf-run
+	 * detail (not a Compare), so the click target is {@code /perf-runs/{id}}.
+	 */
+	static String perfTrendConfig(List<String> labels, List<Long> runIds, List<Long> times,
+			List<Map<String, Object>> series, String yTitle) {
+		Map<String, Object> cfg = new HashMap<>();
+		cfg.put("labels", labels);
+		cfg.put("runIds", runIds);
+		cfg.put("times", times);
+		cfg.put("series", series);
+		cfg.put("yTitle", yTitle);
+		cfg.put("runBase", "/perf-runs");
+		cfg.put("pointLink", true);
+		return write(cfg);
+	}
+
+	private static String write(Map<String, Object> cfg) {
 		try {
 			return MAPPER.writeValueAsString(cfg);
 		}

@@ -69,11 +69,12 @@ Same `AnalyticsPage` model + `fragments/analytics` skeleton + `trend.js`/`roster
 - **L3 — Slowest tests:** test · suite · duration · **Δ prev** (vs previous run, colored) · status — sortable + searchable (`roster.js`)
   - **L4 — Single test history** via the test link → *see Shared entities*
 
-### Load tests (`/projects/{id}/perf`, `perf.html`)
-- **L2 summary:** perf-flag **pill bar** (filter) · p95-regression banner (onset commit/date · baseline→recent · σ) · KPI tiles (p95 · throughput · error rate · samples, +Δ)
-- **L2 charts:** Latency (p50/p90/p99) · Throughput · Error rate (shared time/run toggle; point → **Perf-run** L4)
-- **L3 — Recent perf runs:** when · flag · commit · format · samples · p95 · throughput · errors → **Perf-run** (L4)
-- *Note:* groups by perf-**flag**, not module; only tab still on a top pill bar
+### Load tests (`/projects/{id}/perf`, `perf.html`) — reconciled onto the shared model
+Reuses the shared pieces (`AnalyticsPage` model, `fragments/analytics` KPI + empty + primary-trend, `trend.js`, `roster.js`) while keeping Load tests' own shape.
+- **L2 summary:** perf-flag **pill bar** (filter) · p95-regression banner (onset commit/date · baseline→recent · σ) · shared KPI tiles (p95 +Δ · throughput +Δ · error rate +Δ · samples)
+- **L2 charts:** Latency (p50/p90/p99, the shared primary trend) · Throughput · Error rate — all three on the **one** time/run toggle via `trend.js`; point → **Perf-run** L4 (pointLink, not Compare)
+- **L3 — Recent perf runs:** when · flag · commit · format · samples · p95 · throughput · errors → **Perf-run** (L4) — *sortable + searchable* (shared roster.js)
+- *Note:* scopes by perf-**flag**, not module (so `breakdown()`/`latestRun()` are null); only tab still on a top pill bar
 
 ### Flaky tests — **folded into Tests** (`/projects/{id}/flaky` → 302 `…/tests#flaky-section`)
 ### Failure clusters — **folded into Tests** (`/projects/{id}/clusters` → 302 `…/tests#clusters-section`)
