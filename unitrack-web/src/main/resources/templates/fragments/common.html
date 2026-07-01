@@ -30,6 +30,19 @@
             onclick="window.__toggleTheme()">☀</button>
 </header>
 
+<!-- Flag scope dropdown for an analytics tab (view.ScopeBar). Renders only with >1 flag; switching
+     re-enters the same tab scoped to the chosen flag (module preserved). See scope.js. -->
+<div th:fragment="scopeBar(scope)" th:if="${scope != null and scope.hasChoice()}"
+     class="scope-bar" style="margin:10px 0" aria-label="Filter by flag">
+    <label class="muted" style="display:inline-flex;align-items:center;gap:6px">Flag
+        <select class="form-select form-select-sm" style="width:auto" data-scope-select
+                th:attr="data-base=${scope.basePath()}, data-module=${scope.module()}">
+            <option th:each="f : ${scope.flags()}" th:value="${f}" th:text="${f}"
+                    th:selected="${f == scope.selectedFlag()}">default</option>
+        </select>
+    </label>
+</div>
+
 <nav th:fragment="subnav(projectId, active)" class="subnav" aria-label="Project sections">
     <a th:href="@{/projects/{id}(id=${projectId})}"
        th:classappend="${active == 'overview'} ? 'current'"

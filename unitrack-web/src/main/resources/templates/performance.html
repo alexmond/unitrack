@@ -11,6 +11,7 @@
     </p>
     <h1 th:text="${page.project.name} + ' — test timing'">project — test timing</h1>
     <nav th:replace="~{fragments/common :: subnav(${page.project.id}, ${page.tab})}"></nav>
+    <div th:replace="~{fragments/common :: scopeBar(${page.scope})}"></div>
 
     <!-- Module scope chip + a way back to all (clicking a "by module" row scopes the whole page). -->
     <div th:if="${page.scoped}" style="display:flex;align-items:center;gap:10px;margin:10px 0">
@@ -75,6 +76,7 @@
 
 <!-- Shared table behaviour: sortable columns, module-row drill, roster search. -->
 <script th:src="@{/js/roster.js}"></script>
+<script th:src="@{/js/scope.js}"></script>
 
 <!-- Suite-time + test-count trend via the shared chart (test count on a 2nd axis). -->
 <script th:if="${page.trend.present}" th:src="@{/webjars/chart.js/4.4.1/dist/chart.umd.js}"></script>

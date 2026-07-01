@@ -11,16 +11,9 @@
     </p>
     <h1 th:text="${page.project.name} + ' — load tests'">project — load tests</h1>
     <nav th:replace="~{fragments/common :: subnav(${page.project.id}, ${page.tab})}"></nav>
-
-    <!-- Flag filter: each perf flag is its own series (e.g. several perf tests uploaded together).
-         Scopes the charts + run table to one series — Load tests scope by flag, not module. -->
-    <div th:if="${page.flags != null and page.flags.size() > 1}" class="subnav module-filter"
-         style="border-top:none;padding-top:0" aria-label="Filter by perf flag">
-        <a th:each="pf : ${page.flags}"
-           th:href="@{/projects/{id}/perf(id=${page.project.id},flag=${pf})}"
-           th:classappend="${page.selectedFlag == pf} ? 'current'"
-           th:text="${pf}">default</a>
-    </div>
+    <!-- Flag scope: each perf flag is its own series; the shared dropdown scopes the whole tab
+         (replaces the old pill bar — the resolved "flag = dropdown" idiom). -->
+    <div th:replace="~{fragments/common :: scopeBar(${page.scope})}"></div>
 
     <!-- Empty state: no perf data yet. -->
     <th:block th:unless="${page.hasRun}">
@@ -138,6 +131,7 @@
 
 <!-- Shared table behaviour: sortable columns, run search. -->
 <script th:src="@{/js/roster.js}"></script>
+<script th:src="@{/js/scope.js}"></script>
 
 <!-- Three charts, one shared time/run toggle, all via the shared trend.js. Points → perf-run detail. -->
 <script th:if="${page.trend.present}" th:src="@{/webjars/chart.js/4.4.1/dist/chart.umd.js}"></script>

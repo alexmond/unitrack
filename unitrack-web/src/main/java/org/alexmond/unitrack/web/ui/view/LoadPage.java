@@ -34,8 +34,8 @@ import org.alexmond.unitrack.report.PerfStepSignal;
  */
 public record LoadPage(Project project, boolean hasRun, List<KpiTile> kpis, EmptyState empty, TrendView trend,
 		TrendView throughputTrend, TrendView errorTrend, PerfStepSignal regression, List<PerfRun> perfRuns,
-		List<String> flags, String selectedFlag, String repoCommitBase,
-		List<PerfRunDetail.LabelRow> transactions) implements AnalyticsPage {
+		List<String> flags, String selectedFlag, String repoCommitBase, List<PerfRunDetail.LabelRow> transactions,
+		ScopeBar scope) implements AnalyticsPage {
 
 	@Override
 	public String tab() {

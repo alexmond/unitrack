@@ -25,7 +25,7 @@ import org.alexmond.unitrack.domain.Project;
  */
 public record TimingPage(Project project, boolean scoped, String selectedModule, String allUrl, boolean hasRun,
 		List<KpiTile> kpis, LatestRunLine latestRun, TrendView trend, BreakdownTable breakdown, EmptyState empty,
-		List<TimingRosterRow> slowest) implements AnalyticsPage {
+		List<TimingRosterRow> slowest, ScopeBar scope) implements AnalyticsPage {
 
 	@Override
 	public String tab() {
