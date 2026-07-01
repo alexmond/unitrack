@@ -139,13 +139,20 @@ final class AnalyticsView {
 	/**
 	 * Normalized repo web base (trailing {@code .git}/{@code /} stripped) for building
 	 * GitHub-style {@code /commit/<sha>} and {@code /blob/<sha>/<path>} deep links, or
-	 * null when there's no repo.
+	 * null when there's no repo. Only {@code http(s)} URLs are accepted — {@code repoUrl}
+	 * is user-controlled and these bases are emitted into raw {@code href} expressions,
+	 * so a {@code javascript:}/{@code data:} scheme (XSS) is rejected here rather than
+	 * rendered as a clickable link.
 	 */
 	static String repoBase(String repoUrl) {
 		if (repoUrl == null || repoUrl.isBlank()) {
 			return null;
 		}
 		String u = repoUrl.trim();
+		String lower = u.toLowerCase(Locale.ROOT);
+		if (!lower.startsWith("http://") && !lower.startsWith("https://")) {
+			return null;
+		}
 		if (u.endsWith(".git")) {
 			u = u.substring(0, u.length() - 4);
 		}

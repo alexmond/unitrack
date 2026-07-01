@@ -7,6 +7,8 @@ import lombok.RequiredArgsConstructor;
 
 import org.alexmond.unitrack.domain.PerfRun;
 import org.alexmond.unitrack.domain.Project;
+import org.alexmond.unitrack.report.PerfRunDetail;
+import org.alexmond.unitrack.report.PerfRunDetailService;
 import org.alexmond.unitrack.report.PerfStepDetectionService;
 import org.alexmond.unitrack.report.PerfStepSignal;
 import org.alexmond.unitrack.report.PerfTrendPoint;
@@ -43,6 +45,8 @@ class LoadPageService {
 
 	private final PerfStepDetectionService perfStepDetection;
 
+	private final PerfRunDetailService perfRunDetail;
+
 	LoadPage build(Project project, Long id, String flag) {
 		List<String> flags = reporting.perfFlags(id);
 		String selectedFlag = selectedPerfFlag(flag, flags);
@@ -51,8 +55,12 @@ class LoadPageService {
 		PerfStepSignal step = perfStepDetection.detectLatencyStep(id, selectedFlag).orElse(null);
 		String base = AnalyticsView.repoBase(project.getRepoUrl());
 		String repoCommitBase = (base != null) ? (base + "/commit/") : null;
+		// By-transaction breakdown = the latest run's per-label rows (with p95 Δ vs
+		// baseline).
+		List<PerfRunDetail.LabelRow> transactions = perfRuns.isEmpty() ? List.of()
+				: perfRunDetail.detail(perfRuns.get(0).getId()).map(PerfRunDetail::labels).orElse(List.of());
 		return new LoadPage(project, !trend.isEmpty(), kpis(perfRuns), EMPTY, latency(trend), throughput(trend),
-				error(trend), step, perfRuns, flags, selectedFlag, repoCommitBase);
+				error(trend), step, perfRuns, flags, selectedFlag, repoCommitBase, transactions);
 	}
 
 	private static List<KpiTile> kpis(List<PerfRun> perfRuns) {

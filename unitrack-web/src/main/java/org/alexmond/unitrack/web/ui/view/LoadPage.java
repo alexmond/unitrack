@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.alexmond.unitrack.domain.PerfRun;
 import org.alexmond.unitrack.domain.Project;
+import org.alexmond.unitrack.report.PerfRunDetail;
 import org.alexmond.unitrack.report.PerfStepSignal;
 
 /**
@@ -28,10 +29,13 @@ import org.alexmond.unitrack.report.PerfStepSignal;
  * @param selectedFlag the currently-shown series
  * @param repoCommitBase GitHub-style commit base ({@code <repo>/commit/}) for linking a
  * perf-run's commit SHA, or null when the project has no repo URL
+ * @param transactions the latest run's per-transaction/label rows (the by-transaction
+ * breakdown, with a p95 Δ vs baseline so you can see which label regressed)
  */
 public record LoadPage(Project project, boolean hasRun, List<KpiTile> kpis, EmptyState empty, TrendView trend,
 		TrendView throughputTrend, TrendView errorTrend, PerfStepSignal regression, List<PerfRun> perfRuns,
-		List<String> flags, String selectedFlag, String repoCommitBase) implements AnalyticsPage {
+		List<String> flags, String selectedFlag, String repoCommitBase,
+		List<PerfRunDetail.LabelRow> transactions) implements AnalyticsPage {
 
 	@Override
 	public String tab() {
