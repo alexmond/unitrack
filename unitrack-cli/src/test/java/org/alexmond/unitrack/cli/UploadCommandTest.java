@@ -204,25 +204,29 @@ class UploadCommandTest {
 	}
 
 	@Test
-	void splitByModuleUploadsEachModulePlusRollup(@TempDir Path dir) throws IOException {
+	void splitByModuleIsDeprecatedAndIgnoredUploadsSingleRunTaggedPerModule(@TempDir Path dir) throws IOException {
 		Files.createDirectories(dir.resolve("modA/target/surefire-reports"));
 		Files.createDirectories(dir.resolve("modB/target/surefire-reports"));
 		Files.writeString(dir.resolve("modA/target/surefire-reports/TEST-a.xml"), "<testsuite/>");
 		Files.writeString(dir.resolve("modB/target/surefire-reports/TEST-b.xml"), "<testsuite/>");
 		given(this.client.ingest(any(), any(), any(), any(), any())).willReturn(new IngestResponse(1L));
 		UploadCommand c = command();
-		c.splitByModule = true;
+		c.splitByModule = true; // deprecated + ignored — must NOT split into separate
+								// runs
 		c.junit = List.of(dir + "/**/target/surefire-reports/TEST-*.xml");
 
 		assertThat(c.call()).isEqualTo(ExitCodes.OK);
 
-		// Two modules as their own flags, plus the merged rollup under the default flag
-		// (null).
+		// One run: each module's reports uploaded tagged with its module under a shared
+		// run
+		// key (merged server-side), with no per-module flags and no separate rollup
+		// upload.
 		@SuppressWarnings("unchecked")
 		ArgumentCaptor<Map<String, String>> fields = ArgumentCaptor.forClass(Map.class);
-		verify(this.client, times(3)).ingest(any(), any(), any(), fields.capture(), any());
-		assertThat(fields.getAllValues()).extracting((f) -> f.get("flag"))
-			.containsExactlyInAnyOrder("modA", "modB", null);
+		verify(this.client, times(2)).ingest(any(), any(), any(), fields.capture(), any());
+		assertThat(fields.getAllValues()).extracting((f) -> f.get("module")).containsExactlyInAnyOrder("modA", "modB");
+		assertThat(fields.getAllValues()).extracting((f) -> f.get("flag")).containsOnlyNulls();
+		assertThat(fields.getAllValues().stream().map((f) -> f.get("runKey")).distinct()).hasSize(1);
 	}
 
 	@Test
