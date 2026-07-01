@@ -42,6 +42,10 @@ public class FailureClusteringService {
 
 	private static final Pattern NUMBER = Pattern.compile("\\d+");
 
+	private static final Pattern WHITESPACE = Pattern.compile("\\s+");
+
+	private static final Pattern LINE_BREAK = Pattern.compile("\\R");
+
 	private final TestCaseResultRepository cases;
 
 	/** Clusters recent failures for a project, most frequent first. */
@@ -75,14 +79,14 @@ public class FailureClusteringService {
 		s = HEX.matcher(s).replaceAll("0x#");
 		s = OBJECT_ID.matcher(s).replaceAll("@#");
 		s = NUMBER.matcher(s).replaceAll("#");
-		return s.replaceAll("\\s+", " ");
+		return WHITESPACE.matcher(s).replaceAll(" ");
 	}
 
 	private static String firstLine(String text) {
 		if (text == null) {
 			return null;
 		}
-		for (String line : text.split("\\R")) {
+		for (String line : LINE_BREAK.split(text)) {
 			if (!line.isBlank()) {
 				return line.strip();
 			}
@@ -96,7 +100,7 @@ public class FailureClusteringService {
 			return null;
 		}
 		String firstNonBlank = null;
-		for (String line : stacktrace.split("\\R")) {
+		for (String line : LINE_BREAK.split(stacktrace)) {
 			String trimmed = line.strip();
 			if (trimmed.isBlank()) {
 				continue;

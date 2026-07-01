@@ -36,6 +36,12 @@ import java.util.function.Function;
 @RequiredArgsConstructor
 public class ReportingService {
 
+	/**
+	 * Package-segment separator (dot or slash), compiled once — {@code splitPackage} is
+	 * per-case.
+	 */
+	private static final java.util.regex.Pattern PKG_SEPARATOR = java.util.regex.Pattern.compile("[./]+");
+
 	private final ProjectRepository projects;
 
 	private final TestRunRepository runs;
@@ -257,6 +263,16 @@ public class ReportingService {
 	 */
 	public List<String> testFlags(Long projectId) {
 		return runs.findDistinctFlags(projectId);
+	}
+
+	/**
+	 * Distinct branch names (alphabetical) a project has runs for — for the analytics
+	 * scope dropdown. One query, unlike {@link BranchService#list} which also computes
+	 * each branch's latest-run status/coverage/count (a per-branch N+1); use that only
+	 * when the summary columns are actually shown (the Overview branches list).
+	 */
+	public List<String> branchNames(Long projectId) {
+		return runs.findDistinctBranches(projectId);
 	}
 
 	/**
@@ -579,7 +595,7 @@ public class ReportingService {
 	}
 
 	private static String[] splitPackage(String pkg) {
-		return (pkg == null || pkg.isBlank()) ? new String[0] : pkg.split("[./]+");
+		return (pkg == null || pkg.isBlank()) ? new String[0] : PKG_SEPARATOR.split(pkg);
 	}
 
 	/** The number of leading package segments shared by every file. */

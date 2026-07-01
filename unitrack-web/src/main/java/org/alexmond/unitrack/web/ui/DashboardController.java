@@ -352,7 +352,9 @@ public class DashboardController {
 		Project project = access.requireReadProject(id);
 		List<String> flags = reporting.testFlags(id);
 		String selectedFlag = pickFlag(flag, flags);
-		List<String> branches = branchService.list(id).stream().map(BranchSummary::branch).toList();
+		// Names only (one query) — the dropdown shows no per-branch stats, so avoid
+		// BranchService.list's per-branch N+1 (#314) on this hot render path.
+		List<String> branches = reporting.branchNames(id);
 		// null/unknown branch = all branches (the non-breaking default); a valid one
 		// scopes the tab.
 		String selectedBranch = (branch != null && branches.contains(branch)) ? branch : null;
