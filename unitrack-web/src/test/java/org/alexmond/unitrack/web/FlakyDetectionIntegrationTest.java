@@ -80,8 +80,8 @@ class FlakyDetectionIntegrationTest {
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$[0].status").value("QUARANTINED"));
 
-		// The UI page renders the flaky test.
-		mvc.perform(get("/projects/{id}/flaky", projectId))
+		// Flaky tests are folded into the Tests page (epic #390).
+		mvc.perform(get("/projects/{id}/tests", projectId))
 			.andExpect(status().isOk())
 			.andExpect(content().string(containsString("com.x.T#a")));
 	}

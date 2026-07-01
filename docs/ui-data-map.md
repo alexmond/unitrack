@@ -46,12 +46,14 @@ The whole-project summary (mixes tests + coverage + branches + runs).
 
 ## L2 — Tabs (per aspect)
 
-### Tests (`/projects/{id}/tests`, `tests.html`)
-- **L2 summary:** KPI tiles (pass rate · failures · suite time · tests, each +Δ vs prev run) · latest-run line · **trend** (passed/failed per run; time/run toggle; regression overlay; point → Compare L4)
-- **L3 — Tests by module:** module · tests · pass% · failures · skipped — *click filters the roster (in-page)*
-- **L3 — All tests** (search box): Test · Status · Duration · Flaky badge → Flaky tab
+### Tests (`/projects/{id}/tests`, `tests.html`) — reconciled; Flaky + Clusters folded in
+- **L2 summary:** KPI tiles (pass rate · failures · suite time · tests, each +Δ vs prev run) · latest-run line → **Run** (L4) · **trend** (passed/failed per run; time/run toggle; regression overlay; point → Compare L4)
+- **L3 — Tests by module:** module · tests · pass% · failures · skipped — *click scopes the whole tab (tiles + trend + roster) via `?module=`; chip + "← All tests" returns (D7)*
+- **L3 — All tests** (search-first; sortable): default = failing + flaky (counts strip) with "Show all N" for the rest; Test · Status (+ green **fixed** = red→green) · Duration · Flaky badge (→ folded Flaky section) (D8)
   - **L4 — Single test history** (`/projects/{id}/test`) via the Test link → *see Shared entities*
-- *Gap:* no flag scope (locked to default rollup flag)
+- **L3 — Flaky tests** (folded section): Test · State · Flaky commits · Failures · Fail rate · Last failure · Action (quarantine, writers only)
+- **L3 — Failure clusters** (folded section): clusters (grouped current failures) · recurring failures · AI root-cause analyze (logged-in)
+- *Gap:* no flag scope yet (locked to default rollup flag) — #405
 
 ### Coverage (`/projects/{id}/coverage`, `coverage.html`)
 - **L2 summary:** KPI tiles (line +Δ · branch · instruction · method) · latest-report line → **Run** (L4) · **trend** (line-cov %; time/run toggle; point → Compare L4)
@@ -72,11 +74,10 @@ The whole-project summary (mixes tests + coverage + branches + runs).
 - **L3 — Recent perf runs:** when · flag · commit · format · samples · p95 · throughput · errors → **Perf-run** (L4)
 - *Note:* groups by perf-**flag**, not module; only tab still on a top pill bar
 
-### Flaky tests (`/projects/{id}/flaky`, `flaky.html`)
-- **L2 list:** Test · State · Flaky commits · Failures · Fail rate · Last failure · Action (state mgmt) — *flat; no run drill*
-
-### Failure clusters (`/projects/{id}/clusters`, `clusters.html`)
-- **L2:** Clusters (grouped current failures) · Recurring failures · AI root-cause analyze — *flat; links back to project only*
+### Flaky tests — **folded into Tests** (`/projects/{id}/flaky` → 302 `…/tests#flaky-section`)
+### Failure clusters — **folded into Tests** (`/projects/{id}/clusters` → 302 `…/tests#clusters-section`)
+> Both are now sections of the reconciled Tests page (epic #390); the standalone tabs and
+> `flaky.html`/`clusters.html` were removed. The `/new-tests` preview graduated to `/tests`.
 
 ### Management tabs (write access)
 - Owners (Test owners · Scorecard · Rules · Add rule) · Triage rules · Alerts · Settings (gate/visibility/base branch) · Members · per-project Ingest history
