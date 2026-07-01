@@ -108,8 +108,10 @@ class UploadCommand implements Callable<Integer> {
 	boolean gzip = true;
 
 	@Option(names = "--split-by-module",
-			description = "Upload each module (the directory before /target/) as its own coverage flag/component, "
-					+ "plus a merged rollup — so a multi-module project shows per-module tests, coverage and gates.")
+			description = "DEPRECATED and IGNORED. A run maps to one CI build; modules are a dimension within it. "
+					+ "Reports upload as a single run tagged per module — use the Tests/Coverage by-module breakdown "
+					+ "and the module-scoped trend for per-module history. Accepted (so existing CI doesn't break) "
+					+ "but no longer splits into separate runs.")
 	boolean splitByModule;
 
 	@Option(names = "--module",
@@ -194,8 +196,14 @@ class UploadCommand implements Callable<Integer> {
 			System.out.println("Detected CI: " + ci.ciProvider());
 		}
 
+		// --split-by-module is deprecated + ignored: a run maps 1:1 to a CI build. Route
+		// it to
+		// the single-run, per-module-tagged upload instead of one run per module + a
+		// rollup.
 		if (this.splitByModule) {
-			return uploadPerModule(resolvedProject, ci, junitFiles, jacocoFiles, perfFiles);
+			System.out.println("warning: --split-by-module is deprecated and ignored — uploading as one run tagged "
+					+ "per module (per-module history: the Tests by-module breakdown + module-scoped trend).");
+			return uploadByDetectedModule(resolvedProject, ci, junitFiles, jacocoFiles, perfFiles);
 		}
 		// A scan spans the whole tree, so tag each report with its module and merge into
 		// one
@@ -298,40 +306,6 @@ class UploadCommand implements Callable<Integer> {
 					mb(SHARD_TARGET_BYTES), batches.size(), fields.get("runKey"));
 		}
 		return upload(batches, fields);
-	}
-
-	/**
-	 * Uploads each module (grouped by the directory before {@code /target/}) as its own
-	 * coverage flag, then a merged rollup under the default flag. The rollup is uploaded
-	 * LAST so it is the project's latest run — keeping the dashboard headline
-	 * whole-project while each module appears as a component with its own tests, coverage
-	 * and gate. A distinct run key per component stops the server merging them into one
-	 * run.
-	 */
-	private Integer uploadPerModule(String project, CiMetadata ci, List<Resource> junit, List<Resource> jacoco,
-			List<Resource> perf) {
-		Map<String, ModuleGroup> byModule = groupByModule(junit, jacoco, perf);
-		if (byModule.size() <= 1) {
-			System.out.println("Only one module detected — uploading as a single run.");
-			return uploadFileSet(buildFields(project, ci), junit, jacoco, perf);
-		}
-		String base = coalesce(this.runKey, ci.runKey());
-		System.out.printf("Splitting into %d module component(s) + a rollup.%n", byModule.size());
-		int worst = ExitCodes.OK;
-		for (Map.Entry<String, ModuleGroup> e : byModule.entrySet()) {
-			String module = e.getKey();
-			ModuleGroup g = e.getValue();
-			Map<String, String> fields = buildFields(project, ci);
-			fields.put("flag", module);
-			fields.put("module", module);
-			fields.put("runKey", (base != null) ? base + "::" + module : null);
-			System.out.printf("→ module '%s'%n", module);
-			worst = Math.max(worst, uploadFileSet(fields, g.junit(), g.jacoco(), g.perf()));
-		}
-		Map<String, String> rollup = buildFields(project, ci);
-		rollup.put("runKey", (base != null) ? base + "::rollup" : null);
-		System.out.println("→ rollup (all modules)");
-		return Math.max(worst, uploadFileSet(rollup, junit, jacoco, perf));
 	}
 
 	private static Map<String, ModuleGroup> groupByModule(List<Resource> junit, List<Resource> jacoco,
