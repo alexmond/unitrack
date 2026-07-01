@@ -59,6 +59,8 @@
 			var i = hit[0].index;
 			var id = runIds[i];
 			if (id == null) { return; }
+			// pointLink tabs (e.g. Load tests) open the point's own detail, not a Compare.
+			if (cfg.pointLink) { window.location = runBase + '/' + id; return; }
 			var prev = (i > 0) ? runIds[i - 1] : null;
 			window.location = (prev != null) ? (compareBase + '?base=' + prev + '&head=' + id) : (runBase + '/' + id);
 		}

@@ -16,8 +16,6 @@ import org.alexmond.unitrack.report.FlakyTestView;
 import org.alexmond.unitrack.report.TestTimelinePoint;
 import org.alexmond.unitrack.report.PerfRegressionService;
 import org.alexmond.unitrack.report.PerfRunDetailService;
-import org.alexmond.unitrack.report.PerfStepDetectionService;
-import org.alexmond.unitrack.report.PerfTrendPoint;
 import org.alexmond.unitrack.report.PerformanceService;
 import org.alexmond.unitrack.report.OwnershipService;
 import org.alexmond.unitrack.report.ProjectHealth;
@@ -96,8 +94,6 @@ public class DashboardController {
 
 	private final PerfRunDetailService perfRunDetail;
 
-	private final PerfStepDetectionService perfStepDetection;
-
 	private final CoverageDiffService coverageDiff;
 
 	private final PullRequestService pullRequests;
@@ -121,6 +117,8 @@ public class DashboardController {
 	private final TimingPageService timingPage;
 
 	private final CoveragePageService coveragePage;
+
+	private final LoadPageService loadPage;
 
 	private final io.micrometer.observation.ObservationRegistry observationRegistry;
 
@@ -313,42 +311,17 @@ public class DashboardController {
 		return "performance";
 	}
 
+	/**
+	 * The Load-tests aspect on the shared analytics skeleton (epic #390): KPI tiles +
+	 * empty state + primary trend from the shared fragments, plus Load tests' own shape —
+	 * perf-flag scope, three charts (latency / throughput / error), a p95-regression
+	 * banner, and a recent-runs table.
+	 */
 	@GetMapping("/projects/{id}/perf")
 	public String perf(@PathVariable Long id, @RequestParam(required = false) String flag, Model model) {
 		Project project = access.requireReadProject(id);
-		List<String> perfFlags = reporting.perfFlags(id);
-		String selectedFlag = selectedPerfFlag(flag, perfFlags);
-		List<PerfTrendPoint> trend = reporting.perfTrend(id, selectedFlag, TREND_LIMIT);
-		model.addAttribute("project", project);
-		model.addAttribute("perfFlags", perfFlags);
-		model.addAttribute("selectedFlag", selectedFlag);
-		model.addAttribute("perfRuns", reporting.recentPerfRuns(id, selectedFlag, RUN_LIST_LIMIT));
-		model.addAttribute("perfStep", perfStepDetection.detectLatencyStep(id, selectedFlag).orElse(null));
-		model.addAttribute("hasPerf", !trend.isEmpty());
-		model.addAttribute("trendLabels",
-				toJson(AnalyticsView.labels(trend.stream().map(PerfTrendPoint::shortSha).toList())));
-		model.addAttribute("trendP50", toJson(trend.stream().map((p) -> round(p.p50Ms())).toList()));
-		model.addAttribute("trendP90", toJson(trend.stream().map((p) -> round(p.p90Ms())).toList()));
-		model.addAttribute("trendP99", toJson(trend.stream().map((p) -> round(p.p99Ms())).toList()));
-		model.addAttribute("trendThroughput", toJson(trend.stream().map((p) -> round(p.throughputRps())).toList()));
-		model.addAttribute("trendError", toJson(trend.stream().map((p) -> round(p.errorPct())).toList()));
-		model.addAttribute("trendRunIds", toJson(trend.stream().map(PerfTrendPoint::runId).toList()));
-		model.addAttribute("trendTimes", toJson(trend.stream().map((p) -> p.createdAt().toEpochMilli()).toList()));
+		model.addAttribute("page", loadPage.build(project, id, flag));
 		return "perf";
-	}
-
-	/**
-	 * The perf series to show: the requested flag if valid, else the {@code default}
-	 * rollup, else the first.
-	 */
-	private static String selectedPerfFlag(String requested, List<String> perfFlags) {
-		if (requested != null && !requested.isBlank() && perfFlags.contains(requested)) {
-			return requested;
-		}
-		if (perfFlags.contains(TREND_FLAG)) {
-			return TREND_FLAG;
-		}
-		return perfFlags.isEmpty() ? null : perfFlags.get(0);
 	}
 
 	@GetMapping("/perf-runs/{id}")
@@ -731,10 +704,6 @@ public class DashboardController {
 			}
 		}
 		return out.toString();
-	}
-
-	private static double round(double value) {
-		return Math.round(value * 10.0) / 10.0;
 	}
 
 }

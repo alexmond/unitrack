@@ -56,11 +56,14 @@ class PerfTrendIntegrationTest {
 			.andExpect(jsonPath("$[0].p95Ms").value(300.0))
 			.andExpect(jsonPath("$[0].errorPct").exists());
 
-		// Dashboard page renders with the chart canvases.
+		// Dashboard page renders with the chart canvases (shared latency #trendChart +
+		// the
+		// Load-specific throughput/error canvases).
 		mvc.perform(get("/projects/{id}/perf", projectId))
 			.andExpect(status().isOk())
 			.andExpect(content().string(containsString("load tests")))
-			.andExpect(content().string(containsString("latencyChart")));
+			.andExpect(content().string(containsString("trendChart")))
+			.andExpect(content().string(containsString("throughputChart")));
 	}
 
 	@Test
