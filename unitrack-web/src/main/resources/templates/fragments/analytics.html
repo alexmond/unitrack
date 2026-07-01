@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<!-- Shared building blocks for the analytics tabs (Tests, Test timing, …). Each tab fills these
+     with its own data so the layout + interaction can't drift between pages. The chart logic lives
+     in /static/js/trend.js and the table behaviour in /static/js/roster.js. -->
+<body>
+
+<!-- KPI tile row: List<view.KpiTile>. Δ suppressed when null (first run / no prior scope). -->
+<div th:fragment="kpiRow(kpis)" class="stat-row">
+    <div class="stat" th:each="k : ${kpis}">
+        <div class="label" th:text="${k.label()}">label</div>
+        <div class="value" th:classappend="${k.level()}" th:text="${k.value()}">0</div>
+        <div th:if="${k.sub() != null}" class="delta flat" th:text="${k.sub()}" th:title="${k.sub()}">sub</div>
+        <div th:if="${k.delta() != null}" class="delta" th:classappend="${k.deltaDir()}" th:text="${k.delta()}">+0</div>
+    </div>
+</div>
+
+<!-- Latest-run line: view.LatestRunLine (null → nothing). Blue → Run (L4). -->
+<p th:fragment="latestRunLine(line)" th:if="${line != null}" class="muted" style="margin:6px 0 0">
+    Latest run
+    <a th:href="@{/runs/{id}(id=${line.runId()})}" th:text="${line.label()}">abc1234</a>
+    <span th:if="${line.branch() != null}">on <code class="mono" th:text="${line.branch()}">main</code></span>
+    · <span th:text="${line.whenText()}">date</span>
+</p>
+
+<!-- Primary trend: markup only (title + subtitle + time/run toggle + canvas). The page includes
+     trend.js and calls window.__trendChart('trendChart','trendModeToggle', {…}) with its series. -->
+<th:block th:fragment="trend(hasTrend, title, subtitle)">
+    <div class="trend-head" th:if="${hasTrend}">
+        <h2><span th:text="${title}">Trend</span>
+            <span class="muted" th:if="${subtitle != null}" th:text="${subtitle}">(per run)</span></h2>
+        <div id="trendModeToggle" class="seg" role="group" aria-label="Trend x-axis mode">
+            <button type="button" data-mode="time" class="active">Over time</button>
+            <button type="button" data-mode="run">By run</button>
+        </div>
+    </div>
+    <div th:if="${hasTrend}" class="chart-wrap"><canvas id="trendChart" height="90"></canvas></div>
+</th:block>
+
+<!-- By-group breakdown: view.BreakdownTable (null/empty → nothing). Row-click scopes the whole tab
+     (data-href, wired by roster.js); the name is also a plain link. Columns are sortable. -->
+<div th:fragment="breakdown(bt)" th:if="${bt != null and !bt.rows().isEmpty()}">
+    <h2><span th:text="${bt.title()}">By module</span>
+        <span class="muted" th:if="${bt.subtitle() != null}" th:text="${bt.subtitle()}">(latest run)</span></h2>
+    <table class="table table-hover align-middle sortable">
+        <thead>
+        <tr><th th:each="c,i : ${bt.columns()}" th:classappend="${i.index > 0} ? 'num'" th:text="${c}">col</th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="r : ${bt.rows()}" class="mod-row" style="cursor:pointer"
+            th:classappend="${r.name() == bt.selected()} ? 'branch-current' : (${r.failing()} ? 'row-fail' : '')"
+            th:attr="data-href=${r.href()}">
+            <td><a th:href="${r.href()}"><code class="mono" th:text="${r.name()}">module</code></a></td>
+            <td th:each="cell : ${r.cells()}" class="num" th:attr="data-sort=${cell}" th:text="${cell}">0</td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- Consistent empty state. -->
+<div th:fragment="emptyState(icon, title, message)" class="empty">
+    <i th:class="'bi ' + ${icon} + ' empty-icon'" aria-hidden="true"></i>
+    <h3 th:text="${title}">Empty</h3>
+    <p th:text="${message}">message</p>
+</div>
+
+</body>
+</html>

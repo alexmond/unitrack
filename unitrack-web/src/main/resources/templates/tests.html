@@ -1,142 +1,60 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout}">
-<head><title th:text="'UniTrack — ' + ${project.name} + ' tests'">UniTrack</title></head>
+<head><title th:text="'UniTrack — ' + ${page.project.name} + ' tests'">UniTrack</title></head>
 <body>
 
 <main class="container" layout:fragment="content">
     <p class="crumbs">
         <a th:href="@{/}">Projects</a> /
-        <a th:href="@{/projects/{id}(id=${project.id})}" th:text="${project.name}">project</a> /
+        <a th:href="@{/projects/{id}(id=${page.project.id})}" th:text="${page.project.name}">project</a> /
         <span>Tests</span>
     </p>
-    <h1 th:text="${project.name} + ' — tests'">project — tests</h1>
-    <nav th:replace="~{fragments/common :: subnav(${project.id}, 'tests')}"></nav>
+    <h1 th:text="${page.project.name} + ' — tests'">project — tests</h1>
+    <nav th:replace="~{fragments/common :: subnav(${page.project.id}, ${page.tab})}"></nav>
 
     <!-- Module scope chip + a way back to all tests (clicking a "by module" row scopes the
          whole page — tiles, trend, and roster — to that module). -->
-    <div th:if="${scoped}" style="display:flex;align-items:center;gap:10px;margin:10px 0">
+    <div th:if="${page.scoped}" style="display:flex;align-items:center;gap:10px;margin:10px 0">
         <span class="badge tag"><i class="bi bi-diagram-3" aria-hidden="true"></i>
-            Module: <code class="mono" th:text="${selectedModule}">web</code></span>
-        <a th:href="@{/projects/{id}/tests(id=${project.id},flag=${selectedFlag})}">
-            <i class="bi bi-arrow-left" aria-hidden="true"></i> All tests</a>
+            Module: <code class="mono" th:text="${page.selectedModule}">web</code></span>
+        <a th:href="${page.allUrl}"><i class="bi bi-arrow-left" aria-hidden="true"></i> All tests</a>
     </div>
 
     <!-- Empty state: no test runs for this flag yet. -->
-    <div th:if="${cur == null}" class="empty">
-        <i class="bi bi-check2-square empty-icon" aria-hidden="true"></i>
-        <h3>No test runs yet</h3>
-        <p>Upload Surefire/JUnit XML to start tracking results, the pass/fail trend, and per-test history.</p>
-    </div>
+    <div th:unless="${page.hasRun}"
+         th:replace="~{fragments/analytics :: emptyState(${page.empty.icon}, ${page.empty.title}, ${page.empty.message})}"></div>
 
-    <th:block th:if="${cur != null}">
-        <!-- KPI tiles — the latest run for the selected flag (scoped to the module when one is
-             selected), with change vs the previous run. First run / no prior data for the scope:
-             the Δ chip is suppressed rather than shown as +0 (reconcile D6). -->
-        <div class="stat-row">
-            <div class="stat">
-                <div class="label">Pass rate</div>
-                <div class="value" th:classappend="${statPassRate >= 100} ? 'lvl-good' : (${statFailures > 0} ? 'lvl-bad' : 'lvl-warn')"
-                     th:text="${#numbers.formatDecimal(statPassRate,1,1)} + '%'">100%</div>
-                <div th:if="${hasPrev}" class="delta"
-                     th:with="d=${statPassRate - prevPassRate}"
-                     th:classappend="${d > 0.05} ? 'up' : (${d < -0.05} ? 'down' : 'flat')"
-                     th:text="(${d >= 0} ? '+' : '') + ${#numbers.formatDecimal(d,1,1)} + ' pp'">+0.0 pp</div>
-            </div>
-            <div class="stat">
-                <div class="label">Failures</div>
-                <div class="value" th:classappend="${statFailures > 0} ? 'lvl-bad' : 'lvl-good'" th:text="${statFailures}">0</div>
-                <div th:if="${hasPrev}" class="delta"
-                     th:with="d=${statFailures - prevFailures}"
-                     th:classappend="${d > 0} ? 'down' : (${d < 0} ? 'up' : 'flat')"
-                     th:text="(${d > 0} ? '+' : '') + ${d}">0</div>
-            </div>
-            <div class="stat">
-                <div class="label">Suite time</div>
-                <div class="value" th:text="${#numbers.formatDecimal(statDurationMs / 1000.0,1,1)} + 's'">0s</div>
-                <div th:if="${hasPrev}" class="delta"
-                     th:with="d=${(statDurationMs - prevDurationMs) / 1000.0}"
-                     th:classappend="${d > 0.05} ? 'down' : (${d < -0.05} ? 'up' : 'flat')"
-                     th:text="(${d >= 0} ? '+' : '') + ${#numbers.formatDecimal(d,1,1)} + 's'">+0.0s</div>
-            </div>
-            <div class="stat">
-                <div class="label">Tests</div>
-                <div class="value" th:text="${statTests}">0</div>
-                <div th:if="${hasPrev}" class="delta flat"
-                     th:with="d=${statTests - prevTests}"
-                     th:text="(${d > 0} ? '+' : '') + ${d}">0</div>
-            </div>
-        </div>
-        <!-- Latest-run line below the tiles (canonical skeleton order). -->
-        <p class="muted" style="margin:6px 0 0">
-            Latest run <a th:href="@{/runs/{id}(id=${cur.id})}" th:text="${cur.shortSha} ?: ('#' + ${cur.id})">abc1234</a>
-            on <code class="mono" th:text="${cur.branch} ?: '—'">main</code>
-            · <span th:text="${#temporals.format(cur.createdAt, 'MMM dd HH:mm')}">date</span>
-        </p>
+    <th:block th:if="${page.hasRun}">
+        <!-- Shared analytics skeleton: KPI tiles → latest-run line → trend → by-module breakdown.
+             Δ suppressed on the first run / no prior data for the scope (reconcile D6). -->
+        <div th:replace="~{fragments/analytics :: kpiRow(${page.kpis})}"></div>
+        <div th:replace="~{fragments/analytics :: latestRunLine(${page.latestRun})}"></div>
 
         <!-- Single-run state: a trend needs ≥2 runs, so show a hint instead of a one-dot chart (D6). -->
-        <p th:if="${!hasTrend or trendRunIds == '[]'}" class="muted" style="margin-top:14px">
+        <p th:unless="${page.trend.present}" class="muted" style="margin-top:14px">
             First run — the pass/fail trend appears once there are at least two runs.</p>
 
-        <!-- Pass/fail trend — same time/run toggle + clickable points as Overview. Scoped to the
-             selected module when one is picked (the graph follows the group). -->
-        <div class="trend-head" th:if="${hasTrend}">
-            <h2>Test results trend
-                <span class="muted" th:if="${!scoped}">(pass/fail per run)</span>
-                <span class="muted" th:if="${scoped}" th:text="'(' + ${selectedModule} + ' — pass/fail per run)'">(module)</span></h2>
-            <div id="trendModeToggle" class="seg" role="group" aria-label="Trend x-axis mode">
-                <button type="button" data-mode="time" class="active">Over time</button>
-                <button type="button" data-mode="run">By run</button>
-            </div>
-        </div>
-        <div th:if="${hasTrend}" class="chart-wrap">
-            <canvas id="trendChart" height="90"></canvas>
-        </div>
-
-        <!-- Tests by module (derived from package, same as Coverage by module) — multi-module only.
-             Clicking a module scopes the whole page (tiles + trend + roster) to it; the selected
-             row is highlighted, and the chip above links back to all. -->
-        <div th:if="${!testModules.isEmpty()}">
-            <h2>Tests by module <span class="muted">(latest run)</span></h2>
-            <table class="table table-hover align-middle sortable">
-                <thead>
-                <tr><th>Module</th><th class="num">Tests</th><th class="num">Pass %</th>
-                    <th class="num">Failures</th><th class="num">Skipped</th></tr>
-                </thead>
-                <tbody>
-                <tr th:each="m : ${testModules}"
-                    th:classappend="${m.name() == selectedModule} ? 'branch-current' : (${m.failed() > 0} ? 'row-fail' : '')"
-                    class="mod-row" style="cursor:pointer"
-                    th:attr="data-href=@{/projects/{id}/tests(id=${project.id},flag=${selectedFlag},module=${m.name()})}">
-                    <td><a th:href="@{/projects/{id}/tests(id=${project.id},flag=${selectedFlag},module=${m.name()})}">
-                        <code class="mono" th:text="${m.name()}">web</code></a></td>
-                    <td class="num" th:text="${m.tests()}">0</td>
-                    <td class="num pct" th:text="${#numbers.formatDecimal(m.passRate(),1,1)} + '%'">100%</td>
-                    <td class="num" th:text="${m.failed()}">0</td>
-                    <td class="num muted" th:text="${m.skipped()}">0</td>
-                </tr>
-                </tbody>
-            </table>
-        </div>
-
+        <div th:replace="~{fragments/analytics :: trend(${page.trend.present}, ${page.trend.title}, ${page.trend.subtitle})}"></div>
+        <div th:replace="~{fragments/analytics :: breakdown(${page.breakdown})}"></div>
     </th:block>
 
     <!-- ============ Folded-in section: Flaky tests (was its own tab) ============ -->
     <section id="flaky-section" style="margin-top:34px">
         <h2><i class="bi bi-arrow-repeat" aria-hidden="true"></i> Flaky tests
-            <span class="muted" th:if="${!flakyList.isEmpty()}" th:text="'(' + ${flakyList.size()} + ')'">(0)</span></h2>
+            <span class="muted" th:if="${!page.flaky.isEmpty()}" th:text="'(' + ${page.flaky.size()} + ')'">(0)</span></h2>
         <p class="muted">Tests that both passed and failed for the same commit — likely non-deterministic.</p>
 
         <!-- Nothing to drill → show inline, plain (reconcile D3). -->
-        <p th:if="${flakyList.isEmpty()}" class="muted">No flaky tests detected. 🎉</p>
+        <p th:if="${page.flaky.isEmpty()}" class="muted">No flaky tests detected. 🎉</p>
 
-        <table class="table table-hover align-middle" th:unless="${flakyList.isEmpty()}">
+        <table class="table table-hover align-middle" th:unless="${page.flaky.isEmpty()}">
             <thead>
             <tr><th>Test</th><th>State</th><th class="num">Flaky commits</th><th class="num">Failures</th>
                 <th class="num">Fail rate</th><th>Last failure</th><th>Action</th></tr>
             </thead>
             <tbody>
-            <tr th:each="f : ${flakyList}">
-                <td><a th:href="@{/projects/{id}/test(id=${project.id},className=${f.className()},name=${f.name()})}">
+            <tr th:each="f : ${page.flaky}">
+                <td><a th:href="@{/projects/{id}/test(id=${page.project.id},className=${f.className()},name=${f.name()})}">
                     <code class="mono" th:text="${f.displayName()}">Test#method</code></a></td>
                 <td><span class="badge"
                           th:classappend="${f.status().name() == 'QUARANTINED'} ? 'skip'
@@ -150,8 +68,8 @@
                 <td>
                     <!-- Quarantine is a write action — shown only to users who can manage the project
                          (the page itself is public). -->
-                    <form th:if="${currentUser != null and @membershipService.canWrite(currentUser, project.id)}"
-                          method="post" th:action="@{/projects/{id}/flaky/status(id=${project.id})}">
+                    <form th:if="${currentUser != null and @membershipService.canWrite(currentUser, page.project.id)}"
+                          method="post" th:action="@{/projects/{id}/flaky/status(id=${page.project.id})}">
                         <input type="hidden" name="name" th:value="${f.name()}"/>
                         <input type="hidden" name="className" th:value="${f.className()}"/>
                         <button th:if="${f.status().name() != 'QUARANTINED'}"
@@ -171,12 +89,12 @@
         <p class="muted">Recent failures grouped by a normalized signature (type, message, top stack frame) — most frequent first.</p>
 
         <!-- Nothing to drill → show inline, plain (reconcile D3). -->
-        <p th:if="${clusters.isEmpty() and recurringFailures.isEmpty()}" class="muted">No recent failures to cluster. 🎉</p>
+        <p th:if="${page.clusters.isEmpty() and page.recurringFailures.isEmpty()}" class="muted">No recent failures to cluster. 🎉</p>
 
         <!-- Genuine clusters: one signature shared by more than one test (a likely common root cause). -->
-        <div th:unless="${clusters.isEmpty()}">
+        <div th:unless="${page.clusters.isEmpty()}">
             <h3>Clusters <span class="muted">(same signature across multiple tests)</span></h3>
-            <div th:each="c, iter : ${clusters}" class="cluster">
+            <div th:each="c, iter : ${page.clusters}" class="cluster">
                 <details class="failure">
                     <summary>
                         <span class="badge fail" th:text="${c.occurrences()} + '×'">3×</span>
@@ -188,9 +106,9 @@
                         <div class="muted" th:if="${c.lastSeen() != null}"
                              th:text="'Last seen ' + ${#temporals.format(c.lastSeen(), 'yyyy-MM-dd HH:mm')}">last seen</div>
                         <!-- Click-to-run AI root-cause — logged-in users only (LLM calls cost money). -->
-                        <div th:if="${aiEnabled and currentUser != null}" class="ai-slot">
+                        <div th:if="${page.aiEnabled and currentUser != null}" class="ai-slot">
                             <button type="button" class="btn btn-sm"
-                                    th:attr="hx-post=@{/projects/{id}/clusters/analyze(id=${project.id})},
+                                    th:attr="hx-post=@{/projects/{id}/clusters/analyze(id=${page.project.id})},
                                              hx-vals='{&quot;index&quot;: ' + ${iter.index} + '}',
                                              hx-target='#ai-' + ${iter.index},
                                              hx-disabled-elt='this',
@@ -212,10 +130,10 @@
         </div>
 
         <!-- A single test failing repeatedly isn't a cluster — list those separately. -->
-        <div th:unless="${recurringFailures.isEmpty()}">
+        <div th:unless="${page.recurringFailures.isEmpty()}">
             <h3>Recurring failures <span class="muted">(a single test failing repeatedly the same way —
                 consistent failures; nondeterministic ones are in the Flaky section above)</span></h3>
-            <div th:each="c : ${recurringFailures}" class="cluster">
+            <div th:each="c : ${page.recurringFailures}" class="cluster">
                 <details class="failure">
                     <summary>
                         <span class="badge fail" th:text="${c.occurrences()} + '×'">3×</span>
@@ -240,35 +158,35 @@
          (scoped to the module when one is selected). Default view is the rows that need attention —
          failing + flaky — with passing/skipped folded behind "Show all"; search reaches every test.
          Blue name → per-test history. Columns are sortable (click a header). -->
-    <th:block th:if="${cur != null}">
+    <th:block th:if="${page.hasRun}">
         <div class="trend-head" style="margin-top:34px">
             <div style="display:flex;gap:12px;align-items:center">
-                <h2 style="margin:0">All tests <span class="muted" th:text="'(' + ${roster.size()} + ')'">(0)</span></h2>
-                <!-- Disclosure beside the title: default view is failing + flaky; this reveals the rest. -->
-                <button type="button" id="rosterToggle" class="btn btn-sm btn-secondary" style="display:none"
-                        aria-expanded="false" aria-controls="roster-body"></button>
+                <h2 style="margin:0">All tests <span class="muted" th:text="'(' + ${page.rosterSize()} + ')'">(0)</span></h2>
+                <!-- Disclosure beside the title (wired by roster.js): default view is failing + flaky. -->
+                <button type="button" class="btn btn-sm btn-secondary" style="display:none"
+                        data-roster-toggle="roster-body" aria-controls="roster-body"
+                        data-expand-label="Show all {n} tests" data-collapse-label="Show only failing &amp; flaky"></button>
             </div>
-            <input type="search" id="testSearch" class="form-control form-control-sm" style="max-width:280px"
-                   placeholder="Search every test…" aria-label="Search tests">
+            <input type="search" class="form-control form-control-sm" style="max-width:280px"
+                   data-roster-search="roster-body" placeholder="Search every test…" aria-label="Search tests">
         </div>
         <!-- One-glance counts: a green run reads here without expanding anything. -->
-        <p class="muted" style="margin:0 0 8px"
-           th:with="passed=${statTests - statFailures - statSkipped}">
-            <span th:text="${statFailures}">0</span> failing ·
-            <span th:text="${rosterFlaky}">0</span> flaky ·
-            <span th:if="${rosterFixed > 0}"><span th:text="${rosterFixed}">0</span> fixed · </span>
-            <span th:text="${statSkipped}">0</span> skipped ·
-            <span th:text="${passed}">0</span> passed
+        <p class="muted" style="margin:0 0 8px">
+            <span th:text="${page.failing}">0</span> failing ·
+            <span th:text="${page.flakyCount}">0</span> flaky ·
+            <span th:if="${page.fixedCount > 0}"><span th:text="${page.fixedCount}">0</span> fixed · </span>
+            <span th:text="${page.skipped}">0</span> skipped ·
+            <span th:text="${page.passed}">0</span> passed
         </p>
         <table class="table table-hover align-middle sortable">
             <thead>
             <tr><th>Test</th><th>Status</th><th class="num">Duration</th><th>Flaky</th></tr>
             </thead>
             <tbody id="roster-body">
-            <tr th:each="t : ${roster}" th:attr="data-search=${#strings.toLowerCase(t.displayName())},
+            <tr th:each="t : ${page.roster}" th:attr="data-search=${#strings.toLowerCase(t.displayName())},
                     data-attention=${(t.status() != 'PASSED' and t.status() != 'SKIPPED') or t.flaky() or t.fixed()} ? '1' : '0'"
                 th:classappend="${t.status() != 'PASSED' and t.status() != 'SKIPPED'} ? 'row-fail'">
-                <td><a th:href="@{/projects/{id}/test(id=${project.id},className=${t.className()},name=${t.name()})}">
+                <td><a th:href="@{/projects/{id}/test(id=${page.project.id},className=${t.className()},name=${t.name()})}">
                     <code class="mono" th:text="${t.displayName()}">Test › method</code></a></td>
                 <td><span class="badge"
                           th:classappend="${t.status() == 'PASSED'} ? 'pass' : (${t.status() == 'SKIPPED'} ? '' : 'fail')"
@@ -282,7 +200,7 @@
             </tr>
             </tbody>
         </table>
-        <p class="muted" id="noMatches" style="display:none">No tests match your search.</p>
+        <p class="muted" data-roster-empty="roster-body" style="display:none">No tests match your search.</p>
     </th:block>
 </main>
 <th:block layout:fragment="scripts">
@@ -290,232 +208,14 @@
 <!-- htmx drives the click-to-run "Analyze with AI" buttons in the clusters section. -->
 <script th:src="@{/webjars/htmx.org/2.0.4/dist/htmx.min.js}"></script>
 
-<script>
-    // ---- All-tests roster: default to the rows that need attention (failing + flaky); search
-    //      reaches every test; "Show all" reveals the passing/skipped mass. ----
-    (function () {
-        var box = document.getElementById('testSearch');
-        var bodyEl = document.getElementById('roster-body');
-        if (!box || !bodyEl) { return; }
-        var rows = Array.prototype.slice.call(bodyEl.querySelectorAll('tr'));
-        var none = document.getElementById('noMatches');
-        var toggle = document.getElementById('rosterToggle');
-        var hidden = rows.filter(function (tr) { return tr.getAttribute('data-attention') === '0'; });
-        var total = rows.length;
-        var showAll = false;
+<!-- Shared table behaviour: sortable columns, module-row drill, roster search + collapse. -->
+<script th:src="@{/js/roster.js}"></script>
 
-        function apply() {
-            var q = box.value.trim().toLowerCase();
-            var searching = q.length > 0;
-            var shown = 0;
-            rows.forEach(function (tr) {
-                var match = !searching || (tr.getAttribute('data-search') || '').indexOf(q) !== -1;
-                var att = tr.getAttribute('data-attention') === '1';
-                var vis = match && (searching || showAll || att);
-                tr.style.display = vis ? '' : 'none';
-                if (vis) { shown++; }
-            });
-            if (none) { none.style.display = shown === 0 ? '' : 'none'; }
-            if (toggle) { toggle.style.display = (searching || hidden.length === 0) ? 'none' : ''; }
-        }
-        function syncToggle() {
-            toggle.setAttribute('aria-expanded', showAll ? 'true' : 'false');
-            toggle.textContent = showAll ? 'Show only failing & flaky' : ('Show all ' + total + ' tests');
-        }
-        box.addEventListener('input', apply);
-        if (toggle) {
-            syncToggle();
-            toggle.addEventListener('click', function () { showAll = !showAll; syncToggle(); apply(); });
-        }
-        apply();
-    })();
-
-    // Click anywhere on a "Tests by module" row to scope the page to that module (the name link
-    // works on its own; this just widens the hit area).
-    document.querySelectorAll('tr.mod-row[data-href]').forEach(function (row) {
-        row.addEventListener('click', function (e) {
-            if (e.target.closest('a')) { return; }
-            window.location = row.getAttribute('data-href');
-        });
-    });
-
-    // ---- Sortable tables: click a header to sort; numeric columns sort by value. ----
-    document.querySelectorAll('table.sortable').forEach(function (table) {
-        if (!table.tHead || !table.tBodies.length) { return; }
-        var headers = Array.prototype.slice.call(table.tHead.rows[0].cells);
-        headers.forEach(function (th, col) {
-            th.addEventListener('click', function () {
-                var body = table.tBodies[0];
-                var trs = Array.prototype.slice.call(body.rows);
-                var asc = th.getAttribute('aria-sort') !== 'ascending';
-                function key(tr) {
-                    var cell = tr.cells[col];
-                    if (!cell) { return ''; }
-                    var ds = cell.getAttribute('data-sort');
-                    return (ds != null) ? ds : cell.textContent.trim();
-                }
-                function num(v) { return parseFloat(String(v).replace(/[,%\s]|ms/g, '')); }
-                var numeric = trs.every(function (tr) {
-                    var k = key(tr);
-                    return k === '' || !isNaN(num(k));
-                });
-                trs.sort(function (a, b) {
-                    var ka = key(a), kb = key(b);
-                    if (numeric) { return asc ? (num(ka) || 0) - (num(kb) || 0) : (num(kb) || 0) - (num(ka) || 0); }
-                    return asc ? ka.localeCompare(kb) : kb.localeCompare(ka);
-                });
-                trs.forEach(function (tr) { body.appendChild(tr); });
-                headers.forEach(function (h) { h.removeAttribute('aria-sort'); });
-                th.setAttribute('aria-sort', asc ? 'ascending' : 'descending');
-            });
-        });
-    });
-</script>
-
-<script th:if="${hasTrend}" th:src="@{/webjars/chart.js/4.4.1/dist/chart.umd.js}"></script>
-<script th:if="${hasTrend}" th:inline="javascript">
-    const labels = JSON.parse(/*[[${trendLabels}]]*/ '[]');
-    const runIds = JSON.parse(/*[[${trendRunIds}]]*/ '[]');
-    const times = JSON.parse(/*[[${trendTimes}]]*/ '[]');
-    const passed = JSON.parse(/*[[${trendPassed}]]*/ '[]');
-    const failed = JSON.parse(/*[[${trendFailed}]]*/ '[]');
-    let trendChartInstance;
-    let trendMode = 'time';
-
-    function fmtDate(ms) { return new Date(ms).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); }
-    function fmtDateTime(ms) {
-        return new Date(ms).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-    }
-    function xAt(i) { return trendMode === 'time' ? times[i] : i; }
-    function pts(arr) { return arr.map(function (v, i) { return { x: xAt(i), y: v }; }); }
-    function isRed(i) { return failed[i] > 0; }
-    // First run of the trailing red streak (only when the latest run is red), else -1.
-    function trailingRedOnset() {
-        const n = failed.length;
-        if (n === 0 || !isRed(n - 1)) { return -1; }
-        let i = n - 1;
-        while (i - 1 >= 0 && isRed(i - 1)) { i--; }
-        return i;
-    }
-    // Click a point: open it vs the previous run to see what changed; first point opens the run.
-    function openCompare(chart, evt) {
-        const hit = chart.getElementsAtEventForMode(evt, 'nearest', { intersect: false }, true);
-        if (!hit.length) { return; }
-        const i = hit[0].index;
-        const id = runIds[i];
-        if (id == null) { return; }
-        const prev = (i > 0) ? runIds[i - 1] : null;
-        window.location = (prev != null) ? ('/compare?base=' + prev + '&head=' + id) : ('/runs/' + id);
-    }
-
-    if (labels.length > 0 && window.Chart) {
-        const css = getComputedStyle(document.documentElement);
-        const muted = css.getPropertyValue('--muted').trim() || '#8b98a5';
-        const text = css.getPropertyValue('--text').trim() || '#e6edf3';
-        const grid = css.getPropertyValue('--border').trim() || '#2c343d';
-
-        function xTick(value) {
-            if (trendMode === 'time') { return fmtDate(value); }
-            const i = Math.round(value);
-            return (i >= 0 && i < labels.length) ? labels[i] : '';
-        }
-        function xBounds() {
-            if (trendMode !== 'time') { return { min: undefined, max: undefined }; }
-            const ts = times.filter(function (t) { return t != null; });
-            if (!ts.length) { return { min: undefined, max: undefined }; }
-            const t0 = Math.min.apply(null, ts), tN = Math.max.apply(null, ts);
-            const span = tN - t0;
-            const pad = span > 0 ? Math.max(span * 0.02, 3600000) : 43200000;
-            return { min: t0 - pad, max: tN + pad };
-        }
-        const initBounds = xBounds();
-
-        // Red "regressed since" wash + dashed onset rule from the start of the current red streak.
-        const healthOverlay = {
-            id: 'healthOverlay',
-            beforeDatasetsDraw: function (chart) {
-                const ctx = chart.ctx, area = chart.chartArea, x = chart.scales.x;
-                const oi = trailingRedOnset();
-                if (oi >= 0) {
-                    const px = x.getPixelForValue(xAt(oi));
-                    ctx.save();
-                    ctx.fillStyle = 'rgba(229,83,75,0.08)';
-                    ctx.fillRect(px, area.top, area.right - px, area.bottom - area.top);
-                    ctx.restore();
-                }
-            },
-            afterDatasetsDraw: function (chart) {
-                const ctx = chart.ctx, area = chart.chartArea, x = chart.scales.x;
-                const oi = trailingRedOnset();
-                if (oi >= 0) {
-                    const px = x.getPixelForValue(xAt(oi));
-                    ctx.save();
-                    ctx.strokeStyle = '#e5534b'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 3]);
-                    ctx.beginPath(); ctx.moveTo(px, area.top); ctx.lineTo(px, area.bottom); ctx.stroke();
-                    ctx.setLineDash([]);
-                    ctx.fillStyle = '#e5534b'; ctx.font = '11px sans-serif'; ctx.textAlign = 'left';
-                    ctx.fillText('regressed', Math.min(px + 4, area.right - 62), area.top + 12);
-                    ctx.restore();
-                }
-            }
-        };
-
-        trendChartInstance = window.__chart(document.getElementById('trendChart'), {
-            type: 'line',
-            plugins: [healthOverlay],
-            data: {
-                datasets: [
-                    { label: 'Passed', data: pts(passed), borderColor: '#2ea043', backgroundColor: 'transparent',
-                      fill: false, tension: .25, spanGaps: true, pointRadius: 2, borderWidth: 2 },
-                    { label: 'Failed', data: pts(failed), borderColor: '#e5534b', backgroundColor: 'transparent',
-                      fill: false, tension: .25, spanGaps: true, pointRadius: 2, borderWidth: 2 }
-                ]
-            },
-            options: {
-                onClick: function (e, els, chart) { openCompare(chart, e); },
-                onHover: function (e, els) { e.native.target.style.cursor = els.length ? 'pointer' : 'default'; },
-                parsing: false,
-                scales: { y: { min: 0, ticks: { color: muted, precision: 0 }, grid: { color: grid },
-                               title: { display: true, text: 'tests', color: muted } },
-                          x: { type: 'linear', offset: true, min: initBounds.min, max: initBounds.max,
-                               ticks: { color: muted, autoSkip: true, maxRotation: 0, maxTicksLimit: 8,
-                                        callback: function (v) { return xTick(v); } },
-                               grid: { color: grid } } },
-                plugins: { legend: { labels: { color: text } },
-                           tooltip: { callbacks: { title: function (items) {
-                               const i = items[0].dataIndex;
-                               const sha = labels[i];
-                               const when = (times[i] != null) ? fmtDateTime(times[i]) : null;
-                               if (!when) { return sha; }
-                               return (sha && sha !== '—') ? (sha + ' · ' + when) : when;
-                           } } } }
-            }
-        });
-
-        function redrawTrend() {
-            if (!trendChartInstance) { return; }
-            const d = trendChartInstance.data;
-            d.datasets[0].data = pts(passed);
-            d.datasets[1].data = pts(failed);
-            const b = xBounds();
-            trendChartInstance.options.scales.x.min = b.min;
-            trendChartInstance.options.scales.x.max = b.max;
-            trendChartInstance.update();
-        }
-
-        const toggle = document.getElementById('trendModeToggle');
-        if (toggle) {
-            toggle.addEventListener('click', function (e) {
-                const btn = e.target.closest('button[data-mode]');
-                if (!btn) { return; }
-                trendMode = btn.getAttribute('data-mode');
-                toggle.querySelectorAll('button[data-mode]').forEach(function (b) {
-                    b.classList.toggle('active', b.getAttribute('data-mode') === trendMode);
-                });
-                redrawTrend();
-            });
-        }
-    }
+<!-- Pass/fail trend via the shared chart (config assembled server-side, one shape for every tab). -->
+<script th:if="${page.trend.present}" th:src="@{/webjars/chart.js/4.4.1/dist/chart.umd.js}"></script>
+<script th:if="${page.trend.present}" th:src="@{/js/trend.js}"></script>
+<script th:if="${page.trend.present}" th:inline="javascript">
+    window.__trendChart('trendChart', 'trendModeToggle', JSON.parse(/*[[${page.trend.configJson}]]*/ '{}'));
 </script>
 </th:block>
 </body>
