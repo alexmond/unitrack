@@ -36,7 +36,10 @@
              style="border-left-color: var(--c-fail); margin-bottom:18px">
             <strong><i class="bi bi-graph-down-arrow" aria-hidden="true"></i> p95 latency regressed</strong>
             — since
-            <code class="mono" th:text="${page.regression.onsetCommit() != null ? #strings.abbreviate(page.regression.onsetCommit(),9) : '—'}">abc1234</code>
+            <a th:if="${page.regression.onsetRunId() != null}" th:href="@{/perf-runs/{id}(id=${page.regression.onsetRunId()})}"><code
+                    class="mono" th:text="${page.regression.onsetCommit() != null ? #strings.abbreviate(page.regression.onsetCommit(),9) : '#' + page.regression.onsetRunId()}">abc1234</code></a>
+            <code th:unless="${page.regression.onsetRunId() != null}" class="mono"
+                  th:text="${page.regression.onsetCommit() != null ? #strings.abbreviate(page.regression.onsetCommit(),9) : '—'}">abc1234</code>
             <span class="muted" th:text="'(' + ${#temporals.format(page.regression.onsetAt(),'MMM dd')} + ')'">(Jun 20)</span>:
             <span th:text="${#numbers.formatDecimal(page.regression.baselineMedian(),1,0)}">120</span> →
             <span th:text="${#numbers.formatDecimal(page.regression.recentMedian(),1,0)}">180</span> ms
@@ -59,6 +62,39 @@
             <div class="chart-wrap"><canvas id="errorChart" height="70"></canvas></div>
         </th:block>
 
+        <!-- By transaction (latest run) — the per-label breakdown; Δ p95 vs baseline shows which
+             transaction regressed. Sortable + searchable via the shared roster.js. -->
+        <div class="trend-head" style="margin-top:24px" th:unless="${page.transactions.isEmpty()}">
+            <h2 style="margin:0">By transaction <span class="muted">(latest run)</span></h2>
+            <input type="search" class="form-control form-control-sm" style="max-width:280px"
+                   data-roster-search="txn-body" placeholder="Search transactions…" aria-label="Search transactions">
+        </div>
+        <table class="table table-hover align-middle sortable" th:unless="${page.transactions.isEmpty()}">
+            <thead>
+            <tr><th>Transaction</th><th class="num">Samples</th><th class="num">p50</th><th class="num">p95</th>
+                <th class="num">Δ p95</th><th class="num">Errors</th></tr>
+            </thead>
+            <tbody id="txn-body">
+            <tr th:each="t : ${page.transactions}" th:attr="data-search=${#strings.toLowerCase(t.label())}">
+                <td><code class="mono" th:text="${t.label()}">GET /</code></td>
+                <td class="num" th:attr="data-sort=${t.sampleCount()}" th:text="${t.sampleCount()}">0</td>
+                <td class="num" th:attr="data-sort=${t.p50Ms()}" th:text="${#numbers.formatDecimal(t.p50Ms(),1,0)} + ' ms'">0 ms</td>
+                <td class="num" th:attr="data-sort=${t.p95Ms()}" th:text="${#numbers.formatDecimal(t.p95Ms(),1,0)} + ' ms'">0 ms</td>
+                <td class="num" th:attr="data-sort=${t.p95DeltaPct()}">
+                    <span th:if="${t.p95DeltaPct() == null}" class="muted">new</span>
+                    <span th:unless="${t.p95DeltaPct() == null}" class="delta"
+                          th:classappend="${t.p95DeltaPct() > 0.5} ? 'down' : (${t.p95DeltaPct() < -0.5} ? 'up' : 'flat')"
+                          th:text="(${t.p95DeltaPct() >= 0} ? '+' : '') + ${#numbers.formatDecimal(t.p95DeltaPct(),1,1)} + '%'">+0%</span>
+                </td>
+                <td class="num" th:attr="data-sort=${t.errorPct()}">
+                    <span class="badge" th:classappend="${t.errorPct() > 0} ? 'fail' : 'pass'"
+                          th:text="${#numbers.formatDecimal(t.errorPct(),1,2)} + '%'">0%</span>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+        <p class="muted" data-roster-empty="txn-body" style="display:none">No transactions match your search.</p>
+
     <!-- Recent perf runs — sortable + searchable via the shared roster.js. Inside the hasRun
          guard so it can't render alongside the empty state (perfRuns is a separate query). -->
     <div class="trend-head" style="margin-top:24px" th:unless="${page.perfRuns.isEmpty()}">
@@ -76,7 +112,13 @@
             th:attr="data-search=${#strings.toLowerCase((r.commitSha != null ? r.commitSha : '') + ' ' + r.flag)}">
             <td class="muted" th:text="${#temporals.format(r.createdAt, 'MMM dd HH:mm')}">when</td>
             <td><code class="mono" th:text="${r.flag}">default</code></td>
-            <td><code class="mono" th:text="${r.commitSha != null ? #strings.abbreviate(r.commitSha,9) : '—'}">sha</code></td>
+            <td>
+                <a th:if="${page.repoCommitBase != null and r.commitSha != null}"
+                   th:href="${page.repoCommitBase + r.commitSha}" target="_blank" rel="noopener"><code class="mono"
+                        th:text="${#strings.abbreviate(r.commitSha,9)}">sha</code></a>
+                <code th:unless="${page.repoCommitBase != null and r.commitSha != null}" class="mono"
+                      th:text="${r.commitSha != null ? #strings.abbreviate(r.commitSha,9) : '—'}">sha</code>
+            </td>
             <td class="muted" th:text="${r.format}">jmeter</td>
             <td class="num" th:attr="data-sort=${r.sampleCount}" th:text="${r.sampleCount}">0</td>
             <td class="num" th:attr="data-sort=${r.p95Ms}" th:text="${#numbers.formatDecimal(r.p95Ms,1,0)} + ' ms'">0 ms</td>

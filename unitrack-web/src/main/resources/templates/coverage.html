@@ -71,7 +71,11 @@
             </thead>
             <tbody id="files-body">
             <tr th:each="f : ${page.worstFiles}" th:attr="data-search=${#strings.toLowerCase(f.path)}">
-                <td><code class="mono" th:text="${f.path}">path</code></td>
+                <td>
+                    <a th:if="${page.repoBlobBase != null}" th:href="${page.repoBlobBase + f.path}"
+                       target="_blank" rel="noopener"><code class="mono" th:text="${f.path}">path</code></a>
+                    <code th:unless="${page.repoBlobBase != null}" class="mono" th:text="${f.path}">path</code>
+                </td>
                 <td class="num pct" th:attr="data-sort=${f.linePct}" th:text="${#numbers.formatDecimal(f.linePct,1,1)} + '%'">0%</td>
                 <td style="width:140px">
                     <div class="bar"

@@ -44,7 +44,7 @@ class CoveragePageService {
 		CoverageReport c = reporting.latestCoverage(id).orElse(null);
 		if (c == null) {
 			return new CoveragePage(project, false, null, all, false, List.of(), null,
-					new TrendView(false, "Line-coverage trend", null, "{}"), null, EMPTY, List.of(), List.of());
+					new TrendView(false, "Line-coverage trend", null, "{}"), null, EMPTY, List.of(), List.of(), null);
 		}
 		List<ModuleCoverage> modules = reporting.moduleCoverage(c.getId());
 		String selected = validModule(module, modules);
@@ -69,9 +69,14 @@ class CoveragePageService {
 			kpis = kpis(c, lineDelta(trend));
 			trendView = trend(trend);
 		}
+		// Link worst-file paths to their source (GitHub-style blob at the report's
+		// commit).
+		String base = AnalyticsView.repoBase(project.getRepoUrl());
+		String repoBlobBase = (base != null && run.getCommitSha() != null)
+				? (base + "/blob/" + run.getCommitSha() + "/") : null;
 		return new CoveragePage(project, selected != null, selected, all, true, kpis, AnalyticsView.latestRunLine(run),
 				trendView, breakdown(id, modules, selected), EMPTY, reporting.coveragePackages(c.getId(), selected),
-				reporting.coverageFiles(c.getId(), selected, FILE_LIMIT));
+				reporting.coverageFiles(c.getId(), selected, FILE_LIMIT), repoBlobBase);
 	}
 
 	private static List<KpiTile> kpis(CoverageReport c, Double lineDelta) {
