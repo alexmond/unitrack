@@ -11,7 +11,6 @@ import org.springframework.web.context.WebApplicationContext;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
@@ -20,12 +19,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * The internal preview at {@code /projects/{id}/new-tests} (reconciled Tests page, epic
- * #390) is login-gated even in open mode — anonymous visitors are redirected to login, a
- * logged-in user gets the page with Flaky and Failure-clusters folded in as sections.
+ * The reconciled Tests page ({@code /projects/{id}/tests}, epic #390) is the canonical
+ * Tests tab: KPI tiles, trend, by-module breakdown, an all-tests roster, and the folded
+ * Flaky and Failure-clusters sections. It is public like the other analytics tabs, and
+ * the old {@code /flaky}, {@code /clusters}, and {@code /new-tests} URLs redirect to it.
  */
 @SpringBootTest
-class NewTestsPageIntegrationTest {
+class TestsPageIntegrationTest {
 
 	@Autowired
 	private WebApplicationContext context;
@@ -56,41 +56,50 @@ class NewTestsPageIntegrationTest {
 	}
 
 	@Test
-	void anonymousIsRedirectedToLogin() throws Exception {
+	void publicPageShowsFoldedFlakyAndClusterSections() throws Exception {
 		MockMvc mvc = mvc();
-		long projectId = ingest(mvc, "new-tests-anon");
+		long projectId = ingest(mvc, "tests-page-public");
 
-		mvc.perform(get("/projects/{id}/new-tests", projectId))
-			.andExpect(status().is3xxRedirection())
-			.andExpect(redirectedUrl("/login"));
-	}
-
-	@Test
-	void loggedInUserSeesPreviewWithFoldedSections() throws Exception {
-		MockMvc mvc = mvc();
-		long projectId = ingest(mvc, "new-tests-auth");
-
-		mvc.perform(get("/projects/{id}/new-tests", projectId).with(user("admin").roles("ADMIN")))
+		// No authenticated user — the analytics page is public.
+		mvc.perform(get("/projects/{id}/tests", projectId))
 			.andExpect(status().isOk())
-			.andExpect(content().string(containsString("Internal preview")))
+			.andExpect(content().string(containsString("All tests")))
 			.andExpect(content().string(containsString("id=\"flaky-section\"")))
 			.andExpect(content().string(containsString("id=\"clusters-section\"")));
 	}
 
 	/**
-	 * An unknown {@code module} scope falls back to "all tests" (the page renders the
-	 * full roster, no module chip) rather than erroring — the page is never a dead end.
+	 * An unknown {@code module} scope falls back to "all tests" (full roster, no module
+	 * chip) rather than erroring — the page is never a dead end.
 	 */
 	@Test
 	void unknownModuleFallsBackToAllTests() throws Exception {
 		MockMvc mvc = mvc();
-		long projectId = ingest(mvc, "new-tests-module");
+		long projectId = ingest(mvc, "tests-page-module");
 
-		mvc.perform(get("/projects/{id}/new-tests", projectId).param("module", "does-not-exist")
-			.with(user("admin").roles("ADMIN")))
+		mvc.perform(get("/projects/{id}/tests", projectId).param("module", "does-not-exist"))
 			.andExpect(status().isOk())
 			.andExpect(content().string(containsString("All tests")))
 			.andExpect(content().string(not(containsString("Module: <code"))));
+	}
+
+	/**
+	 * The folded-away tabs' URLs redirect to the Tests page so bookmarks keep working.
+	 */
+	@Test
+	void oldTabUrlsRedirectToTests() throws Exception {
+		MockMvc mvc = mvc();
+		long projectId = ingest(mvc, "tests-page-redirects");
+
+		mvc.perform(get("/projects/{id}/new-tests", projectId))
+			.andExpect(status().is3xxRedirection())
+			.andExpect(redirectedUrl("/projects/" + projectId + "/tests"));
+		mvc.perform(get("/projects/{id}/flaky", projectId))
+			.andExpect(status().is3xxRedirection())
+			.andExpect(redirectedUrl("/projects/" + projectId + "/tests#flaky-section"));
+		mvc.perform(get("/projects/{id}/clusters", projectId))
+			.andExpect(status().is3xxRedirection())
+			.andExpect(redirectedUrl("/projects/" + projectId + "/tests#clusters-section"));
 	}
 
 }

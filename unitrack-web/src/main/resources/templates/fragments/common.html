@@ -43,10 +43,6 @@
        th:classappend="${active == 'coverage'} ? 'current'"
        th:attr="aria-current=${active == 'coverage'} ? 'page' : null">
         <i class="bi bi-shield-check" aria-hidden="true"></i> Coverage</a>
-    <a th:href="@{/projects/{id}/flaky(id=${projectId})}"
-       th:classappend="${active == 'flaky'} ? 'current'"
-       th:attr="aria-current=${active == 'flaky'} ? 'page' : null">
-        <i class="bi bi-arrow-repeat" aria-hidden="true"></i> Flaky tests</a>
     <a th:href="@{/projects/{id}/performance(id=${projectId})}"
        th:classappend="${active == 'timing'} ? 'current'"
        th:attr="aria-current=${active == 'timing'} ? 'page' : null">
@@ -59,16 +55,6 @@
        th:classappend="${active == 'load'} ? 'current'"
        th:attr="aria-current=${active == 'load'} ? 'page' : null">
         <i class="bi bi-rocket-takeoff" aria-hidden="true"></i> Load tests</a>
-    <a th:href="@{/projects/{id}/clusters(id=${projectId})}"
-       th:classappend="${active == 'clusters'} ? 'current'"
-       th:attr="aria-current=${active == 'clusters'} ? 'page' : null">
-        <i class="bi bi-diagram-3" aria-hidden="true"></i> Failure clusters</a>
-    <!-- Internal preview (epic #390): the reconciled Tests page with Flaky + Clusters folded in.
-         Login-only while we test-drive the new data + UI; hidden from anonymous viewers. -->
-    <a th:if="${currentUser != null}" th:href="@{/projects/{id}/new-tests(id=${projectId})}"
-       th:classappend="${active == 'newtests'} ? 'current'"
-       th:attr="aria-current=${active == 'newtests'} ? 'page' : null">
-        <i class="bi bi-cone-striped" aria-hidden="true"></i> New tests</a>
     <!-- Management section — only for users who can write/manage this project. Hidden for anonymous
          and read-only visitors, so the public view of a project is read-only. -->
     <th:block th:if="${currentUser != null and @membershipService.canWrite(currentUser, projectId)}">

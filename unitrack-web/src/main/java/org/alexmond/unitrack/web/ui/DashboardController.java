@@ -227,37 +227,10 @@ public class DashboardController {
 		return "pr";
 	}
 
-	@GetMapping("/projects/{id}/clusters")
-	public String clusters(@PathVariable Long id, Model model) {
-		Project project = access.requireReadProject(id);
-		model.addAttribute("project", project);
-		// A real cluster spans >1 distinct test (shared root cause). A signature hit by a
-		// single
-		// test is just that test failing repeatedly — list those separately as recurring
-		// failures.
-		List<FailureCluster> all = clustering.cluster(id);
-		model.addAttribute("clusters", all.stream().filter((c) -> c.distinctTests() > 1).toList());
-		// AI root-cause is click-to-run (see analyzeCluster) — no LLM call on page load.
-		model.addAttribute("aiEnabled", aiAnalyzer.enabled());
-		// Recurring failures = a single test failing repeatedly with one signature.
-		// Exclude tests
-		// already flagged flaky (nondeterministic — pass+fail on a commit); those belong
-		// in the Flaky
-		// tab. What's left here is consistently-failing tests (standing bugs), with no
-		// double-listing.
-		java.util.Set<String> flakyKeys = flaky.listFlaky(id)
-			.stream()
-			.map(FlakyTestView::displayName)
-			.collect(java.util.stream.Collectors.toSet());
-		model.addAttribute("recurringFailures",
-				all.stream().filter((c) -> c.distinctTests() == 1 && !flakyKeys.contains(c.tests().get(0))).toList());
-		return "clusters";
-	}
-
 	/**
-	 * Click-to-run AI root-cause for one cluster (htmx target on the clusters page).
-	 * Returns just the analysis card fragment. Requires a logged-in user — LLM calls cost
-	 * money, so anonymous visitors can't trigger them.
+	 * Click-to-run AI root-cause for one cluster (htmx target on the Tests page's folded
+	 * Failure-clusters section). Returns just the analysis card fragment. Requires a
+	 * logged-in user — LLM calls cost money, so anonymous visitors can't trigger them.
 	 */
 	@PostMapping("/projects/{id}/clusters/analyze")
 	public String analyzeCluster(@PathVariable Long id, @RequestParam int index, Model model) {
@@ -402,55 +375,18 @@ public class DashboardController {
 		return "perf-run";
 	}
 
-	@GetMapping("/projects/{id}/tests")
-	public String tests(@PathVariable Long id, @RequestParam(required = false) String flag, Model model) {
-		Project project = access.requireReadProject(id);
-		List<String> flags = reporting.testFlags(id);
-		String selectedFlag = pickFlag(flag, flags);
-
-		List<TestRun> trend = reporting.trendRuns(id, null, selectedFlag, TREND_LIMIT);
-		TestRun cur = trend.isEmpty() ? null : trend.get(trend.size() - 1);
-		TestRun prev = (trend.size() > 1) ? trend.get(trend.size() - 2) : null;
-
-		java.util.Set<String> flakyKeys = flaky.listFlaky(id)
-			.stream()
-			.map((v) -> testKey(v.className(), v.name()))
-			.collect(java.util.stream.Collectors.toSet());
-		List<TestRosterRow> roster = (cur != null) ? reporting.allCasesFor(cur.getId())
-			.stream()
-			.map((c) -> new TestRosterRow(c.getClassName(), c.getName(), c.getStatus().name(), c.getDurationMs(),
-					flakyKeys.contains(testKey(c.getClassName(), c.getName())), false))
-			.toList() : List.of();
-
-		model.addAttribute("project", project);
-		model.addAttribute("flags", flags);
-		model.addAttribute("selectedFlag", selectedFlag);
-		model.addAttribute("cur", cur);
-		model.addAttribute("prev", prev);
-		model.addAttribute("roster", roster);
-		model.addAttribute("testModules", (cur != null) ? reporting.testModules(cur.getId()) : List.of());
-		model.addAttribute("hasTrend", !trend.isEmpty());
-		model.addAttribute("trendLabels", toJson(labels(trend.stream().map(TestRun::getShortSha).toList())));
-		model.addAttribute("trendRunIds", toJson(trend.stream().map(TestRun::getId).toList()));
-		model.addAttribute("trendTimes", toJson(trend.stream().map(DashboardController::epochMilli).toList()));
-		model.addAttribute("trendPassed", toJson(trend.stream().map(TestRun::getPassed).toList()));
-		model.addAttribute("trendFailed", toJson(trend.stream().map((r) -> r.getFailed() + r.getErrors()).toList()));
-		return "tests";
-	}
-
 	/**
-	 * Internal preview of the reconciled Tests page (P0, epic #390): the Tests aspect
-	 * with Flaky and Failure-clusters folded in as sections, on the canonical analytics
-	 * skeleton. Login-gated in {@code SecurityConfig} so it stays an internal test-drive
-	 * surface; the shipped {@code /tests}, {@code /flaky}, and {@code /clusters} pages
-	 * are untouched.
+	 * The Tests aspect on the canonical analytics skeleton (epic #390): KPI tiles,
+	 * pass/fail trend, a by-module breakdown that scopes the whole tab, and an all-tests
+	 * roster (failing + flaky first, "fixed" flagged, sortable, searchable), with Flaky
+	 * and Failure-clusters folded in as sections. Public like the other analytics tabs;
+	 * write actions are gated in the template. Clicking a by-module row re-enters with
+	 * {@code ?module=} to scope the tiles, trend, and roster; an unknown module falls
+	 * back to all (never a dead end).
 	 */
-	@GetMapping("/projects/{id}/new-tests")
-	public String newTests(@PathVariable Long id, @RequestParam(required = false) String flag,
+	@GetMapping("/projects/{id}/tests")
+	public String tests(@PathVariable Long id, @RequestParam(required = false) String flag,
 			@RequestParam(required = false) String module, Model model) {
-		if (access.currentUsername() == null) {
-			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Sign in to preview the new Tests page");
-		}
 		Project project = access.requireReadProject(id);
 		List<String> flags = reporting.testFlags(id);
 		String selectedFlag = pickFlag(flag, flags);
@@ -519,7 +455,21 @@ public class DashboardController {
 		model.addAttribute("aiEnabled", aiAnalyzer.enabled());
 		addFoldedClusterAttrs(model, id, flakyViews);
 		addTrendAttrs(model, trend, scoped, selectedModule);
-		return "new-tests";
+		return "tests";
+	}
+
+	/**
+	 * Old Flaky and Failure-clusters tabs + the {@code /new-tests} preview folded into
+	 * Tests.
+	 */
+	@GetMapping("/projects/{id}/new-tests")
+	public String newTestsRedirect(@PathVariable Long id) {
+		return "redirect:/projects/" + id + "/tests";
+	}
+
+	@GetMapping("/projects/{id}/clusters")
+	public String clustersRedirect(@PathVariable Long id) {
+		return "redirect:/projects/" + id + "/tests#clusters-section";
 	}
 
 	/**
