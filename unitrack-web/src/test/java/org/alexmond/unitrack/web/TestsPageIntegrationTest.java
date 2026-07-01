@@ -42,17 +42,42 @@ class TestsPageIntegrationTest {
 	}
 
 	private long ingest(MockMvc mvc, String project) throws Exception {
+		return ingest(mvc, project, "main", "sha1");
+	}
+
+	private long ingest(MockMvc mvc, String project, String branch, String commit) throws Exception {
 		String body = mvc
 			.perform(multipart("/api/v1/ingest")
 				.file(new MockMultipartFile("junit", "TEST-MyClass.xml", "text/xml", junitXml()))
 				.param("project", project)
-				.param("branch", "main")
-				.param("commit", "sha1"))
+				.param("branch", branch)
+				.param("commit", commit))
 			.andExpect(status().isCreated())
 			.andReturn()
 			.getResponse()
 			.getContentAsString();
 		return ((Number) JsonPath.read(body, "$.projectId")).longValue();
+	}
+
+	/**
+	 * A project with more than one branch renders the shared branch scope dropdown
+	 * (view.ScopeBar / fragments/common :: scopeBar, #431) — "All branches" plus each
+	 * branch — and scoping the tab by {@code ?branch=} stays a 200 (non-breaking default
+	 * is all branches).
+	 */
+	@Test
+	void multiBranchProjectShowsBranchScopeDropdown() throws Exception {
+		MockMvc mvc = mvc();
+		long projectId = ingest(mvc, "tests-branch-scope", "main", "sha-main");
+		ingest(mvc, "tests-branch-scope", "feature/x", "sha-feat");
+
+		mvc.perform(get("/projects/{id}/tests", projectId))
+			.andExpect(status().isOk())
+			.andExpect(content().string(containsString("data-scope=\"branch\"")))
+			.andExpect(content().string(containsString("All branches")))
+			.andExpect(content().string(containsString("feature/x")));
+
+		mvc.perform(get("/projects/{id}/tests", projectId).param("branch", "main")).andExpect(status().isOk());
 	}
 
 	@Test

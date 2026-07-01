@@ -30,15 +30,23 @@
             onclick="window.__toggleTheme()">☀</button>
 </header>
 
-<!-- Flag scope dropdown for an analytics tab (view.ScopeBar). Renders only with >1 flag; switching
-     re-enters the same tab scoped to the chosen flag (module preserved). See scope.js. -->
+<!-- Scope dropdowns for an analytics tab (view.ScopeBar): flag and/or branch. Each renders only
+     with a real choice; switching re-enters the same tab scoped to the selection (module + the
+     other dimension preserved). See scope.js. -->
 <div th:fragment="scopeBar(scope)" th:if="${scope != null and scope.hasChoice()}"
-     class="scope-bar" style="margin:10px 0" aria-label="Filter by flag">
-    <label class="muted" style="display:inline-flex;align-items:center;gap:6px">Flag
-        <select class="form-select form-select-sm" style="width:auto" data-scope-select
-                th:attr="data-base=${scope.basePath()}, data-module=${scope.module()}">
+     class="scope-bar" style="margin:10px 0;display:flex;gap:14px;align-items:center" aria-label="Scope"
+     th:attr="data-base=${scope.basePath()}, data-module=${scope.module()}">
+    <label th:if="${scope.hasFlagChoice()}" class="muted" style="display:inline-flex;align-items:center;gap:6px">Flag
+        <select class="form-select form-select-sm" style="width:auto" data-scope="flag">
             <option th:each="f : ${scope.flags()}" th:value="${f}" th:text="${f}"
                     th:selected="${f == scope.selectedFlag()}">default</option>
+        </select>
+    </label>
+    <label th:if="${scope.hasBranchChoice()}" class="muted" style="display:inline-flex;align-items:center;gap:6px">Branch
+        <select class="form-select form-select-sm" style="width:auto" data-scope="branch">
+            <option value="" th:selected="${scope.selectedBranch() == null}">All branches</option>
+            <option th:each="b : ${scope.branches()}" th:value="${b}" th:text="${b}"
+                    th:selected="${b == scope.selectedBranch()}">main</option>
         </select>
     </label>
 </div>
