@@ -419,7 +419,7 @@ public class DashboardController {
 		List<TestRosterRow> roster = (cur != null) ? reporting.allCasesFor(cur.getId())
 			.stream()
 			.map((c) -> new TestRosterRow(c.getClassName(), c.getName(), c.getStatus().name(), c.getDurationMs(),
-					flakyKeys.contains(testKey(c.getClassName(), c.getName()))))
+					flakyKeys.contains(testKey(c.getClassName(), c.getName())), false))
 			.toList() : List.of();
 
 		model.addAttribute("project", project);
@@ -463,6 +463,14 @@ public class DashboardController {
 		java.util.Set<String> flakyKeys = flakyViews.stream()
 			.map((v) -> testKey(v.className(), v.name()))
 			.collect(java.util.stream.Collectors.toSet());
+		// Tests that failed/errored in the previous run — a current PASS for one of these
+		// is a
+		// "fixed" (red→green) row, surfaced in the status column.
+		java.util.Set<String> prevFailingKeys = (prev != null) ? reporting.allCasesFor(prev.getId())
+			.stream()
+			.filter((c) -> c.getStatus() == TestStatus.FAILED || c.getStatus() == TestStatus.ERROR)
+			.map((c) -> testKey(c.getClassName(), c.getName()))
+			.collect(java.util.stream.Collectors.toSet()) : java.util.Set.of();
 
 		// By-module breakdown (empty for single-module projects). Clicking a row scopes
 		// the
@@ -485,8 +493,10 @@ public class DashboardController {
 				continue;
 			}
 			TestCaseResult c = curCases.get(i);
+			String key = testKey(c.getClassName(), c.getName());
+			boolean fixed = c.getStatus() == TestStatus.PASSED && prevFailingKeys.contains(key);
 			roster.add(new TestRosterRow(c.getClassName(), c.getName(), c.getStatus().name(), c.getDurationMs(),
-					flakyKeys.contains(testKey(c.getClassName(), c.getName()))));
+					flakyKeys.contains(key), fixed));
 		}
 
 		// KPI tiles: the run's stored aggregates when unscoped, computed from the
@@ -501,6 +511,7 @@ public class DashboardController {
 		model.addAttribute("prev", prev);
 		model.addAttribute("roster", roster);
 		model.addAttribute("rosterFlaky", roster.stream().filter(TestRosterRow::flaky).count());
+		model.addAttribute("rosterFixed", roster.stream().filter(TestRosterRow::fixed).count());
 		model.addAttribute("testModules", modules);
 		model.addAttribute("selectedModule", selectedModule);
 		model.addAttribute("scoped", scoped);
