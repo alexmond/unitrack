@@ -110,9 +110,12 @@ public class CoberturaXmlParser implements CoverageParser {
 	 * Parses {@code "75% (3/4)"} into {@code [covered, total]}; {@code [0,0]} if absent.
 	 */
 	private static int[] parseConditionCoverage(String value) {
-		int open = (value != null) ? value.indexOf('(') : -1;
-		int slash = (value != null) ? value.indexOf('/') : -1;
-		int close = (value != null) ? value.indexOf(')') : -1;
+		if (value == null) {
+			return new int[] { 0, 0 };
+		}
+		int open = value.indexOf('(');
+		int slash = value.indexOf('/');
+		int close = value.indexOf(')');
 		if (open < 0 || slash < 0 || close < 0 || slash < open || close < slash) {
 			return new int[] { 0, 0 };
 		}

@@ -53,6 +53,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.RejectedExecutionException;
@@ -457,7 +458,7 @@ public class IngestController {
 
 	private static Path createTempCopy(MultipartFile file, long maxBytes, String label) {
 		try {
-			Path tmp = Files.createTempFile("unitrack-ingest-", ".bin");
+			Path tmp = createOwnerOnlyTempFile();
 			try (InputStream in = new BoundedInputStream(GzipStreams.gunzipIfNeeded(file.getInputStream()), maxBytes,
 					label); OutputStream out = Files.newOutputStream(tmp)) {
 				in.transferTo(out);
@@ -467,6 +468,21 @@ public class IngestController {
 		catch (IOException ex) {
 			throw new IngestException(
 					"Could not buffer upload '" + file.getOriginalFilename() + "': " + ex.getMessage(), ex);
+		}
+	}
+
+	/**
+	 * Creates the ingest scratch file with owner-only permissions from the start, so it
+	 * is never briefly world-readable in the shared temp dir (defense-in-depth on
+	 * multi-tenant hosts). Falls back to a plain temp file on non-POSIX filesystems.
+	 */
+	private static Path createOwnerOnlyTempFile() throws IOException {
+		try {
+			return Files.createTempFile("unitrack-ingest-", ".bin",
+					PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-------")));
+		}
+		catch (UnsupportedOperationException ex) {
+			return Files.createTempFile("unitrack-ingest-", ".bin");
 		}
 	}
 

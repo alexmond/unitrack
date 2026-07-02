@@ -93,7 +93,7 @@ public class ComparisonService {
 			else if (h != null) {
 				deltas.add(new TestTimingDelta(key, null, h, h, TestTimingDelta.Kind.ADDED));
 			}
-			else {
+			else if (b != null) {
 				deltas.add(new TestTimingDelta(key, b, null, -b, TestTimingDelta.Kind.REMOVED));
 			}
 		}
