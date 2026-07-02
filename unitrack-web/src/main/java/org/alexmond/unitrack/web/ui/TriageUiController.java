@@ -22,7 +22,7 @@ public class TriageUiController {
 
 	@GetMapping("/projects/{id}/triage")
 	public String rules(@PathVariable Long id, Model model) {
-		Project project = access.requireReadProject(id);
+		Project project = access.requireReadProjectUi(id);
 		model.addAttribute("project", project);
 		model.addAttribute("rules", triage.listRules(id));
 		return "triage";

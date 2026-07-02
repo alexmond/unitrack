@@ -161,7 +161,7 @@ public class DashboardController {
 
 	@GetMapping("/projects/{id}")
 	public String project(@PathVariable Long id, @RequestParam(required = false) String branch, Model model) {
-		Project project = access.requireReadProject(id);
+		Project project = access.requireReadProjectUi(id);
 		List<BranchSummary> branchSummaries = branchService.list(id);
 		List<String> branches = branchSummaries.stream().map(BranchSummary::branch).toList();
 		String selectedBranch = resolveBranch(id, branch, branches);
@@ -199,14 +199,14 @@ public class DashboardController {
 	 */
 	@GetMapping("/projects/{id}/coverage")
 	public String coverage(@PathVariable Long id, @RequestParam(required = false) String module, Model model) {
-		Project project = access.requireReadProject(id);
+		Project project = access.requireReadProjectUi(id);
 		model.addAttribute("page", coveragePage.build(project, id, module));
 		return "coverage";
 	}
 
 	@GetMapping("/projects/{id}/pr/{pr}")
 	public String pullRequest(@PathVariable Long id, @PathVariable Integer pr, Model model) {
-		Project project = access.requireReadProject(id);
+		Project project = access.requireReadProjectUi(id);
 		List<TestRun> prRuns = pullRequests.runsFor(id, pr);
 		if (prRuns.isEmpty()) {
 			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Pull request not found");
@@ -232,7 +232,7 @@ public class DashboardController {
 		if (access.currentUsername() == null) {
 			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Sign in to run AI analysis");
 		}
-		Project project = access.requireReadProject(id);
+		Project project = access.requireReadProjectUi(id);
 		List<FailureCluster> realClusters = clustering.cluster(id)
 			.stream()
 			.filter((c) -> c.distinctTests() > 1)
@@ -247,7 +247,7 @@ public class DashboardController {
 
 	@GetMapping("/runs/{id}")
 	public String run(@PathVariable Long id, Model model) {
-		TestRun run = access.requireReadRun(id);
+		TestRun run = access.requireReadRunUi(id);
 		Long projectId = run.getProject().getId();
 		model.addAttribute("run", run);
 		model.addAttribute("prevRunId", reporting.previousRunId(run));
@@ -309,7 +309,7 @@ public class DashboardController {
 	@GetMapping("/projects/{id}/performance")
 	public String performance(@PathVariable Long id, @RequestParam(required = false) String flag,
 			@RequestParam(required = false) String branch, @RequestParam(required = false) String module, Model model) {
-		Project project = access.requireReadProject(id);
+		Project project = access.requireReadProjectUi(id);
 		model.addAttribute("page", timingPage.build(project, id, flag, branch, module));
 		return "performance";
 	}
@@ -322,14 +322,14 @@ public class DashboardController {
 	 */
 	@GetMapping("/projects/{id}/perf")
 	public String perf(@PathVariable Long id, @RequestParam(required = false) String flag, Model model) {
-		Project project = access.requireReadProject(id);
+		Project project = access.requireReadProjectUi(id);
 		model.addAttribute("page", loadPage.build(project, id, flag));
 		return "perf";
 	}
 
 	@GetMapping("/perf-runs/{id}")
 	public String perfRun(@PathVariable Long id, Model model) {
-		org.alexmond.unitrack.domain.PerfRun run = access.requireReadPerfRun(id);
+		org.alexmond.unitrack.domain.PerfRun run = access.requireReadPerfRunUi(id);
 		model.addAttribute("detail", perfRunDetail.detail(id)
 			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Perf run not found")));
 		model.addAttribute("prevRunId", reporting.previousPerfRunId(run));
@@ -349,7 +349,7 @@ public class DashboardController {
 	@GetMapping("/projects/{id}/tests")
 	public String tests(@PathVariable Long id, @RequestParam(required = false) String flag,
 			@RequestParam(required = false) String branch, @RequestParam(required = false) String module, Model model) {
-		Project project = access.requireReadProject(id);
+		Project project = access.requireReadProjectUi(id);
 		List<String> flags = reporting.testFlags(id);
 		String selectedFlag = pickFlag(flag, flags);
 		// Names only (one query) — the dropdown shows no per-branch stats, so avoid
@@ -642,7 +642,7 @@ public class DashboardController {
 	@GetMapping("/projects/{id}/test")
 	public String test(@PathVariable Long id, @RequestParam(defaultValue = "") String className,
 			@RequestParam String name, Model model) {
-		Project project = access.requireReadProject(id);
+		Project project = access.requireReadProjectUi(id);
 		List<TestTimelinePoint> timeline = performance.testStatusTimeline(id, className, name, TREND_FLAG, TREND_LIMIT);
 		model.addAttribute("project", project);
 		model.addAttribute("className", className);
