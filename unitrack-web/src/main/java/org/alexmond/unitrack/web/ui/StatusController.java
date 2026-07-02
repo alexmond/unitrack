@@ -62,14 +62,17 @@ public class StatusController {
 	private List<Map<String, Object>> components(HealthDescriptor descriptor) {
 		List<Map<String, Object>> rows = new ArrayList<>();
 		if (descriptor instanceof CompositeHealthDescriptor composite) {
-			composite.getComponents().forEach((name, child) -> {
-				Map<String, Object> row = new LinkedHashMap<>();
-				row.put("name", name);
-				row.put("status", child.getStatus().getCode());
-				row.put("details",
-						(child instanceof IndicatedHealthDescriptor indicated) ? indicated.getDetails() : Map.of());
-				rows.add(row);
-			});
+			var components = composite.getComponents();
+			if (components != null) {
+				components.forEach((name, child) -> {
+					Map<String, Object> row = new LinkedHashMap<>();
+					row.put("name", name);
+					row.put("status", child.getStatus().getCode());
+					row.put("details",
+							(child instanceof IndicatedHealthDescriptor indicated) ? indicated.getDetails() : Map.of());
+					rows.add(row);
+				});
+			}
 		}
 		return rows;
 	}
