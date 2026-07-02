@@ -25,7 +25,7 @@ public class RunExportController {
 
 	@GetMapping("/runs/{id}/export")
 	public String export(@PathVariable Long id, Model model) {
-		TestRun run = access.requireReadRun(id);
+		TestRun run = access.requireReadRunUi(id);
 		assembler.populate(model, run);
 		return "run-export";
 	}

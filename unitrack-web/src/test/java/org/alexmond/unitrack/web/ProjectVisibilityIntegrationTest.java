@@ -25,6 +25,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /** Public/private project visibility: enforced on reads, owner-gated on writes. */
@@ -86,9 +87,20 @@ class ProjectVisibilityIntegrationTest {
 			.andExpect(content().string(containsString("vis-public-proj")))
 			.andExpect(content().string(not(containsString("vis-private-proj"))));
 		mvc.perform(get("/projects/{id}", publicId)).andExpect(status().isOk());
-		mvc.perform(get("/projects/{id}", privateId)).andExpect(status().isNotFound());
+		// Anonymous hitting an existing private project's browser page is sent to login —
+		// they may
+		// gain access once identified — not a dead 404. The API path still 404s so a
+		// script can't
+		// probe it. A genuinely missing id stays 404 (the caller loads it before the
+		// read-check).
+		mvc.perform(get("/projects/{id}", privateId))
+			.andExpect(status().is3xxRedirection())
+			.andExpect(redirectedUrl("/login"));
+		mvc.perform(get("/projects/{id}", 999_999L)).andExpect(status().isNotFound());
 		mvc.perform(get("/api/v1/projects/{id}", privateId)).andExpect(status().isNotFound());
-		mvc.perform(get("/runs/{id}", privateRunId)).andExpect(status().isNotFound());
+		mvc.perform(get("/runs/{id}", privateRunId))
+			.andExpect(status().is3xxRedirection())
+			.andExpect(redirectedUrl("/login"));
 		mvc.perform(get("/")).andExpect(content().string(not(containsString("vis-private-proj"))));
 	}
 

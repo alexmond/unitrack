@@ -26,8 +26,8 @@ public class ComparisonController {
 	@GetMapping("/compare")
 	public String compare(@RequestParam Long base, @RequestParam Long head, Model model) {
 		// Both runs must be readable (404 hides private/unknown runs).
-		access.requireReadRun(base);
-		TestRun headRun = access.requireReadRun(head);
+		access.requireReadRunUi(base);
+		TestRun headRun = access.requireReadRunUi(head);
 		RunComparison cmp = comparison.compare(base, head)
 			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Run not found"));
 		model.addAttribute("cmp", cmp);
