@@ -72,6 +72,20 @@
         <thymeleaf-layout-dialect.version>3.4.0</thymeleaf-layout-dialect.version>
         <htmx.version>2.0.4</htmx.version>
         <notify4j.version>1.0.0</notify4j.version>
+
+        <!-- SonarQube analysis scope. Demo seeding is illustrative fixture data, not
+             product code; the CLI is a console app whose stdout IS its output (S106); and
+             test sources aren't a quality gate. Excluding these keeps the dashboard focused
+             on shippable code. Host URL + token are passed at scan time (not committed). -->
+        <sonar.projectKey>unitrack</sonar.projectKey>
+        <sonar.projectName>unitrack</sonar.projectName>
+        <sonar.exclusions>**/web/demo/**</sonar.exclusions>
+        <sonar.coverage.exclusions>**/web/demo/**</sonar.coverage.exclusions>
+        <sonar.issue.ignore.multicriteria>cliStdout,testSources</sonar.issue.ignore.multicriteria>
+        <sonar.issue.ignore.multicriteria.cliStdout.ruleKey>java:S106</sonar.issue.ignore.multicriteria.cliStdout.ruleKey>
+        <sonar.issue.ignore.multicriteria.cliStdout.resourceKey>**/unitrack-cli/**</sonar.issue.ignore.multicriteria.cliStdout.resourceKey>
+        <sonar.issue.ignore.multicriteria.testSources.ruleKey>*</sonar.issue.ignore.multicriteria.testSources.ruleKey>
+        <sonar.issue.ignore.multicriteria.testSources.resourceKey>**/src/test/**</sonar.issue.ignore.multicriteria.testSources.resourceKey>
     </properties>
 
     <!--
