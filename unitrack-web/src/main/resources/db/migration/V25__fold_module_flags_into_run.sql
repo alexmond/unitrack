@@ -16,6 +16,12 @@
 -- Groups WITHOUT a default sibling (a real coverage component like `frontend`, or a
 -- single-flag project) are left untouched.
 
+-- Temporary match indexes: the tagging steps match rollup rows to module rows by
+-- (class_name, name) / (package_name, file_name), which are otherwise unindexed — on a large
+-- production dataset the correlated lookups would be far too slow at startup without these.
+CREATE INDEX idx_v25_case_match ON test_case_result (class_name, name);
+CREATE INDEX idx_v25_cov_match ON coverage_file_entry (package_name, file_name);
+
 -- 1. Tag the rollup's test cases with the owning module (the sibling module run's flag).
 UPDATE test_case_result rc
 SET module = (
@@ -83,6 +89,9 @@ WHERE cfe.module IS NULL
           AND mr2.flag <> 'default'
       )
   );
+
+DROP INDEX idx_v25_case_match;
+DROP INDEX idx_v25_cov_match;
 
 -- 3. Delete the redundant module runs and their children. A "foldable" module run is a
 --    non-default run at a real commit that has a 'default' rollup sibling in its group.
