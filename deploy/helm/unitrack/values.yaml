@@ -51,7 +51,7 @@ service:
 managementPort: 9090
 
 # When true, also expose the management port on the Service (a named `management` port) with the
-# `boot-admin/monitor` label + `management.*` annotations a Spring Cloud Kubernetes discovery client
+# `bootapp: "true"` label + `management.*` annotations a Spring Cloud Kubernetes discovery client
 # (Spring Boot Admin) reads to auto-discover and scrape actuator (#458). Off by default — actuator
 # stays reachable in-cluster via the pod either way; this only adds the Service port + metadata so a
 # monitoring server can find the app. Stays ClusterIP-internal; the ingress still routes only `http`.
