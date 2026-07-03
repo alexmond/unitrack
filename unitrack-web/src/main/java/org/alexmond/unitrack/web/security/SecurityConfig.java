@@ -67,8 +67,6 @@ public class SecurityConfig {
 				// /runs/** and still requires write access.
 				auth.requestMatchers(HttpMethod.GET, "/share/**").permitAll();
 				auth.requestMatchers("/profile/**", "/api/v1/me/**").authenticated();
-				// The "New summary" page is login-only, even in open mode.
-				auth.requestMatchers("/new-summary", "/new-summary/**").authenticated();
 				// The audit log can name private projects/users — admin-only, even in
 				// open
 				// mode.
