@@ -156,6 +156,12 @@ public class DashboardController {
 		List<ProjectHealth> board = projectHealth.board(membership.readableBy(user));
 		model.addAttribute("board", board);
 		model.addAttribute("summary", ProjectHealthService.summarize(board));
+		// Extra KPI-strip rollups the summarize() record doesn't carry — cheap in-memory
+		// counts.
+		model.addAttribute("passingGates",
+				board.stream().filter(ProjectHealth::hasRuns).filter(ProjectHealth::gatePassed).count());
+		model.addAttribute("regressedCount", board.stream().filter(ProjectHealth::isRegressed).count());
+		model.addAttribute("noRunsCount", board.stream().filter((h) -> !h.hasRuns()).count());
 		return "index";
 	}
 
