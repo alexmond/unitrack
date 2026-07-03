@@ -5,8 +5,9 @@ metadata:
   labels:
     {{- include "unitrack.labels" . | nindent 4 }}
     {{- if .Values.managementDiscoverable }}
-    # The label a Spring Boot Admin discovery client selects on to decide which Services to monitor.
-    boot-admin/monitor: "true"
+    # The label the Spring Boot Admin discovery client filters on (spring.cloud.kubernetes.discovery
+    # .service-labels: {bootapp: "true"}) to decide which Services to monitor — unlabelled ones are ignored.
+    bootapp: "true"
     {{- end }}
   {{- if .Values.managementDiscoverable }}
   annotations:
