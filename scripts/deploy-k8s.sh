@@ -26,8 +26,7 @@
 # Helm CLI override: set $HELM to use a different Helm implementation for the chart step
 # (default: the Go `helm` binary). Multi-word values are supported, so you can point it at
 # jhelm (the Java Helm impl):
-#   HELM="java -jar $HOME/IdeaProjects/jhelm/jhelm-cli/target/jhelm-1.0.1-SNAPSHOT.jar" \
-#     scripts/deploy-k8s.sh --values ...
+#   HELM="java -jar $HOME/.local/share/jhelm/jhelm-1.0.1.jar" scripts/deploy-k8s.sh --values ...
 # The namespace is created up-front via kubectl (not `--create-namespace`, which jhelm lacks),
 # so the same upgrade call works with either implementation.
 
