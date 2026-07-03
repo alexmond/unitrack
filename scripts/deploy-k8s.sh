@@ -20,8 +20,16 @@
 #   buildpacks  - Spring Boot's Cloud Native Buildpacks via -Pdocker. Needs a real Docker
 #                 daemon (fails under rootless Podman, see #211).
 #
-# Requires: kubectl + helm pointed at the target cluster, podman or docker for the build, and
-# (for publish) a prior `podman login <registry>` / `docker login <registry>`.
+# Requires: kubectl + a Helm CLI pointed at the target cluster, podman or docker for the build,
+# and (for publish) a prior `podman login <registry>` / `docker login <registry>`.
+#
+# Helm CLI override: set $HELM to use a different Helm implementation for the chart step
+# (default: the Go `helm` binary). Multi-word values are supported, so you can point it at
+# jhelm (the Java Helm impl):
+#   HELM="java -jar $HOME/IdeaProjects/jhelm/jhelm-cli/target/jhelm-1.0.1-SNAPSHOT.jar" \
+#     scripts/deploy-k8s.sh --values ...
+# The namespace is created up-front via kubectl (not `--create-namespace`, which jhelm lacks),
+# so the same upgrade call works with either implementation.
 
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -35,6 +43,10 @@ BUILDER=podman
 BUILD=1
 PUBLISH=1
 
+# Helm CLI, overridable via $HELM (e.g. jhelm). Split on whitespace so a multi-word command
+# like "java -jar /path/jhelm.jar" works; defaults to the Go `helm` binary.
+read -r -a HELM_CMD <<< "${HELM:-helm}"
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --registry)  REGISTRY="$2"; shift 2 ;;
@@ -45,7 +57,7 @@ while [[ $# -gt 0 ]]; do
     --builder)   BUILDER="$2"; shift 2 ;;
     --no-build)  BUILD=0; shift ;;
     --no-push)   PUBLISH=0; shift ;;
-    -h|--help)   sed -n '2,28p' "$0"; exit 0 ;;
+    -h|--help)   sed -n '2,32p' "$0"; exit 0 ;;
     *) echo "Unknown argument: $1" >&2; exit 2 ;;
   esac
 done
@@ -91,9 +103,12 @@ if [[ "$BUILD" -eq 1 ]]; then
   esac
 fi
 
-echo "==> helm upgrade --install $RELEASE (ns: $NAMESPACE)..."
-helm upgrade --install "$RELEASE" deploy/helm/unitrack \
-  -n "$NAMESPACE" --create-namespace \
+# Ensure the namespace exists (replaces `helm --create-namespace`, which jhelm doesn't support).
+kubectl get namespace "$NAMESPACE" >/dev/null 2>&1 || kubectl create namespace "$NAMESPACE"
+
+echo "==> ${HELM_CMD[*]} upgrade --install $RELEASE (ns: $NAMESPACE)..."
+"${HELM_CMD[@]}" upgrade --install "$RELEASE" deploy/helm/unitrack \
+  -n "$NAMESPACE" \
   --set image.repository="${REGISTRY}/unitrack" \
   --set image.tag="$TAG" \
   ${VALUES:+-f "$VALUES"}
@@ -102,5 +117,5 @@ echo "==> Waiting for rollout..."
 kubectl -n "$NAMESPACE" rollout status "deploy/${RELEASE}" --timeout=180s
 
 echo "==> Smoke test..."
-helm test "$RELEASE" -n "$NAMESPACE"
+"${HELM_CMD[@]}" test "$RELEASE" -n "$NAMESPACE"
 echo "==> Done. UniTrack is up (release '$RELEASE', namespace '$NAMESPACE')."
