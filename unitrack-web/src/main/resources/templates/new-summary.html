@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head><title th:text="'UniTrack — New summary'">UniTrack</title></head>
+<body>
+
+<main class="container" layout:fragment="content">
+    <h1>New summary</h1>
+    <p class="muted" th:if="${currentUser != null}">
+        Signed in as <code class="mono" th:text="${currentUser}">user</code> — this page is visible only after login.
+    </p>
+    <p class="muted">A fresh at-a-glance summary. Starting point — sections below are ready to fill in.</p>
+
+    <div class="row g-3" style="margin-top:8px">
+        <div class="col-12 col-md-4">
+            <div class="card h-100"><div class="card-body">
+                <h2 class="h5"><i class="bi bi-check2-square" aria-hidden="true"></i> Tests</h2>
+                <p class="muted mb-0">Pass/fail trends and flaky tests across your projects.</p>
+            </div></div>
+        </div>
+        <div class="col-12 col-md-4">
+            <div class="card h-100"><div class="card-body">
+                <h2 class="h5"><i class="bi bi-shield-check" aria-hidden="true"></i> Coverage</h2>
+                <p class="muted mb-0">Line coverage and quality-gate verdicts over time.</p>
+            </div></div>
+        </div>
+        <div class="col-12 col-md-4">
+            <div class="card h-100"><div class="card-body">
+                <h2 class="h5"><i class="bi bi-rocket-takeoff" aria-hidden="true"></i> Performance</h2>
+                <p class="muted mb-0">Latency percentiles and regressions from load and JMH runs.</p>
+            </div></div>
+        </div>
+    </div>
+</main>
+
+</body>
+</html>

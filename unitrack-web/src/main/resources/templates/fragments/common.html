@@ -14,6 +14,7 @@
         <a th:if="${currentUser != null}" th:href="@{/}"><i class="bi bi-grid-1x2" aria-hidden="true"></i> Projects</a>
         <a th:if="${currentUser != null}" th:href="@{/status}"><i class="bi bi-activity" aria-hidden="true"></i> Status</a>
         <a th:if="${currentUser != null}" th:href="@{/owners}"><i class="bi bi-people" aria-hidden="true"></i> Owners</a>
+        <a th:if="${currentUser != null}" th:href="@{/new-summary}"><i class="bi bi-clipboard-data" aria-hidden="true"></i> New summary</a>
         <a th:if="${isAdmin}" th:href="@{/ops}"><i class="bi bi-sliders" aria-hidden="true"></i> Ops</a>
         <a th:if="${isAdmin}" th:href="@{/audit}"><i class="bi bi-journal-text" aria-hidden="true"></i> Audit</a>
         <a th:if="${isAdmin}" th:href="@{/ingest}"><i class="bi bi-inbox" aria-hidden="true"></i> Ingest</a>
