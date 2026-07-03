@@ -78,7 +78,7 @@ spec:
             # Actuator runs here, separate from the public app port. The Service exposes only
             # `http`, so health/metrics/prometheus are reachable in-cluster (probes, scrape) but
             # never through the ingress / Cloudflare Tunnel.
-            - name: mgmt
+            - name: management
               containerPort: {{ .Values.managementPort }}
               protocol: TCP
           envFrom:
@@ -123,19 +123,19 @@ spec:
           startupProbe:
             httpGet:
               path: {{ .Values.probes.startup.path }}
-              port: mgmt
+              port: management
             periodSeconds: {{ .Values.probes.startup.periodSeconds }}
             failureThreshold: {{ .Values.probes.startup.failureThreshold }}
           livenessProbe:
             httpGet:
               path: {{ .Values.probes.liveness.path }}
-              port: mgmt
+              port: management
             periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
             failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
           readinessProbe:
             httpGet:
               path: {{ .Values.probes.readiness.path }}
-              port: mgmt
+              port: management
             periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
             failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
           resources:

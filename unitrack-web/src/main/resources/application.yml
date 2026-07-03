@@ -90,7 +90,7 @@ management:
     # (health, metrics, prometheus, env stay internal). The chart points probes + the prometheus
     # scrape at this port and exposes only the app port on the Service. Set MANAGEMENT_PORT=8080 to
     # fold it back onto the app port for a simple all-in-one local run.
-    port: ${MANAGEMENT_PORT:9001}
+    port: ${MANAGEMENT_PORT:9090}
   endpoints:
     web:
       exposure:

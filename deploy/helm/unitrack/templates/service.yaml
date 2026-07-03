@@ -4,6 +4,17 @@ metadata:
   name: {{ include "unitrack.fullname" . }}
   labels:
     {{- include "unitrack.labels" . | nindent 4 }}
+    {{- if .Values.managementDiscoverable }}
+    # The label a Spring Boot Admin discovery client selects on to decide which Services to monitor.
+    boot-admin/monitor: "true"
+    {{- end }}
+  {{- if .Values.managementDiscoverable }}
+  annotations:
+    # Spring Cloud Kubernetes copies Service annotations into the discovery instance metadata;
+    # a Spring Boot Admin server reads these to scrape actuator on the management port (#458).
+    management.port: {{ .Values.managementPort | quote }}
+    management.context-path: "/actuator"
+  {{- end }}
 spec:
   type: {{ .Values.service.type }}
   ports:
@@ -11,6 +22,14 @@ spec:
       port: {{ .Values.service.port }}
       targetPort: http
       protocol: TCP
+    {{- if .Values.managementDiscoverable }}
+    # Management/actuator port — ClusterIP-internal only (the ingress still routes only `http`),
+    # so an in-cluster monitoring server can reach health/info/metrics without public exposure.
+    - name: management
+      port: {{ .Values.managementPort }}
+      targetPort: management
+      protocol: TCP
+    {{- end }}
   # Target only the app pods. cloudflared pods carry the same name/instance selector labels,
   # so without the component label this Service could route to a pod that doesn't serve :8080.
   selector:
