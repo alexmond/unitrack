@@ -115,8 +115,8 @@ class UploadCommand implements Callable<Integer> {
 	boolean splitByModule;
 
 	@Option(names = "--module",
-			description = "Build module these reports belong to; tags results so the Tests/Coverage by-module "
-					+ "breakdown uses it instead of guessing from package names.")
+			description = "Build module these reports belong to; tags results so the Tests by-module breakdown "
+					+ "groups by it. Test results with no module tag are grouped under (none).")
 	String module;
 
 	@Option(names = "--scan",

@@ -313,9 +313,8 @@ public class ReportingService {
 
 	/**
 	 * Per-module suite-time totals for a run, for the Test timing page. Same module
-	 * resolution as {@link #testModules} (explicit uploader module, else
-	 * package-derived); empty for a single-module project so the caller can hide the
-	 * section.
+	 * resolution as {@link #testModules} (the explicit module the uploader tagged); empty
+	 * for a single-module project so the caller can hide the section.
 	 */
 	public List<TestModuleTiming> testModuleTiming(Long runId) {
 		List<TestCaseResult> all = cases.findByRunIdOrderByStatusAscClassNameAscNameAsc(runId);
@@ -339,32 +338,17 @@ public class ReportingService {
 	}
 
 	/**
-	 * The module of each test case, in order: the explicit uploader-supplied module
-	 * (#393) when any case carries one, otherwise the package-derived module (segment
-	 * after the longest common package prefix).
+	 * The module of each test case, in order — the explicit module the uploader tagged on
+	 * the result (#393/#423), or {@code (none)} when untagged. Modules come from tags,
+	 * not from guessing the package tree: a run with no tagged modules collapses to a
+	 * single {@code (none)} group, so {@link #testModules} suppresses the by-module
+	 * breakdown. (Test results carry an explicit module; coverage — which has no per-test
+	 * module — still derives modules from the package tree in {@link #moduleCoverage}.)
 	 */
 	private static List<String> moduleOfEach(List<TestCaseResult> cases) {
-		boolean hasExplicit = cases.stream().anyMatch((c) -> c.getModule() != null && !c.getModule().isBlank());
-		if (hasExplicit) {
-			return cases.stream()
-				.map((c) -> (c.getModule() != null && !c.getModule().isBlank()) ? c.getModule() : "(none)")
-				.toList();
-		}
-		List<String[]> segments = cases.stream().map((c) -> splitPackage(packageOf(c.getClassName()))).toList();
-		int prefix = commonPrefixLength(segments);
-		return segments.stream().map((s) -> (s.length > prefix) ? s[prefix] : "(root)").toList();
-	}
-
-	/**
-	 * The package of a fully-qualified class name (everything before the last dot), or
-	 * null.
-	 */
-	private static String packageOf(String className) {
-		if (className == null) {
-			return null;
-		}
-		int dot = className.lastIndexOf('.');
-		return (dot > 0) ? className.substring(0, dot) : null;
+		return cases.stream()
+			.map((c) -> (c.getModule() != null && !c.getModule().isBlank()) ? c.getModule() : "(none)")
+			.toList();
 	}
 
 	public List<TestCaseResult> allCasesFor(Long runId) {
