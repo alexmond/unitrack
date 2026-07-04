@@ -2,6 +2,18 @@
 
 Evidence from past panels in this repo. Bias future proposals with it; it's not law.
 
+## 2026-07-04 — Project Overview page synthesizes the 4 aspect tabs (improve existing UI / cross-tab IA)
+- Proposed: UX/IA (director), QA/Tester, Developer, Performance Eng, Frontend/design-system, Competitive analyst, Restraint skeptic. User edits: **none** ("go"). 8th analytics/IA target — roster now rock-solid.
+- Note: kept **Frontend/design-system** (not the pure-data drop) because the ask said "data AND *design* of the 4 tabs"; it earned its seat (mapped the whole card to existing `.cards`/`.stat`/`statusPill`/`.donut`/`.bar`, zero new deps). Rule: seat Frontend when the prompt names design/visual cohesion; drop only the standalone visual *Designer* on "what-is-this-for" targets.
+- Style: swarm → director-led, **1 round** (very strong; 7/7 independently landed on "verdict + 4 one-number aspect cards routing to tabs; cut the duplicated coverage tables").
+- Recurring: **the hero shows raw `r.status`, not the quality-gate verdict** — flagged again (QA+Dev). And `resolveBranch()` defaulting the whole page to the gate *base* branch is a real per-commit bug (Dev). Both worth their own tickets regardless of this redesign.
+
+## 2026-07-04 — Verify the built Overview preview (`/projects/{id}/overview`) (acceptance review of implemented artifact)
+- Proposed: UX/IA (director), QA, Developer, Performance Eng, Data-Correctness skeptic, Competitive analyst, Restraint skeptic. User edits: none (implicit — followed the build→verify→fix loop). Same 7-role acceptance roster as 2026-07-01; still the right shape.
+- Style: swarm → director-led, 1 round; 3 SIGN-OFF, 4 CHANGES-REQUESTED. Director folded all blocking items in one pass, re-ran full `dev-verify` green (3/3 tests).
+- Recurring (now a hard rule): **on any status/verdict UI, drive the pill + donut colour from the quality-gate verdict, never `TestRun.getStatus()`** — the gate-passes-tests-fail-coverage case makes raw status self-contradict. Third time this class has surfaced here.
+- Note: **Thymeleaf `th:replace` outranks `th:if` on the same element** — a null-guard on a `th:replace` pill element is ignored (renders spurious "UNKNOWN"); put the `th:if` on a wrapping `<th:block>`. And **`recentRuns` is all-flags** — for per-run Δ pick the previous run *of the same flag*, or split-by-module builds compare across modules.
+
 ## 2026-06-10 — UI critique vs competitor screenshots (improve existing artifact)
 - Proposed: Visual/UI Designer (director), Frontend/Design-system Eng, Competitor/Market Analyst, UX/Information Architect, QA/Tester, Restraint Skeptic. User edits: **none** ("go" as-is) — confirms the default UI-target roster (design trio + Analyst + QA + Restraint) is well-calibrated here; stop re-deriving it.
 - Style: swarm → director-led, **1 round** (very strong convergence). Vote: **wow = 4 yes-subtle / 2 no**, but the two "no" = "functional-not-decorative", so effective consensus = **subtle, functional-first wow; nobody wanted bold/animated flash**.
