@@ -1,9 +1,11 @@
 package org.alexmond.unitrack.report;
 
 /**
- * Per-module test totals for one run, on the Tests page. The module is derived from each
- * test's package the same way {@link ReportingService#moduleCoverage} derives coverage
- * modules, so the Tests-by-module and Coverage-by-module breakdowns line up.
+ * Per-module test totals for one run, on the Tests page. The module is the explicit
+ * module the uploader tagged on each result (#393/#423); untagged results fall under
+ * {@code (none)}, and a run with no tagged modules shows no by-module breakdown.
+ * (Coverage — which has no per-test module — still derives its modules from the package
+ * tree in {@link ReportingService#moduleCoverage}.)
  */
 public record TestModuleRow(String name, int tests, int passed, int failed, int skipped) {
 
