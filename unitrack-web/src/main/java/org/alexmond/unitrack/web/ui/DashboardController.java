@@ -76,6 +76,12 @@ public class DashboardController {
 
 	private static final int SLOWEST_IN_RUN_LIMIT = 10;
 
+	/**
+	 * The reconciled Overview keeps a short recent-runs list — it's a summary, not the
+	 * Tests tab.
+	 */
+	private static final int OVERVIEW_RUN_LIMIT = 10;
+
 	private final ReportingService reporting;
 
 	private final QualityGateService qualityGate;
@@ -121,6 +127,8 @@ public class DashboardController {
 	private final CoveragePageService coveragePage;
 
 	private final LoadPageService loadPage;
+
+	private final OverviewPageService overviewPage;
 
 	private final io.micrometer.observation.ObservationRegistry observationRegistry;
 
@@ -195,6 +203,41 @@ public class DashboardController {
 		model.addAttribute("pullRequests", pullRequests.list(id));
 		model.addAttribute("uploadSnippet", uploadSnippet(project.getName()));
 		return "project";
+	}
+
+	/**
+	 * Preview of the reconciled Overview (2026-07-04 brainstorm panel): a computed health
+	 * verdict + four one-signal aspect cards that route into the tabs + the "Health over
+	 * time" trend, with the recent-runs/branches/PRs tables demoted. Served at a distinct
+	 * URL alongside the classic {@code /projects/{id}} so it can be reviewed before it
+	 * replaces it (same pattern as the earlier {@code /new-tests} preview). Reuses the
+	 * classic Overview's data loading; the verdict + cards come from
+	 * {@link OverviewPageService}.
+	 */
+	@GetMapping("/projects/{id}/overview")
+	public String overviewPreview(@PathVariable Long id, @RequestParam(required = false) String branch, Model model) {
+		Project project = access.requireReadProjectUi(id);
+		List<BranchSummary> branchSummaries = branchService.list(id);
+		List<String> branches = branchSummaries.stream().map(BranchSummary::branch).toList();
+		String selectedBranch = resolveBranch(id, branch, branches);
+		List<TestRun> runs = reporting.recentRuns(id, selectedBranch, OVERVIEW_RUN_LIMIT);
+		// Health-over-time uses one flag (the rollup) so split-by-module series don't
+		// interleave; fall back to the first flag when there is no `default` rollup,
+		// matching
+		// the tabs, so the trend never silently vanishes.
+		String trendFlag = pickFlag(null, reporting.testFlags(id));
+		List<TestRun> trend = reporting.trendRuns(id, selectedBranch, trendFlag, TREND_LIMIT);
+
+		model.addAttribute("page", overviewPage.build(project, id, runs, trend));
+		model.addAttribute("runs", runs);
+		model.addAttribute("uploadSnippet", uploadSnippet(project.getName()));
+		model.addAttribute("branches", branches);
+		model.addAttribute("selectedBranch", selectedBranch);
+		model.addAttribute("branchSummaries", branchSummaries);
+		model.addAttribute("hiddenBranchCount",
+				branchSummaries.stream().filter((b) -> !b.shown() && !b.branch().equals(selectedBranch)).count());
+		model.addAttribute("pullRequests", pullRequests.list(id));
+		return "project-overview";
 	}
 
 	/**

@@ -15,6 +15,11 @@
     </p>
     <nav th:replace="~{fragments/common :: subnav(${project.id}, 'overview')}"></nav>
 
+    <p class="muted" style="margin:8px 0 0">
+        <i class="bi bi-stars" aria-hidden="true"></i>
+        <a th:href="@{/projects/{id}/overview(id=${project.id})}">Try the new reconciled Overview →</a>
+    </p>
+
     <form th:if="${branches.size() > 1}" method="get" class="branch-bar"
           th:action="@{/projects/{id}(id=${project.id})}">
         <label for="branchSel"><i class="bi bi-signpost-split" aria-hidden="true"></i> Branch</label>
