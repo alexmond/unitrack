@@ -99,8 +99,8 @@ class TestsPageIntegrationTest {
 	}
 
 	/**
-	 * An unknown {@code module} scope falls back to "all tests" (full roster, no module
-	 * chip) rather than erroring — the page is never a dead end.
+	 * An unknown {@code module} scope falls back to "all tests" (full roster, not
+	 * module-scoped) rather than erroring — the page is never a dead end.
 	 */
 	@Test
 	void unknownModuleFallsBackToAllTests() throws Exception {
@@ -110,7 +110,9 @@ class TestsPageIntegrationTest {
 		mvc.perform(get("/projects/{id}/tests", projectId).param("module", "does-not-exist"))
 			.andExpect(status().isOk())
 			.andExpect(content().string(containsString("All tests")))
-			.andExpect(content().string(not(containsString("Module: <code"))));
+			// Fallback isn't scoped: the bogus module must not surface (e.g. as a
+			// breadcrumb crumb).
+			.andExpect(content().string(not(containsString("does-not-exist"))));
 	}
 
 	/**

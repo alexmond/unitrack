@@ -7,18 +7,13 @@
     <p class="crumbs">
         <a th:href="@{/}">Projects</a> /
         <a th:href="@{/projects/{id}(id=${page.project.id})}" th:text="${page.project.name}">project</a> /
-        <span>Test timing</span>
+        <span th:unless="${page.scoped}">Test timing</span>
+        <th:block th:if="${page.scoped}"><a th:href="${page.allUrl}">Test timing</a> /
+            <code class="mono" th:text="${page.selectedModule}">web</code></th:block>
     </p>
     <h1 th:text="${page.project.name} + ' — test timing'">project — test timing</h1>
     <nav th:replace="~{fragments/common :: subnav(${page.project.id}, ${page.tab})}"></nav>
     <div th:replace="~{fragments/common :: scopeBar(${page.scope})}"></div>
-
-    <!-- Module scope chip + a way back to all (clicking a "by module" row scopes the whole page). -->
-    <div th:if="${page.scoped}" style="display:flex;align-items:center;gap:10px;margin:10px 0">
-        <span class="badge tag"><i class="bi bi-diagram-3" aria-hidden="true"></i>
-            Module: <code class="mono" th:text="${page.selectedModule}">web</code></span>
-        <a th:href="${page.allUrl}"><i class="bi bi-arrow-left" aria-hidden="true"></i> All modules</a>
-    </div>
 
     <!-- Empty state: no timing data yet. -->
     <th:block th:unless="${page.hasRun}">

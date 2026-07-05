@@ -7,18 +7,12 @@
     <p class="crumbs">
         <a th:href="@{/}">Projects</a> /
         <a th:href="@{/projects/{id}(id=${page.project.id})}" th:text="${page.project.name}">project</a> /
-        Coverage
+        <span th:unless="${page.scoped}">Coverage</span>
+        <th:block th:if="${page.scoped}"><a th:href="${page.allUrl}">Coverage</a> /
+            <code class="mono" th:text="${page.selectedModule}">web</code></th:block>
     </p>
     <h1 th:text="${page.project.name} + ' — coverage'">project — coverage</h1>
     <nav th:replace="~{fragments/common :: subnav(${page.project.id}, ${page.tab})}"></nav>
-
-    <!-- Module scope chip + a way back to all (clicking a "by module" row scopes the package +
-         file tables below to that module). -->
-    <div th:if="${page.scoped}" style="display:flex;align-items:center;gap:10px;margin:10px 0">
-        <span class="badge tag"><i class="bi bi-diagram-3" aria-hidden="true"></i>
-            Module: <code class="mono" th:text="${page.selectedModule}">web</code></span>
-        <a th:href="${page.allUrl}"><i class="bi bi-arrow-left" aria-hidden="true"></i> All modules</a>
-    </div>
 
     <!-- Empty state: no coverage report yet. -->
     <th:block th:unless="${page.hasRun}">
