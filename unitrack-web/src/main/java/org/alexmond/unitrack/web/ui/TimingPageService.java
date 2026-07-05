@@ -76,8 +76,9 @@ class TimingPageService {
 		List<TimingRosterRow> roster = roster(curCases, curMods, selected, prev);
 
 		return new TimingPage(project, scoped, selected, all, true, kpis(curScope, prevScope, prev != null, roster),
-				AnalyticsView.latestRunLine(cur), trend(trend, scoped, selected), breakdown(id, cur, prev, selected),
-				EMPTY, roster, new ScopeBar(all, flags, selectedFlag, branches, selectedBranch, selected));
+				AnalyticsView.latestRunLine(cur), trend(trend, scoped, selected),
+				scoped ? null : breakdown(id, selectedFlag, cur, prev, null), EMPTY, roster,
+				new ScopeBar(all, flags, selectedFlag, branches, selectedBranch, selected));
 	}
 
 	/**
@@ -198,7 +199,7 @@ class TimingPageService {
 	}
 
 	/** Timing by module with a Δ-total-time column vs the previous run. */
-	private BreakdownTable breakdown(Long id, TestRun cur, TestRun prev, String selected) {
+	private BreakdownTable breakdown(Long id, String flag, TestRun cur, TestRun prev, String selected) {
 		Map<String, Long> prevTotal = new HashMap<>();
 		if (prev != null) {
 			for (TestModuleTiming m : reporting.testModuleTiming(prev.getId())) {
@@ -214,7 +215,7 @@ class TimingPageService {
 					? new BreakdownCell(AnalyticsView.signed1((m.totalMs() - was) / 1000.0) + "s",
 							"delta " + AnalyticsView.upIsBad((m.totalMs() - was) / 1000.0, 0.05))
 					: BreakdownCell.of("new");
-			rows.add(new BreakdownRow(m.name(), "/projects/" + id + "/performance?module=" + enc(m.name()), false,
+			rows.add(new BreakdownRow(m.name(), AnalyticsView.moduleUrl("performance", id, flag, m.name()), false,
 					List.of(BreakdownCell.of(String.valueOf(m.tests())),
 							BreakdownCell.of(AnalyticsView.fmt1(m.totalMs() / 1000.0) + "s"),
 							BreakdownCell.of(fmtMs(m.avgMs())), deltaCell)));
@@ -233,10 +234,6 @@ class TimingPageService {
 
 	private static String fmtMs(long ms) {
 		return String.format(java.util.Locale.US, "%,d ms", ms);
-	}
-
-	private static String enc(String v) {
-		return java.net.URLEncoder.encode(v, java.nio.charset.StandardCharsets.UTF_8);
 	}
 
 }
