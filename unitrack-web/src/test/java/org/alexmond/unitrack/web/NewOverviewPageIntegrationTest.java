@@ -16,9 +16,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * The reconciled Overview preview ({@code /projects/{id}/overview}) — verifies it
+ * The reconciled Overview — now the project page at {@code /projects/{id}}. Verifies it
  * synthesizes the four aspects into a verdict + aspect strip, degrades on the Load aspect
- * (no perf data), routes into the tabs, and is reachable from the classic Overview.
+ * (no perf data), routes into the tabs, and that the old {@code /overview} preview URL
+ * redirects to it.
  */
 @SpringBootTest
 class NewOverviewPageIntegrationTest {
@@ -59,7 +60,7 @@ class NewOverviewPageIntegrationTest {
 		long id = ingest(mvc, "overview-green", "aaa1", true);
 		ingest(mvc, "overview-green", "bbb2", true);
 
-		mvc.perform(get("/projects/{id}/overview", id))
+		mvc.perform(get("/projects/{id}", id))
 			.andExpect(status().isOk())
 			// Verdict band.
 			.andExpect(content().string(containsString("Healthy")))
@@ -86,21 +87,21 @@ class NewOverviewPageIntegrationTest {
 		MockMvc mvc = mockMvc();
 		long id = ingest(mvc, "overview-red", "ccc1", false);
 
-		mvc.perform(get("/projects/{id}/overview", id))
+		mvc.perform(get("/projects/{id}", id))
 			.andExpect(status().isOk())
 			.andExpect(content().string(containsString("Failing")))
 			.andExpect(content().string(containsString("test failing")));
 	}
 
 	@Test
-	void classicOverviewLinksToThePreview() throws Exception {
+	void oldPreviewUrlRedirectsToTheProjectPage() throws Exception {
 		MockMvc mvc = mockMvc();
 		long id = ingest(mvc, "overview-link", "ddd1", true);
 
-		mvc.perform(get("/projects/{id}", id))
-			.andExpect(status().isOk())
-			.andExpect(content().string(containsString("/projects/" + id + "/overview")))
-			.andExpect(content().string(containsString("reconciled Overview")));
+		mvc.perform(get("/projects/{id}/overview", id))
+			.andExpect(status().is3xxRedirection())
+			.andExpect(
+					org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl("/projects/" + id));
 	}
 
 }

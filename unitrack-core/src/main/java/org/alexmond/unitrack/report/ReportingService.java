@@ -56,6 +56,8 @@ public class ReportingService {
 
 	private final org.alexmond.unitrack.repository.PerfRunRepository perfRuns;
 
+	private final org.alexmond.unitrack.repository.PerfTransactionRepository perfTransactions;
+
 	public List<Project> listProjects() {
 		return projects.findAllByOrderByNameAsc();
 	}
@@ -196,6 +198,15 @@ public class ReportingService {
 	/** Distinct perf flags (series) for a project — for the perf flag filter. */
 	public List<String> perfFlags(Long projectId) {
 		return perfRuns.findDistinctFlagsByProjectId(projectId);
+	}
+
+	/**
+	 * One transaction's history (oldest run first) for a project + flag — powers the
+	 * per-transaction detail page's latency-over-runs trend.
+	 */
+	public List<org.alexmond.unitrack.domain.PerfTransaction> perfTransactionSeries(Long projectId, String label,
+			String flag) {
+		return perfTransactions.findSeries(projectId, label, flag);
 	}
 
 	public Optional<org.alexmond.unitrack.domain.PerfRun> findPerfRun(Long id) {

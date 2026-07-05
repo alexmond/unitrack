@@ -51,6 +51,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -61,8 +62,6 @@ import java.util.Optional;
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class DashboardController {
-
-	private static final int RUN_LIST_LIMIT = 50;
 
 	private static final int TREND_LIMIT = 30;
 
@@ -173,49 +172,15 @@ public class DashboardController {
 		return "index";
 	}
 
+	/**
+	 * The project Overview: a computed health verdict + four one-signal aspect cards that
+	 * route into the tabs + the "Health over time" trend, with the
+	 * recent-runs/branches/PRs tables demoted. This reconciled view (2026-07-04
+	 * brainstorm panel) replaced the classic KPI-and-tables Overview; the verdict + cards
+	 * come from {@link OverviewPageService}.
+	 */
 	@GetMapping("/projects/{id}")
 	public String project(@PathVariable Long id, @RequestParam(required = false) String branch, Model model) {
-		Project project = access.requireReadProjectUi(id);
-		List<BranchSummary> branchSummaries = branchService.list(id);
-		List<String> branches = branchSummaries.stream().map(BranchSummary::branch).toList();
-		String selectedBranch = resolveBranch(id, branch, branches);
-		List<TestRun> runs = reporting.recentRuns(id, selectedBranch, RUN_LIST_LIMIT);
-		List<TestRun> trend = reporting.trendRuns(id, selectedBranch, TREND_FLAG, TREND_LIMIT);
-
-		model.addAttribute("project", project);
-		model.addAttribute("branches", branches);
-		model.addAttribute("selectedBranch", selectedBranch);
-		model.addAttribute("branchSummaries", branchSummaries);
-		model.addAttribute("hiddenBranchCount",
-				branchSummaries.stream().filter((b) -> !b.shown() && !b.branch().equals(selectedBranch)).count());
-		model.addAttribute("runs", runs);
-		model.addAttribute("flags", reporting.flagSummaries(id));
-		model.addAttribute("modules",
-				reporting.latestCoverage(id).map((c) -> reporting.moduleCoverage(c.getId())).orElse(List.of()));
-		model.addAttribute("trendLabels",
-				toJson(AnalyticsView.labels(trend.stream().map(TestRun::getShortSha).toList())));
-		model.addAttribute("trendRunIds", toJson(trend.stream().map(TestRun::getId).toList()));
-		model.addAttribute("trendTimes", toJson(trend.stream().map(AnalyticsView::epochMilli).toList()));
-		model.addAttribute("trendPassed", toJson(trend.stream().map(TestRun::getPassed).toList()));
-		model.addAttribute("trendFailed", toJson(trend.stream().map((r) -> r.getFailed() + r.getErrors()).toList()));
-		model.addAttribute("trendSkipped", toJson(trend.stream().map(TestRun::getSkipped).toList()));
-		model.addAttribute("trendCoverage", toJson(trend.stream().map(TestRun::getLineCoveragePct).toList()));
-		model.addAttribute("pullRequests", pullRequests.list(id));
-		model.addAttribute("uploadSnippet", uploadSnippet(project.getName()));
-		return "project";
-	}
-
-	/**
-	 * Preview of the reconciled Overview (2026-07-04 brainstorm panel): a computed health
-	 * verdict + four one-signal aspect cards that route into the tabs + the "Health over
-	 * time" trend, with the recent-runs/branches/PRs tables demoted. Served at a distinct
-	 * URL alongside the classic {@code /projects/{id}} so it can be reviewed before it
-	 * replaces it (same pattern as the earlier {@code /new-tests} preview). Reuses the
-	 * classic Overview's data loading; the verdict + cards come from
-	 * {@link OverviewPageService}.
-	 */
-	@GetMapping("/projects/{id}/overview")
-	public String overviewPreview(@PathVariable Long id, @RequestParam(required = false) String branch, Model model) {
 		Project project = access.requireReadProjectUi(id);
 		List<BranchSummary> branchSummaries = branchService.list(id);
 		List<String> branches = branchSummaries.stream().map(BranchSummary::branch).toList();
@@ -238,6 +203,20 @@ public class DashboardController {
 				branchSummaries.stream().filter((b) -> !b.shown() && !b.branch().equals(selectedBranch)).count());
 		model.addAttribute("pullRequests", pullRequests.list(id));
 		return "project-overview";
+	}
+
+	/**
+	 * The reconciled Overview now <em>is</em> {@code /projects/{id}}; this keeps the old
+	 * preview URL alive as a redirect so links/bookmarks (and the deployed preview) don't
+	 * break.
+	 */
+	@GetMapping("/projects/{id}/overview")
+	public String overviewRedirect(@PathVariable Long id, @RequestParam(required = false) String branch) {
+		UriComponentsBuilder uri = UriComponentsBuilder.fromPath("/projects/" + id);
+		if (branch != null && !branch.isBlank()) {
+			uri.queryParam("branch", branch);
+		}
+		return "redirect:" + uri.encode().toUriString();
 	}
 
 	/**
@@ -374,6 +353,19 @@ public class DashboardController {
 		Project project = access.requireReadProjectUi(id);
 		model.addAttribute("page", loadPage.build(project, id, flag));
 		return "perf";
+	}
+
+	/**
+	 * One transaction's performance over runs — the drill-in from the Load tests "By
+	 * transaction" table. A dedicated detail page (latency-over-runs trend + per-run
+	 * history), mirroring the per-run and per-test detail pages.
+	 */
+	@GetMapping("/projects/{id}/perf/transaction")
+	public String perfTransaction(@PathVariable Long id, @RequestParam String label,
+			@RequestParam(required = false) String flag, Model model) {
+		Project project = access.requireReadProjectUi(id);
+		model.addAttribute("page", loadPage.buildTransaction(project, id, label, flag));
+		return "perf-transaction";
 	}
 
 	@GetMapping("/perf-runs/{id}")
