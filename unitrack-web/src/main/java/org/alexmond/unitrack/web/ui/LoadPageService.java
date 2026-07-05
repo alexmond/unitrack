@@ -6,6 +6,7 @@ import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 
 import org.alexmond.unitrack.domain.PerfRun;
+import org.alexmond.unitrack.domain.PerfTransaction;
 import org.alexmond.unitrack.domain.Project;
 import org.alexmond.unitrack.report.PerfRunDetail;
 import org.alexmond.unitrack.report.PerfRunDetailService;
@@ -16,6 +17,7 @@ import org.alexmond.unitrack.report.ReportingService;
 import org.alexmond.unitrack.web.ui.view.EmptyState;
 import org.alexmond.unitrack.web.ui.view.KpiTile;
 import org.alexmond.unitrack.web.ui.view.LoadPage;
+import org.alexmond.unitrack.web.ui.view.PerfTransactionPage;
 import org.alexmond.unitrack.web.ui.view.ScopeBar;
 import org.alexmond.unitrack.web.ui.view.TrendView;
 import org.springframework.stereotype.Service;
@@ -65,6 +67,63 @@ class LoadPageService {
 		ScopeBar scope = new ScopeBar("/projects/" + id + "/perf", flags, selectedFlag, null, null, null);
 		return new LoadPage(project, !trend.isEmpty(), kpis(perfRuns), EMPTY, latency(trend), throughput(trend),
 				error(trend), step, perfRuns, flags, selectedFlag, repoCommitBase, transactions, scope);
+	}
+
+	/**
+	 * The per-transaction detail: one request label's latency over runs (KPI tiles + a
+	 * p50/p95/p99 trend + a per-run history table), scoped to the same flag as the Load
+	 * tab.
+	 */
+	PerfTransactionPage buildTransaction(Project project, Long id, String label, String flag) {
+		List<String> flags = reporting.perfFlags(id);
+		String selectedFlag = selectedPerfFlag(flag, flags);
+		String base = AnalyticsView.repoBase(project.getRepoUrl());
+		String repoCommitBase = (base != null) ? (base + "/commit/") : null;
+		// oldest-first (for the chart); the query fetches each row's owning run.
+		List<PerfTransaction> series = reporting.perfTransactionSeries(id, label, selectedFlag);
+		if (series.isEmpty()) {
+			TrendView none = new TrendView(false, "Latency over runs", "(p50 / p95 / p99, ms)", "{}");
+			return new PerfTransactionPage(project, "load", label, selectedFlag, false, List.of(), none, List.of(),
+					repoCommitBase);
+		}
+		PerfTransaction cur = series.get(series.size() - 1);
+		PerfTransaction prev = (series.size() > 1) ? series.get(series.size() - 2) : null;
+		List<PerfTransactionPage.RunRow> runs = new java.util.ArrayList<>(series.stream()
+			.map((t) -> new PerfTransactionPage.RunRow(t.getPerfRun().getId(), t.getPerfRun().getCommitSha(),
+					t.getPerfRun().getCreatedAt(), t.getP50Ms(), t.getP95Ms(), t.getP99Ms(), t.getSampleCount(),
+					t.getErrorPct()))
+			.toList());
+		java.util.Collections.reverse(runs); // history table reads newest-first
+		return new PerfTransactionPage(project, "load", label, selectedFlag, true, txnKpis(cur, prev), txnTrend(series),
+				runs, repoCommitBase);
+	}
+
+	private static List<KpiTile> txnKpis(PerfTransaction cur, PerfTransaction prev) {
+		boolean hp = prev != null;
+		double dP95 = hp ? (cur.getP95Ms() - prev.getP95Ms()) : 0;
+		return List.of(
+				new KpiTile("p95 latency", f0(cur.getP95Ms()) + " ms", "", hp ? (sgn0(dP95) + " ms") : null,
+						AnalyticsView.upIsBad(dP95, 0.5), null),
+				KpiTile.of("p50", f0(cur.getP50Ms()) + " ms", ""), KpiTile.of("p99", f0(cur.getP99Ms()) + " ms", ""),
+				KpiTile.of("Samples", String.format(Locale.US, "%,d", cur.getSampleCount()), ""));
+	}
+
+	private static TrendView txnTrend(List<PerfTransaction> series) {
+		List<String> labels = AnalyticsView
+			.labels(series.stream().map((t) -> shortSha(t.getPerfRun().getCommitSha())).toList());
+		List<Long> ids = series.stream().map((t) -> t.getPerfRun().getId()).toList();
+		List<Long> times = series.stream()
+			.map((t) -> (t.getPerfRun().getCreatedAt() != null) ? t.getPerfRun().getCreatedAt().toEpochMilli() : null)
+			.toList();
+		String cfg = AnalyticsView.perfTrendConfig(labels, ids, times, List.of(
+				AnalyticsView.series("p50", "#2ea043", series.stream().map(PerfTransaction::getP50Ms).toList()),
+				AnalyticsView.series("p95", "#58a6ff", series.stream().map(PerfTransaction::getP95Ms).toList()),
+				AnalyticsView.series("p99", "#f85149", series.stream().map(PerfTransaction::getP99Ms).toList())), "ms");
+		return new TrendView(series.size() >= 2, "Latency over runs", "(p50 / p95 / p99, ms)", cfg);
+	}
+
+	private static String shortSha(String sha) {
+		return (sha != null) ? ((sha.length() > 7) ? sha.substring(0, 7) : sha) : "";
 	}
 
 	private static List<KpiTile> kpis(List<PerfRun> perfRuns) {

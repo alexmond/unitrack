@@ -222,9 +222,31 @@ h2 { font-size: 17px; margin: 28px 0 12px; }
 .crumbs { color: var(--muted); font-size: 13px; margin-bottom: 18px; }
 
 .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+/* A card is a panel — same chrome (bg/border/radius) as the .stat KPI tiles and the
+   .verdict-band, so boxed UI coheres across every page. */
+.card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
 .card h3 { margin: 0 0 6px; font-size: 16px; }
 .card .meta { color: var(--muted); font-size: 13px; }
 .card:hover { border-color: var(--muted); }
+
+/* Project Overview: the aspect cards (one signal per tab) + the health verdict band.
+   Typography tracks the .stat KPI tiles (24px value) so the strip reads as first-class,
+   not bolted on. */
+.aspect-card { display: block; text-decoration: none; color: var(--text); }
+.aspect-card:hover { text-decoration: none; }
+.aspect-card .ac-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.aspect-card h3 { display: flex; align-items: center; gap: 7px; margin: 0; font-size: 15px; }
+.aspect-card .value { font-size: 24px; font-weight: 700; margin: 8px 0 2px; }
+.aspect-card .value.lvl-good { color: var(--green); }
+.aspect-card .value.lvl-warn { color: var(--amber); }
+.aspect-card .value.lvl-bad { color: var(--red); }
+.aspect-card .go { display: flex; align-items: center; gap: 5px; margin-top: 10px; color: var(--muted); font-size: 13px; }
+.verdict-band {
+    display: flex; gap: 22px; align-items: center; flex-wrap: wrap; margin: 16px 0 4px;
+    padding: 18px; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+}
+.verdict-word { font-size: 22px; font-weight: 800; }
+.verdict-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
 
 .stat-row { display: flex; gap: 14px; flex-wrap: wrap; margin: 14px 0 6px; }
 .stat {

@@ -69,7 +69,8 @@
             </thead>
             <tbody id="txn-body">
             <tr th:each="t : ${page.transactions}" th:attr="data-search=${#strings.toLowerCase(t.label())}">
-                <td><code class="mono" th:text="${t.label()}">GET /</code></td>
+                <td><a th:href="@{/projects/{id}/perf/transaction(id=${page.project.id},label=${t.label()},flag=${page.selectedFlag})}"><code
+                        class="mono" th:text="${t.label()}">GET /</code></a></td>
                 <td class="num" th:attr="data-sort=${t.sampleCount()}" th:text="${t.sampleCount()}">0</td>
                 <td class="num" th:attr="data-sort=${t.p50Ms()}" th:text="${#numbers.formatDecimal(t.p50Ms(),1,0)} + ' ms'">0 ms</td>
                 <td class="num" th:attr="data-sort=${t.p95Ms()}" th:text="${#numbers.formatDecimal(t.p95Ms(),1,0)} + ' ms'">0 ms</td>
