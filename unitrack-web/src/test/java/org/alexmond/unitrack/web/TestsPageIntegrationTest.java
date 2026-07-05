@@ -1,5 +1,8 @@
 package org.alexmond.unitrack.web;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,6 +12,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
@@ -43,6 +47,38 @@ class TestsPageIntegrationTest {
 
 	private long ingest(MockMvc mvc, String project) throws Exception {
 		return ingest(mvc, project, "main", "sha1");
+	}
+
+	private static byte[] junitCase(String name) {
+		return ("<?xml version=\"1.0\"?><testsuite name=\"s\" tests=\"1\" failures=\"0\" errors=\"0\" skipped=\"0\""
+				+ " time=\"0.1\"><testcase name=\"" + name + "\" classname=\"com.x.M\" time=\"0.1\"/></testsuite>")
+			.getBytes();
+	}
+
+	/**
+	 * A single run carrying two modules: two sharded uploads with the same {@code runKey}
+	 * (so they merge into one run), each tagged with a different explicit {@code module}
+	 * (#393). Yields a By-module breakdown ({@code svc}, {@code web}).
+	 */
+	private long ingestMultiModule(MockMvc mvc, String project) throws Exception {
+		ingestShard(mvc, project, "svc", "svcTest");
+		return ingestShard(mvc, project, "web", "webTest");
+	}
+
+	private long ingestShard(MockMvc mvc, String project, String module, String caseName) throws Exception {
+		String body = mvc
+			.perform(multipart("/api/v1/ingest")
+				.file(new MockMultipartFile("junit", "TEST.xml", "text/xml", junitCase(caseName)))
+				.param("project", project)
+				.param("branch", "main")
+				.param("commit", "shard-commit")
+				.param("runKey", "build-mm")
+				.param("module", module))
+			.andExpect(status().isCreated())
+			.andReturn()
+			.getResponse()
+			.getContentAsString();
+		return ((Number) JsonPath.read(body, "$.projectId")).longValue();
 	}
 
 	private long ingest(MockMvc mvc, String project, String branch, String commit) throws Exception {
@@ -113,6 +149,42 @@ class TestsPageIntegrationTest {
 			// Fallback isn't scoped: the bogus module must not surface (e.g. as a
 			// breadcrumb crumb).
 			.andExpect(content().string(not(containsString("does-not-exist"))));
+	}
+
+	/**
+	 * The all-modules page shows the by-module picker, and its rows link to each module's
+	 * dedicated page ({@code /tests/module/{module}}), not the old {@code ?module=}
+	 * scope.
+	 */
+	@Test
+	void modulePickerLinksToDedicatedModulePages() throws Exception {
+		MockMvc mvc = mvc();
+		long projectId = ingestMultiModule(mvc, "tests-modpick");
+
+		mvc.perform(get("/projects/{id}/tests", projectId))
+			.andExpect(status().isOk())
+			.andExpect(content().string(containsString("Tests by module")))
+			.andExpect(content().string(containsString("/projects/" + projectId + "/tests/module/")));
+	}
+
+	/**
+	 * A module's dedicated page is module-filtered (the roster is still there) and drops
+	 * the module picker ("Tests by module") — you're already in the module.
+	 */
+	@Test
+	void modulePageIsScopedAndDropsThePicker() throws Exception {
+		MockMvc mvc = mvc();
+		long projectId = ingestMultiModule(mvc, "tests-modpage");
+
+		// Discover a real module URL from the picker, then follow it (robust to naming).
+		String all = mvc.perform(get("/projects/{id}/tests", projectId)).andReturn().getResponse().getContentAsString();
+		Matcher m = Pattern.compile("/projects/" + projectId + "/tests/module/[\\w.%-]+").matcher(all);
+		assertThat(m.find()).as("a dedicated module link on the all-modules page").isTrue();
+
+		mvc.perform(get(m.group()))
+			.andExpect(status().isOk())
+			.andExpect(content().string(containsString("All tests")))
+			.andExpect(content().string(not(containsString("Tests by module"))));
 	}
 
 	/**
