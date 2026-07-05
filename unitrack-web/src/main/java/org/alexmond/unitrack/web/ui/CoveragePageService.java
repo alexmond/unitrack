@@ -74,8 +74,11 @@ class CoveragePageService {
 		String base = AnalyticsView.repoBase(project.getRepoUrl());
 		String repoBlobBase = (base != null && run.getCommitSha() != null)
 				? (base + "/blob/" + run.getCommitSha() + "/") : null;
+		// The module page is a dedicated, module-filtered view — it drops the by-module
+		// picker (you're already in a module; the breadcrumb is the way back to all).
+		BreakdownTable byModule = (selected != null) ? null : breakdown(id, modules, null);
 		return new CoveragePage(project, selected != null, selected, all, true, kpis, AnalyticsView.latestRunLine(run),
-				trendView, breakdown(id, modules, selected), EMPTY, reporting.coveragePackages(c.getId(), selected),
+				trendView, byModule, EMPTY, reporting.coveragePackages(c.getId(), selected),
 				reporting.coverageFiles(c.getId(), selected, FILE_LIMIT), repoBlobBase);
 	}
 
@@ -114,15 +117,15 @@ class CoveragePageService {
 	}
 
 	/**
-	 * Coverage by module (null for single-module projects); clicking a row scopes the
-	 * tab.
+	 * Coverage by module (null for single-module projects); clicking a row navigates to
+	 * that module's dedicated page.
 	 */
 	private static BreakdownTable breakdown(Long id, List<ModuleCoverage> modules, String selected) {
 		if (modules.size() <= 1) {
 			return null;
 		}
 		List<BreakdownRow> rows = modules.stream()
-			.map((m) -> new BreakdownRow(m.name(), "/projects/" + id + "/coverage?module=" + enc(m.name()), false,
+			.map((m) -> new BreakdownRow(m.name(), "/projects/" + id + "/coverage/module/" + enc(m.name()), false,
 					List.of(BreakdownCell.of(AnalyticsView.fmt1(m.linePct()) + "%"),
 							BreakdownCell.of(m.lineCovered() + "/" + m.lineTotal()),
 							BreakdownCell.of(String.valueOf(m.files())))))

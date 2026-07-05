@@ -232,6 +232,19 @@ public class DashboardController {
 		return "coverage";
 	}
 
+	/**
+	 * A single module's dedicated coverage page — the drill-in from the "By module"
+	 * table. Module-filtered (tiles, by-package, worst files) with the module picker
+	 * dropped; the breadcrumb is the way back to all modules. ({@code ?module=} still
+	 * renders the same page, for old bookmarks.)
+	 */
+	@GetMapping("/projects/{id}/coverage/module/{module}")
+	public String coverageModule(@PathVariable Long id, @PathVariable String module, Model model) {
+		Project project = access.requireReadProjectUi(id);
+		model.addAttribute("page", coveragePage.build(project, id, module));
+		return "coverage";
+	}
+
 	@GetMapping("/projects/{id}/pr/{pr}")
 	public String pullRequest(@PathVariable Long id, @PathVariable Integer pr, Model model) {
 		Project project = access.requireReadProjectUi(id);
