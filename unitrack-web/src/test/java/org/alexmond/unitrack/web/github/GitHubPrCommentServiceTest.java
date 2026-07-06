@@ -64,7 +64,7 @@ class GitHubPrCommentServiceTest {
 	/** Service whose resolver falls back to the global props (empty settings repo). */
 	private GitHubPrCommentService svc(GitHubProperties props, RestClient.Builder builder) {
 		return new GitHubPrCommentService(props, builder,
-				new GitHubConfigResolver(props, mock(ProjectSettingsRepository.class)));
+				new GitHubConfigResolver(props, mock(ProjectSettingsRepository.class)), GitHubAuth.patOnly(props));
 	}
 
 	@Test
@@ -130,7 +130,8 @@ class GitHubPrCommentServiceTest {
 		MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
 		GitHubConfigResolver resolver = mock(GitHubConfigResolver.class);
 		given(resolver.effective(any())).willReturn(new GitHubConfigResolver.Effective(true, "ctx", false));
-		GitHubPrCommentService service = new GitHubPrCommentService(props, builder, resolver);
+		GitHubPrCommentService service = new GitHubPrCommentService(props, builder, resolver,
+				GitHubAuth.patOnly(props));
 
 		// prComment overridden off for this project -> no GitHub calls at all.
 		service.publish(run(), new QualityGateResult(true, List.of()), null, 0, 0);
