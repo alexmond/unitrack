@@ -13,9 +13,9 @@
     <h1>Compare runs</h1>
     <p class="muted">
         base <a th:href="@{/runs/{id}(id=${cmp.base().id})}"><code class="mono"
-            th:text="${cmp.base().shortSha} ?: cmp.base().id">base</code></a>
+            th:text="${cmp.base().shortSha ?: cmp.base().id}">base</code></a>
         → head <a th:href="@{/runs/{id}(id=${cmp.head().id})}"><code class="mono"
-            th:text="${cmp.head().shortSha} ?: cmp.head().id">head</code></a>
+            th:text="${cmp.head().shortSha ?: cmp.head().id}">head</code></a>
     </p>
 
     <div class="stat-row">

@@ -58,6 +58,15 @@ final class AnalyticsView {
 		return "/projects/" + id + "/" + page + "?flag=" + enc(flag) + "&module=" + enc(module);
 	}
 
+	/**
+	 * A module's dedicated page — {@code /projects/{id}/{page}/module/{module}} — keeping
+	 * the flag scope. Selecting a module navigates here (a module-filtered page with no
+	 * module picker) rather than re-scoping the current tab.
+	 */
+	static String moduleUrl(String page, Long id, String flag, String module) {
+		return "/projects/" + id + "/" + page + "/module/" + enc(module) + "?flag=" + enc(flag);
+	}
+
 	private static String enc(String v) {
 		return URLEncoder.encode(v, StandardCharsets.UTF_8);
 	}

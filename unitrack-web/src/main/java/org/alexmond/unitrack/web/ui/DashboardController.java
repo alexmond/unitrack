@@ -232,6 +232,13 @@ public class DashboardController {
 		return "coverage";
 	}
 
+	@GetMapping("/projects/{id}/coverage/module/{module}")
+	public String coverageModule(@PathVariable Long id, @PathVariable String module, Model model) {
+		Project project = access.requireReadProjectUi(id);
+		model.addAttribute("page", coveragePage.build(project, id, module));
+		return "coverage";
+	}
+
 	@GetMapping("/projects/{id}/pr/{pr}")
 	public String pullRequest(@PathVariable Long id, @PathVariable Integer pr, Model model) {
 		Project project = access.requireReadProjectUi(id);
@@ -342,6 +349,14 @@ public class DashboardController {
 		return "performance";
 	}
 
+	@GetMapping("/projects/{id}/performance/module/{module}")
+	public String performanceModule(@PathVariable Long id, @PathVariable String module,
+			@RequestParam(required = false) String flag, @RequestParam(required = false) String branch, Model model) {
+		Project project = access.requireReadProjectUi(id);
+		model.addAttribute("page", timingPage.build(project, id, flag, branch, module));
+		return "performance";
+	}
+
 	/**
 	 * The Load-tests aspect on the shared analytics skeleton (epic #390): KPI tiles +
 	 * empty state + primary trend from the shared fragments, plus Load tests' own shape —
@@ -440,7 +455,8 @@ public class DashboardController {
 		String allUrl = AnalyticsView.scopeUrl("tests", id, selectedFlag, "").replace("&module=", "");
 		TestsPage page = new TestsPage(project, scoped, selectedModule, allUrl, cur != null,
 				(tiles != null) ? tiles.kpis() : List.of(), AnalyticsView.latestRunLine(cur),
-				testsTrend(trend, scoped, selectedModule), testsBreakdown(id, selectedFlag, selectedModule, modules),
+				testsTrend(trend, scoped, selectedModule),
+				scoped ? null : testsBreakdown(id, selectedFlag, null, modules),
 				new EmptyState("bi-check2-square", "No test runs yet",
 						"Upload Surefire/JUnit XML to start tracking results, the pass/fail trend, and per-test history."),
 				roster, (tiles != null) ? tiles.failures() : 0, roster.stream().filter(TestRosterRow::flaky).count(),
@@ -450,6 +466,16 @@ public class DashboardController {
 						selectedModule));
 		model.addAttribute("page", page);
 		return "tests";
+	}
+
+	/**
+	 * A module's dedicated Tests page: reuses tests(), module-filtered, no module picker
+	 * (breadcrumb goes back).
+	 */
+	@GetMapping("/projects/{id}/tests/module/{module}")
+	public String testsModule(@PathVariable Long id, @PathVariable String module,
+			@RequestParam(required = false) String flag, @RequestParam(required = false) String branch, Model model) {
+		return tests(id, flag, branch, module, model);
 	}
 
 	/**
@@ -477,7 +503,7 @@ public class DashboardController {
 	private static BreakdownTable testsBreakdown(Long id, String flag, String selectedModule,
 			List<TestModuleRow> modules) {
 		return AnalyticsView.moduleBreakdown(selectedModule, modules.stream()
-			.map((m) -> new BreakdownRow(m.name(), AnalyticsView.scopeUrl("tests", id, flag, m.name()), m.failed() > 0,
+			.map((m) -> new BreakdownRow(m.name(), AnalyticsView.moduleUrl("tests", id, flag, m.name()), m.failed() > 0,
 					List.of(BreakdownCell.of(String.valueOf(m.tests())),
 							BreakdownCell.of(AnalyticsView.fmt1(m.passRate()) + "%"),
 							BreakdownCell.of(String.valueOf(m.failed())),
