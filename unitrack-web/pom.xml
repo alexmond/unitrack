@@ -7,13 +7,23 @@
     <parent>
         <groupId>org.alexmond</groupId>
         <artifactId>unitrack-parent</artifactId>
-        <version>0.2.0-SNAPSHOT</version>
+        <version>0.5.0-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
     <artifactId>unitrack-web</artifactId>
     <name>unitrack-web</name>
     <description>UniTrack Spring Boot application — REST API and Thymeleaf dashboard</description>
+
+    <!-- The self-hosted server -> AGPL-3.0 (overrides the parent's Apache; see root LICENSE).
+         Not published to Maven Central. -->
+    <licenses>
+        <license>
+            <name>GNU Affero General Public License v3.0 only</name>
+            <url>https://www.gnu.org/licenses/agpl-3.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
 
     <dependencies>
         <dependency>
@@ -162,6 +172,14 @@
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
             <scope>runtime</scope>
+        </dependency>
+        <!-- In-app AI failure analysis via Spring AI's Anthropic ChatClient (off by default —
+             see spring.ai.anthropic.* / the AiAnalyzer). Shares the Spring AI stack already
+             pulled for the MCP server, so structured output (.entity) uses one victools version
+             (no clash). BOM-managed version. -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-model-anthropic</artifactId>
         </dependency>
     </dependencies>
 

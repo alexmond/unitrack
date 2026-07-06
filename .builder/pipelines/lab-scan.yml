@@ -1,0 +1,38 @@
+name: lab-scan
+on:
+  - push
+  - manual
+push:
+  branches:
+    - main
+checkout: true
+jobs:
+  lab-scan:
+    image: eclipse-temurin:21-jdk
+    timeout: 10m
+    secrets:
+      - LAB_DENY_PATTERNS
+      - LAB_SCAN_BASELINE
+    steps:
+      - name: scan-for-lab-references
+        run: |
+          set -euo pipefail
+          if [ -z "${LAB_DENY_PATTERNS:-}" ]; then
+            echo "LAB_DENY_PATTERNS not set - skipping lab-scan (add the secret to enable the gate)."
+            exit 0
+          fi
+          pat="$(mktemp)"
+          printf '%s' "$LAB_DENY_PATTERNS" | grep -vE '^[[:space:]]*(#|$)' > "$pat" || true
+          hits="$(git ls-files | while IFS= read -r f; do
+                    { grep -hoiE -f "$pat" -- "$f" 2>/dev/null || true; } | sort -u |
+                      while IFS= read -r m; do printf '%s\t%s\n' "$f" "$m"; done
+                  done | LC_ALL=C sort -u)"
+          base="$(printf '%s' "${LAB_SCAN_BASELINE:-}" | LC_ALL=C sort -u)"
+          new="$(LC_ALL=C comm -23 <(printf '%s\n' "$hits" | grep -v '^$' || true) \
+                                   <(printf '%s\n' "$base" | grep -v '^$' || true) || true)"
+          if [ -n "$new" ]; then
+            echo "lab-scan: new lab-internal reference(s):"
+            printf '%s\n' "$new" | sed 's/^/  /'
+            exit 1
+          fi
+          echo "lab-scan: no new lab-internal references"

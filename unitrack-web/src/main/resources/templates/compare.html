@@ -13,9 +13,9 @@
     <h1>Compare runs</h1>
     <p class="muted">
         base <a th:href="@{/runs/{id}(id=${cmp.base().id})}"><code class="mono"
-            th:text="${cmp.base().shortSha} ?: cmp.base().id">base</code></a>
+            th:text="${cmp.base().shortSha ?: cmp.base().id}">base</code></a>
         → head <a th:href="@{/runs/{id}(id=${cmp.head().id})}"><code class="mono"
-            th:text="${cmp.head().shortSha} ?: cmp.head().id">head</code></a>
+            th:text="${cmp.head().shortSha ?: cmp.head().id}">head</code></a>
     </p>
 
     <div class="stat-row">
@@ -58,6 +58,29 @@
     <ul th:unless="${cmp.stillFailing().isEmpty()}">
         <li th:each="t : ${cmp.stillFailing()}"><code class="mono" th:text="${t}">Test#m</code></li>
     </ul>
+
+    <!-- Per-test timing diff (#327): which tests drove the suite-time change between the runs. -->
+    <h2>Timing changes <span class="muted" th:text="'(' + ${cmp.timingDeltas().size()} + ', biggest first)'">(0)</span></h2>
+    <div th:if="${cmp.timingDeltas().isEmpty()}" class="empty muted">No per-test timing changes.</div>
+    <table class="table table-hover align-middle" th:unless="${cmp.timingDeltas().isEmpty()}">
+        <thead>
+        <tr><th>Test</th><th></th><th class="num">Base</th><th class="num">Head</th><th class="num">Δ</th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="d : ${cmp.timingDeltas()}">
+            <td><code class="mono" th:text="${d.test()}">Class#method</code></td>
+            <td>
+                <span class="badge"
+                      th:classappend="${d.kind().name() == 'FASTER' or d.kind().name() == 'REMOVED'} ? 'pass' : 'fail'"
+                      th:text="${#strings.toLowerCase(d.kind())}">slower</span>
+            </td>
+            <td class="num muted" th:text="${d.baseMs() != null} ? (${d.baseMs()} + ' ms') : '—'">0 ms</td>
+            <td class="num muted" th:text="${d.headMs() != null} ? (${d.headMs()} + ' ms') : '—'">0 ms</td>
+            <td class="num" th:classappend="${d.deltaMs() > 0} ? 'lvl-bad' : 'lvl-good'"
+                th:text="(${d.deltaMs() > 0} ? '+' : '') + ${#numbers.formatInteger(d.deltaMs(),1)} + ' ms'">+0 ms</td>
+        </tr>
+        </tbody>
+    </table>
 </main>
 </body>
 </html>

@@ -1,8 +1,8 @@
 package org.alexmond.unitrack.ingest;
 
-import java.io.ByteArrayInputStream;
+import java.io.BufferedInputStream;
+import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import lombok.RequiredArgsConstructor;
@@ -22,21 +22,20 @@ public class CoverageParsers {
 
 	/** Reads the report, detects its format, and parses it. */
 	public CoverageResults parse(InputStream in) {
-		byte[] content;
 		try {
-			content = in.readAllBytes();
-		}
-		catch (Exception ex) {
-			throw new IngestException("Failed reading coverage upload: " + ex.getMessage(), ex);
-		}
-		int sampleLen = Math.min(content.length, HEAD_SAMPLE_BYTES);
-		String head = new String(content, 0, sampleLen, StandardCharsets.UTF_8);
-		for (CoverageParser parser : this.parsers) {
-			if (parser.supports(head)) {
-				return parser.parse(new ByteArrayInputStream(content));
+			BufferedInputStream bis = StreamSniff.buffered(in, HEAD_SAMPLE_BYTES);
+			String head = StreamSniff.head(bis, HEAD_SAMPLE_BYTES);
+			for (CoverageParser parser : this.parsers) {
+				if (parser.supports(head)) {
+					return parser.parse(bis);
+				}
 			}
 		}
-		throw new IngestException("Unrecognized coverage format (expected JaCoCo, Cobertura, LCOV, or OpenCover)");
+		catch (IOException ex) {
+			throw new IngestException("Failed reading coverage upload: " + ex.getMessage(), ex);
+		}
+		throw new IngestException(
+				"Unrecognized coverage format (expected JaCoCo, Cobertura, LCOV, OpenCover, or Go cover)");
 	}
 
 }

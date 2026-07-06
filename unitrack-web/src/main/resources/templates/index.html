@@ -29,9 +29,22 @@
             <div class="value" th:text="${summary.projectCount()}">0</div>
         </div>
         <div class="stat">
+            <div class="label">Passing gates</div>
+            <div class="value lvl-good" th:text="${passingGates}">0</div>
+        </div>
+        <div class="stat">
             <div class="label">Failing gates</div>
             <div class="value" th:classappend="${summary.failingGates() > 0} ? 'lvl-bad'"
                  th:text="${summary.failingGates()}">0</div>
+        </div>
+        <div class="stat">
+            <div class="label">Regressed</div>
+            <div class="value" th:classappend="${regressedCount > 0} ? 'lvl-bad'"
+                 th:text="${regressedCount}">0</div>
+        </div>
+        <div class="stat">
+            <div class="label">No runs</div>
+            <div class="value muted" th:text="${noRunsCount}">0</div>
         </div>
         <div class="stat">
             <div class="label">Flaky tests</div>

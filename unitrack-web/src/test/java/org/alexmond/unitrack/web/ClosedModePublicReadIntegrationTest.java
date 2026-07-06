@@ -18,6 +18,7 @@ import static org.springframework.security.test.web.servlet.setup.SecurityMockMv
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -65,8 +66,12 @@ class ClosedModePublicReadIntegrationTest {
 			.andExpect(status().isOk())
 			.andExpect(content().string(containsString("cm-public")))
 			.andExpect(content().string(not(containsString("cm-private"))));
-		// A private project is hidden (404) — the controller enforces visibility.
-		mvc.perform(get("/projects/{id}", privateId)).andExpect(status().isNotFound());
+		// A private project's browser page sends an anonymous visitor to login (they may
+		// gain access
+		// once identified); the API path still 404s so a script can't probe it.
+		mvc.perform(get("/projects/{id}", privateId))
+			.andExpect(status().is3xxRedirection())
+			.andExpect(redirectedUrl("/login"));
 		mvc.perform(get("/api/v1/projects/{id}", privateId)).andExpect(status().isNotFound());
 	}
 

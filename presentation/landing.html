@@ -1,0 +1,621 @@
+<style>
+  :root {
+    --ink: #0a0e14;
+    --surface: #10161f;
+    --surface-2: #161d28;
+    --surface-3: #1b2431;
+    --line: #222c3a;
+    --line-2: #2c3849;
+    --text: #e6edf3;
+    --muted: #8b98a9;
+    --faint: #5c6878;
+    --accent: #2ee6d6;
+    --accent-ink: #06110f;
+    --accent-dim: #178f83;
+    --pass: #3fb950;
+    --fail: #f85149;
+    --flaky: #e3a008;
+    --mono: ui-monospace, "JetBrains Mono", "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --maxw: 1120px;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ink);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 17px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 24px; }
+
+  a { color: inherit; text-decoration: none; }
+
+  h1, h2, h3 { font-weight: 800; letter-spacing: -0.03em; text-wrap: balance; margin: 0; }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .num { font-variant-numeric: tabular-nums; }
+
+  /* ---------- nav ---------- */
+  header.nav {
+    position: sticky; top: 0; z-index: 50;
+    background: color-mix(in srgb, var(--ink) 82%, transparent);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line);
+  }
+  .nav-in { display: flex; align-items: center; gap: 20px; height: 62px; }
+  .brand { font-family: var(--mono); font-weight: 700; font-size: 16px; letter-spacing: -0.02em; display: flex; align-items: center; gap: 9px; }
+  .brand .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 10px var(--accent); }
+  .nav-links { display: flex; gap: 22px; margin-left: auto; align-items: center; font-size: 14.5px; color: var(--muted); }
+  .nav-links a:hover { color: var(--text); }
+  .nav-links .stars { font-family: var(--mono); font-size: 13px; border: 1px solid var(--line-2); padding: 4px 9px; border-radius: 6px; color: var(--muted); }
+  @media (max-width: 720px) { .nav-links a.hide-sm { display: none; } }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--mono); font-size: 14px; font-weight: 600;
+    padding: 10px 16px; border-radius: 8px; cursor: pointer;
+    border: 1px solid transparent; transition: transform .12s ease, background .15s ease, border-color .15s ease;
+    white-space: nowrap;
+  }
+  .btn-primary { background: var(--accent); color: var(--accent-ink); }
+  .btn-primary:hover { transform: translateY(-1px); background: #4bf0e1; }
+  .btn-ghost { background: transparent; color: var(--text); border-color: var(--line-2); }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-sm { padding: 7px 12px; font-size: 13px; }
+
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+
+  /* ---------- hero ---------- */
+  .hero { position: relative; padding: 74px 0 40px; overflow: hidden; }
+  #trace { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0.5; pointer-events: none; z-index: 0; }
+  .hero-grid { position: relative; z-index: 1; display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 52px; align-items: center; }
+  @media (max-width: 900px) { .hero-grid { grid-template-columns: 1fr; gap: 38px; } }
+
+  h1.hero-h { font-size: clamp(2.35rem, 5.4vw, 3.9rem); line-height: 1.04; }
+  h1.hero-h .accent { color: var(--accent); }
+  .hero-sub { color: var(--muted); font-size: clamp(1.02rem, 1.6vw, 1.18rem); margin-top: 20px; max-width: 33em; }
+  .hero-sub b { color: var(--text); font-weight: 600; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 24px; }
+  .chip { font-family: var(--mono); font-size: 12px; color: var(--muted); border: 1px solid var(--line); background: var(--surface); padding: 5px 10px; border-radius: 20px; }
+  .chip b { color: var(--accent); font-weight: 500; }
+
+  .cta-row { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 30px; align-items: center; }
+  .cta-note { font-family: var(--mono); font-size: 12.5px; color: var(--faint); }
+
+  /* ---------- the "one commit" card ---------- */
+  .board {
+    background: linear-gradient(180deg, var(--surface-2), var(--surface));
+    border: 1px solid var(--line-2);
+    border-radius: 14px;
+    box-shadow: 0 30px 70px -30px rgba(0,0,0,.8), inset 0 1px 0 rgba(255,255,255,.03);
+    overflow: hidden;
+  }
+  .board-top { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--line); background: var(--surface-3); }
+  .board-top .sha { font-family: var(--mono); font-size: 13px; color: var(--text); }
+  .board-top .branch { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  .board-top .tl { margin-left: auto; font-family: var(--mono); font-size: 11px; color: var(--faint); letter-spacing: .08em; text-transform: uppercase; }
+  .board-body { padding: 6px 16px 16px; display: flex; flex-direction: column; }
+
+  .sig { display: grid; grid-template-columns: 92px 1fr auto; align-items: center; gap: 14px; padding: 15px 2px; border-bottom: 1px solid var(--line); }
+  .sig:last-child { border-bottom: 0; }
+  .sig .label { font-family: var(--mono); font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+  .sig .val { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 20px; font-weight: 600; }
+  .sig .delta { font-family: var(--mono); font-size: 12.5px; padding: 2px 7px; border-radius: 5px; }
+  .d-bad { color: var(--fail); background: color-mix(in srgb, var(--fail) 15%, transparent); }
+  .d-warn { color: var(--flaky); background: color-mix(in srgb, var(--flaky) 15%, transparent); }
+
+  .cov-track { height: 8px; border-radius: 5px; background: var(--surface-3); overflow: hidden; border: 1px solid var(--line); }
+  .cov-fill { height: 100%; width: 78.4%; background: var(--flaky); border-radius: 5px 0 0 5px; }
+  .flag { display: inline-flex; align-items: center; gap: 7px; font-family: var(--mono); font-size: 13px; color: var(--flaky); }
+  .flag .b { width: 8px; height: 8px; border-radius: 2px; background: var(--flaky); box-shadow: 0 0 8px var(--flaky); }
+  .spark { width: 100%; height: 34px; display: block; }
+
+  .board-foot { padding: 12px 16px; border-top: 1px solid var(--line-2); background: color-mix(in srgb, var(--fail) 8%, var(--surface)); display: flex; align-items: center; gap: 10px; font-family: var(--mono); font-size: 13px; }
+  .board-foot .x { color: var(--fail); font-weight: 700; }
+  .caption { font-family: var(--mono); font-size: 12px; color: var(--faint); margin-top: 12px; text-align: center; }
+
+  /* ---------- section frame ---------- */
+  section { padding: 66px 0; border-top: 1px solid var(--line); position: relative; }
+  .sec-eyebrow { margin-bottom: 14px; }
+  h2.sec-h { font-size: clamp(1.7rem, 3.2vw, 2.3rem); line-height: 1.1; max-width: 18em; }
+  .sec-lead { color: var(--muted); margin-top: 14px; max-width: 40em; font-size: 1.05rem; }
+
+  .reveal { opacity: 0; transform: translateY(18px); transition: opacity .6s ease, transform .6s ease; }
+  .reveal.in { opacity: 1; transform: none; }
+
+  /* ---------- wedge strip ---------- */
+  .wedge { background: radial-gradient(120% 140% at 50% 0%, color-mix(in srgb, var(--accent) 9%, var(--ink)), var(--ink)); }
+  .wedge-line { font-size: clamp(1.5rem, 3.6vw, 2.5rem); font-weight: 800; letter-spacing: -0.03em; line-height: 1.16; text-wrap: balance; max-width: 20em; }
+  .wedge-line .c { color: var(--flaky); } .wedge-line .f { color: var(--fail); } .wedge-line .p { color: var(--accent); }
+  .wedge-sub { font-family: var(--mono); color: var(--muted); font-size: 14px; margin-top: 20px; }
+  .wedge-sub .none { color: var(--text); }
+
+  /* ---------- persona tabs ---------- */
+  .tabs { display: flex; gap: 6px; margin: 26px 0 22px; flex-wrap: wrap; }
+  .tab {
+    font-family: var(--mono); font-size: 14px; font-weight: 600; color: var(--muted);
+    background: var(--surface); border: 1px solid var(--line); padding: 9px 16px; border-radius: 8px; cursor: pointer;
+    transition: color .15s, border-color .15s, background .15s;
+  }
+  .tab:hover { color: var(--text); }
+  .tab[aria-selected="true"] { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
+  .panel { display: none; }
+  .panel.on { display: grid; grid-template-columns: 1fr 1fr; gap: 34px; align-items: center; }
+  @media (max-width: 820px) { .panel.on { grid-template-columns: 1fr; gap: 24px; } }
+  .panel h3 { font-size: 1.5rem; }
+  .panel .who { font-family: var(--mono); font-size: 12px; color: var(--faint); text-transform: uppercase; letter-spacing: .1em; margin-bottom: 10px; }
+  .panel .benefit { color: var(--muted); margin-top: 12px; font-size: 1.06rem; }
+  .panel .benefit b { color: var(--text); font-weight: 600; }
+  .panel .demo-link { display: inline-flex; margin-top: 18px; font-family: var(--mono); font-size: 13.5px; color: var(--accent); border-bottom: 1px solid color-mix(in srgb, var(--accent) 40%, transparent); padding-bottom: 2px; }
+  .panel .demo-link:hover { border-color: var(--accent); }
+
+  .mock { background: var(--surface); border: 1px solid var(--line-2); border-radius: 12px; padding: 16px; box-shadow: 0 20px 50px -30px rgba(0,0,0,.7); }
+  .mock-row { display: flex; align-items: center; gap: 10px; padding: 9px 4px; border-bottom: 1px solid var(--line); font-family: var(--mono); font-size: 13px; }
+  .mock-row:last-child { border-bottom: 0; }
+  .mock-row .name { color: var(--muted); }
+  .mock-row .r { margin-left: auto; font-variant-numeric: tabular-nums; }
+  .pill { font-family: var(--mono); font-size: 11px; padding: 2px 8px; border-radius: 20px; font-weight: 600; }
+  .pill-pass { color: var(--pass); background: color-mix(in srgb, var(--pass) 15%, transparent); }
+  .pill-fail { color: var(--fail); background: color-mix(in srgb, var(--fail) 15%, transparent); }
+  .pill-flaky { color: var(--flaky); background: color-mix(in srgb, var(--flaky) 15%, transparent); }
+
+  /* ---------- matrix ---------- */
+  .table-scroll { overflow-x: auto; margin-top: 26px; border: 1px solid var(--line-2); border-radius: 12px; }
+  table { border-collapse: collapse; width: 100%; min-width: 620px; font-size: 14.5px; }
+  th, td { padding: 13px 14px; text-align: center; border-bottom: 1px solid var(--line); }
+  th { font-family: var(--mono); font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 500; background: var(--surface-3); }
+  th.tool, td.tool { text-align: left; font-weight: 600; }
+  td.tool { font-family: var(--mono); font-size: 13.5px; color: var(--muted); }
+  th.hot { color: var(--accent); }
+  td.hot { background: color-mix(in srgb, var(--accent) 6%, transparent); }
+  tr.ut td { background: color-mix(in srgb, var(--accent) 10%, transparent); border-bottom: none; }
+  tr.ut td.tool { color: var(--text); }
+  tr.ut { outline: 1px solid color-mix(in srgb, var(--accent) 45%, transparent); }
+  .ck { color: var(--pass); font-weight: 700; }
+  .no { color: var(--faint); }
+  .pt { color: var(--flaky); font-size: 12px; font-family: var(--mono); }
+  .matrix-note { font-family: var(--mono); font-size: 13px; color: var(--muted); margin-top: 18px; line-height: 1.7; }
+  .matrix-note b { color: var(--text); }
+
+  /* ---------- gate block ---------- */
+  .gate-grid { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 26px; align-items: start; margin-top: 26px; }
+  @media (max-width: 820px) { .gate-grid { grid-template-columns: 1fr; } }
+  .term { background: #06090e; border: 1px solid var(--line-2); border-radius: 12px; overflow: hidden; font-family: var(--mono); font-size: 13.5px; }
+  .term-bar { display: flex; gap: 7px; padding: 11px 14px; border-bottom: 1px solid var(--line); background: var(--surface-3); }
+  .term-bar i { width: 11px; height: 11px; border-radius: 50%; display: block; }
+  .term-body { padding: 15px 16px; line-height: 1.85; overflow-x: auto; }
+  .term-body .cmd { color: var(--text); } .term-body .cmd .p { color: var(--accent); }
+  .term-body .ok { color: var(--pass); } .term-body .er { color: var(--fail); }
+  .term-body .dim { color: var(--faint); }
+  .pr { background: var(--surface); border: 1px solid var(--line-2); border-radius: 12px; padding: 16px; }
+  .pr .head { display: flex; align-items: center; gap: 9px; font-family: var(--mono); font-size: 13px; color: var(--muted); border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 12px; }
+  .pr .head .status { color: var(--fail); font-weight: 700; }
+  .pr .line { font-family: var(--mono); font-size: 13px; padding: 5px 0; display: flex; gap: 8px; }
+
+  /* ---------- proof + honesty ---------- */
+  .proof-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 8px; }
+  @media (max-width: 820px) { .proof-grid { grid-template-columns: 1fr; } }
+  .proof { background: var(--surface); border: 1px solid var(--line); border-radius: 11px; padding: 18px; }
+  .proof .k { font-family: var(--mono); font-size: 12px; color: var(--accent); text-transform: uppercase; letter-spacing: .08em; }
+  .proof p { margin: 8px 0 0; color: var(--muted); font-size: 14.5px; }
+  .proof p b { color: var(--text); font-weight: 600; }
+
+  .honesty { margin-top: 30px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; background: var(--surface); border: 1px dashed var(--line-2); border-radius: 11px; padding: 15px 18px; font-family: var(--mono); font-size: 13.5px; color: var(--muted); }
+  .honesty b { color: var(--text); }
+  .honesty .tag { color: var(--accent); }
+
+  /* ---------- quickstart ---------- */
+  .qs-tabs { display: flex; gap: 6px; margin: 22px 0 0; }
+  .qs-tab { font-family: var(--mono); font-size: 13px; color: var(--muted); background: transparent; border: 1px solid var(--line); border-bottom: none; padding: 9px 15px; border-radius: 8px 8px 0 0; cursor: pointer; }
+  .qs-tab[aria-selected="true"] { color: var(--accent); background: #06090e; border-color: var(--line-2); }
+  .qs-wrap { border: 1px solid var(--line-2); border-radius: 0 10px 10px 10px; background: #06090e; position: relative; }
+  .qs-pane { display: none; padding: 18px 18px; font-family: var(--mono); font-size: 13.5px; line-height: 1.85; overflow-x: auto; }
+  .qs-pane.on { display: block; }
+  .qs-pane .k { color: #7ee0d6; } .qs-pane .s { color: var(--muted); } .qs-pane .c { color: var(--faint); } .qs-pane .v { color: var(--text); }
+  .copy { position: absolute; top: 10px; right: 10px; font-family: var(--mono); font-size: 12px; color: var(--muted); background: var(--surface-2); border: 1px solid var(--line-2); padding: 5px 10px; border-radius: 6px; cursor: pointer; }
+  .copy:hover { color: var(--accent); border-color: var(--accent); }
+
+  /* ---------- final + footer ---------- */
+  .final { text-align: center; background: radial-gradient(100% 130% at 50% 100%, color-mix(in srgb, var(--accent) 10%, var(--ink)), var(--ink)); }
+  .final h2 { margin: 0 auto; }
+  .final .cta-row { justify-content: center; }
+  footer { border-top: 1px solid var(--line); padding: 34px 0 46px; color: var(--faint); font-family: var(--mono); font-size: 13px; }
+  .foot-in { display: flex; flex-wrap: wrap; gap: 18px; align-items: center; }
+  .foot-in a { color: var(--muted); } .foot-in a:hover { color: var(--accent); }
+  .foot-in .sp { margin-left: auto; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .reveal { transition: none; opacity: 1; transform: none; }
+    .btn:hover { transform: none; }
+  }
+</style>
+
+<header class="nav">
+  <div class="wrap nav-in">
+    <div class="brand"><span class="dot"></span>UniTrack</div>
+    <nav class="nav-links">
+      <a class="hide-sm" href="#personas">Product</a>
+      <a class="hide-sm" href="#compare">Compare</a>
+      <a class="hide-sm" href="#quickstart">Docs</a>
+      <a class="stars" href="#">★ github</a>
+      <a class="btn btn-primary btn-sm" href="#">Try the live demo</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="hero" style="border-top:none">
+    <canvas id="trace" aria-hidden="true"></canvas>
+    <div class="wrap hero-grid">
+      <div>
+        <div class="eyebrow">Self-hosted · open source · JVM</div>
+        <h1 class="hero-h" style="margin-top:16px">Your tests, coverage, and&nbsp;<span class="accent">performance</span> — one self-hosted timeline.</h1>
+        <p class="hero-sub"><b>Allure-meets-Codecov for the JVM.</b> Upload the Surefire/JaCoCo XML you already produce and get trends, flaky detection, quality gates, and perf regressions — open-source, on your own box.</p>
+        <div class="chips">
+          <span class="chip">Java 21 · Spring&nbsp;Boot</span>
+          <span class="chip">Surefire / JUnit XML</span>
+          <span class="chip">JaCoCo · Cobertura · LCOV</span>
+          <span class="chip">JMeter · k6 · JMH</span>
+          <span class="chip"><b>Self-hosted</b></span>
+        </div>
+        <div class="cta-row">
+          <a class="btn btn-primary" href="#">Try the live demo →</a>
+          <a class="btn btn-ghost" href="#quickstart">Self-host in 5 min</a>
+          <span class="cta-note">docker&nbsp;run · no signup</span>
+        </div>
+      </div>
+
+      <div>
+        <div class="board" role="img" aria-label="One commit showing a coverage drop, a flaky test, and a p99 regression — all failing the quality gate.">
+          <div class="board-top">
+            <span class="sha">a4c0de3</span><span class="branch">· main</span>
+            <span class="tl">one commit</span>
+          </div>
+          <div class="board-body">
+            <div class="sig">
+              <span class="label">Coverage</span>
+              <span class="cov-track"><span class="cov-fill"></span></span>
+              <span><span class="val" style="color:var(--flaky)">78.4%</span> <span class="delta d-warn">▼2.1</span></span>
+            </div>
+            <div class="sig">
+              <span class="label">Tests</span>
+              <span class="flag"><span class="b"></span>PaymentIT.retry — passed &amp; failed on this SHA</span>
+              <span class="delta d-warn">1 flaky</span>
+            </div>
+            <div class="sig">
+              <span class="label">p99</span>
+              <canvas class="spark" id="spark" aria-hidden="true"></canvas>
+              <span><span class="val" style="color:var(--fail)">214ms</span> <span class="delta d-bad">▲38</span></span>
+            </div>
+          </div>
+          <div class="board-foot"><span class="x">✗ gate failed</span> <span style="color:var(--muted)">commit status → failure · posted to PR #482</span></div>
+        </div>
+        <p class="caption">the same commit. three signals. one place.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="wedge" id="wedge">
+    <div class="wrap reveal">
+      <div class="eyebrow sec-eyebrow">The wedge</div>
+      <p class="wedge-line">The only free, self-hosted tool that shows a <span class="c">coverage drop</span>, a <span class="c">flaky test</span>, and a <span class="p">p99 regression</span> — for the <span class="f">same commit</span>.</p>
+      <p class="wedge-sub"><span class="none">No single competitor can print that sentence.</span> Codecov has no perf. Datadog &amp; Trunk aren't self-host-free and have no coverage. Allure &amp; ReportPortal have no coverage. SonarQube isn't a test report.</p>
+    </div>
+  </section>
+
+  <section id="personas">
+    <div class="wrap">
+      <div class="reveal">
+        <div class="eyebrow sec-eyebrow">One page, three engineers</div>
+        <h2 class="sec-h">Everyone who owns a red build has a home here.</h2>
+      </div>
+      <div class="tabs reveal" role="tablist" aria-label="Audience">
+        <button class="tab" role="tab" aria-selected="true" aria-controls="p-dev" id="t-dev">Developers</button>
+        <button class="tab" role="tab" aria-selected="false" aria-controls="p-qa" id="t-qa">QA &amp; Test</button>
+        <button class="tab" role="tab" aria-selected="false" aria-controls="p-perf" id="t-perf">Performance</button>
+      </div>
+
+      <div class="panel on" id="p-dev" role="tabpanel" aria-labelledby="t-dev">
+        <div>
+          <div class="who">Build / platform engineer</div>
+          <h3>Fail the merge, not production.</h3>
+          <p class="benefit"><b>Enforce coverage and quality gates in CI with a GitHub commit status</b>, so a merge that drops coverage or breaks a gate fails the check instead of shipping.</p>
+          <a class="demo-link" href="#">See a project overview on the live demo →</a>
+        </div>
+        <div class="mock">
+          <div class="mock-row"><span class="name">line coverage</span><span class="r" style="color:var(--flaky)">78.4% <span class="pill pill-flaky">▼ gate 80%</span></span></div>
+          <div class="mock-row"><span class="name">new failures</span><span class="r"><span class="pill pill-fail">2</span></span></div>
+          <div class="mock-row"><span class="name">commit status</span><span class="r"><span class="pill pill-fail">failure</span></span></div>
+          <div class="mock-row"><span class="name">badge</span><span class="r" style="color:var(--muted)">coverage · pass · flaky</span></div>
+        </div>
+      </div>
+
+      <div class="panel" id="p-qa" role="tabpanel" aria-labelledby="t-qa" hidden>
+        <div>
+          <div class="who">QA / test engineer</div>
+          <h3>Stop rerunning to find out if it's flaky.</h3>
+          <p class="benefit"><b>Flag tests that pass and fail on the same commit, and cluster failures by cause</b>, so you triage one root cause instead of re-running a hundred red tests.</p>
+          <a class="demo-link" href="#">Open the flaky &amp; clusters views →</a>
+        </div>
+        <div class="mock">
+          <div class="mock-row"><span class="name">PaymentIT.retry</span><span class="r"><span class="pill pill-flaky">flaky</span></span></div>
+          <div class="mock-row"><span class="name">207 failures</span><span class="r" style="color:var(--muted)">→ <b style="color:var(--text)">4 clusters</b></span></div>
+          <div class="mock-row"><span class="name">cluster · timeout</span><span class="r" style="color:var(--muted)">Analyze with AI ▸</span></div>
+          <div class="mock-row"><span class="name">CheckoutTest.total</span><span class="r"><span class="pill pill-pass">stable</span></span></div>
+        </div>
+      </div>
+
+      <div class="panel" id="p-perf" role="tabpanel" aria-labelledby="t-perf" hidden>
+        <div>
+          <div class="who">Performance engineer</div>
+          <h3>Which commit moved p99?</h3>
+          <p class="benefit"><b>Track p50/p90/p99 and throughput per commit with regression-since baselines</b>, so a JMH or load slowdown shows up as a diff, not a surprise in prod.</p>
+          <a class="demo-link" href="#">See the load-test trend (regression at a4, recovered) →</a>
+        </div>
+        <div class="mock">
+          <div class="mock-row"><span class="name">p50</span><span class="r">96ms <span class="pill pill-pass">flat</span></span></div>
+          <div class="mock-row"><span class="name">p99</span><span class="r" style="color:var(--fail)">214ms <span class="pill pill-fail">▲38 since a3</span></span></div>
+          <div class="mock-row"><span class="name">throughput</span><span class="r">1,240 rps</span></div>
+          <div class="mock-row"><span class="name">JMH · parseRun</span><span class="r" style="color:var(--muted)">tracked over 60 commits</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="compare">
+    <div class="wrap reveal">
+      <div class="eyebrow sec-eyebrow">Why not just use X</div>
+      <h2 class="sec-h">Every rival owns one or two axes. UniTrack owns the row.</h2>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th class="tool">Tool</th>
+              <th>Tests</th>
+              <th>Coverage</th>
+              <th class="hot">Perf / JMH</th>
+              <th>Flaky</th>
+              <th class="hot">Free self-host</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td class="tool">Codecov</td><td class="ck">✓</td><td class="ck">✓</td><td class="hot no">✕</td><td class="ck">✓</td><td class="hot"><span class="pt">paid</span></td></tr>
+            <tr><td class="tool">Datadog Test Opt.</td><td class="ck">✓</td><td class="no">✕</td><td class="hot no">✕</td><td class="ck">✓</td><td class="hot no">✕</td></tr>
+            <tr><td class="tool">Trunk</td><td class="ck">✓</td><td class="no">✕</td><td class="hot no">✕</td><td class="ck">✓</td><td class="hot"><span class="pt">preview</span></td></tr>
+            <tr><td class="tool">Allure</td><td class="ck">✓</td><td class="no">✕</td><td class="hot no">✕</td><td class="pt">⚠</td><td class="hot ck">✓</td></tr>
+            <tr><td class="tool">SonarQube</td><td class="pt">⚠</td><td class="ck">✓</td><td class="hot no">✕</td><td class="no">✕</td><td class="hot ck">✓</td></tr>
+            <tr class="ut"><td class="tool">UniTrack</td><td class="ck">✓</td><td class="ck">✓</td><td class="hot ck">✓</td><td class="ck">✓</td><td class="hot ck">✓</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="matrix-note">The two columns nobody else fills: <b>Perf / JMH</b> — no test-or-coverage tool tracks a p99 or benchmark regression over commits — and <b>free self-host</b> — the capable rivals are SaaS or paid tiers. Flaky detection is table-stakes here, included but not the pitch.</p>
+    </div>
+  </section>
+
+  <section id="gate">
+    <div class="wrap reveal">
+      <div class="eyebrow sec-eyebrow">It enforces, it doesn't just chart</div>
+      <h2 class="sec-h">A quality gate that closes the loop in your own CI.</h2>
+      <div class="gate-grid">
+        <div class="term" aria-label="CLI quality gate output">
+          <div class="term-bar"><i style="background:var(--fail)"></i><i style="background:var(--flaky)"></i><i style="background:var(--pass)"></i></div>
+          <div class="term-body">
+            <div class="cmd"><span class="p">unitrack</span> gate --project checkout --min-coverage 80</div>
+            <div class="er">✗ coverage 78.4% &lt; 80.0% <span class="dim">(−2.1 since a3c0de3)</span></div>
+            <div class="er">✗ 2 new test failures <span class="dim">(clustered → 1 cause)</span></div>
+            <div class="er">✗ p99 214ms &gt; 180ms budget <span class="dim">(+38ms since a3c0de3)</span></div>
+            <div class="dim">→ commit status: <span class="er">failure</span> · comment posted to PR #482</div>
+            <div class="dim">exit 1</div>
+          </div>
+        </div>
+        <div class="pr">
+          <div class="head">✕ <span>UniTrack / quality-gate</span> — <span class="status">Failing</span></div>
+          <div class="line" style="color:var(--flaky)">▼ Coverage 80.5% → 78.4% on 6 files</div>
+          <div class="line" style="color:var(--fail)">✕ 2 tests newly failing</div>
+          <div class="line" style="color:var(--fail)">✕ p99 +38ms over budget</div>
+          <div class="line" style="color:var(--muted)">Details → unitrack · run a4c0de3</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="own">
+    <div class="wrap reveal">
+      <div class="eyebrow sec-eyebrow">Yours, not rented</div>
+      <h2 class="sec-h">Runs on your box. Reads what CI already makes.</h2>
+      <div class="proof-grid" style="margin-top:26px">
+        <div class="proof"><div class="k">Self-hosted</div><p><b>Docker or Kubernetes, your Postgres, your network.</b> Source and coverage never leave your infra.</p></div>
+        <div class="proof"><div class="k">Open source</div><p><b>Free, no seat limits.</b> 0.x and self-hosted — read every line before you trust it.</p></div>
+        <div class="proof"><div class="k">No pipeline rewrite</div><p>Upload via the <b>CLI or GitHub Action</b> — it auto-detects CI metadata. Any CI works.</p></div>
+        <div class="proof"><div class="k">Reads your formats</div><p>Surefire/JUnit XML, JaCoCo/Cobertura/LCOV/OpenCover, JMeter/k6/JMH.</p></div>
+        <div class="proof"><div class="k">Ships back to GitHub</div><p><b>Commit status + PR comments</b> today. Live coverage / pass / flaky badges you can embed.</p></div>
+        <div class="proof"><div class="k">Optional AI triage</div><p>Explain a failure cluster with AI — <b>bring your own Anthropic key</b>. Off by default.</p></div>
+      </div>
+      <div class="honesty">
+        <span class="tag">■ honest about maturity</span>
+        <span><b>0.x, self-hosted, open source.</b> Built for the JVM today (JUnit + JaCoCo); format-agnostic ingest by design. Your server, your data — inspect the code.</span>
+      </div>
+    </div>
+  </section>
+
+  <section id="quickstart">
+    <div class="wrap reveal">
+      <div class="eyebrow sec-eyebrow">Try it now</div>
+      <h2 class="sec-h">Wire it into a build in about five lines.</h2>
+      <div class="qs-tabs" role="tablist" aria-label="Quickstart">
+        <button class="qs-tab" role="tab" aria-selected="true" aria-controls="q-gha" id="qt-gha">GitHub Action</button>
+        <button class="qs-tab" role="tab" aria-selected="false" aria-controls="q-cli" id="qt-cli">CLI</button>
+        <button class="qs-tab" role="tab" aria-selected="false" aria-controls="q-run" id="qt-run">docker run</button>
+      </div>
+      <div class="qs-wrap">
+        <button class="copy" id="copyBtn">copy</button>
+        <div class="qs-pane on" id="q-gha" role="tabpanel" aria-labelledby="qt-gha"><span class="c"># .github/workflows/ci.yml — after your build</span><br><span class="k">- uses:</span> <span class="v">alexmond/unitrack/action@v0</span><br>&nbsp;&nbsp;<span class="k">with:</span><br>&nbsp;&nbsp;&nbsp;&nbsp;<span class="k">url:</span> <span class="v">https://unitrack.example.com</span><br>&nbsp;&nbsp;&nbsp;&nbsp;<span class="k">token:</span> <span class="v">${{ secrets.UNITRACK_TOKEN }}</span><br>&nbsp;&nbsp;&nbsp;&nbsp;<span class="c"># junit + jacoco globs auto-detected</span></div>
+        <div class="qs-pane" id="q-cli" role="tabpanel" aria-labelledby="qt-cli"><span class="c"># upload this build's reports (metadata auto-detected)</span><br><span class="v">unitrack</span> <span class="s">upload</span> --project checkout \<br>&nbsp;&nbsp;--junit <span class="v">'**/surefire-reports/*.xml'</span> \<br>&nbsp;&nbsp;--jacoco <span class="v">'**/jacoco.xml'</span><br><br><span class="c"># then gate the build</span><br><span class="v">unitrack</span> <span class="s">gate</span> --project checkout --min-coverage 80</div>
+        <div class="qs-pane" id="q-run" role="tabpanel" aria-labelledby="qt-run"><span class="c"># self-host in one command (H2 demo mode)</span><br><span class="v">docker</span> <span class="s">run</span> --rm -p 8080:8080 \<br>&nbsp;&nbsp;ghcr.io/alexmond/unitrack:<span class="v">0.4.0</span><br><br><span class="c"># → open http://localhost:8080 · Postgres compose for prod</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="final">
+    <div class="wrap reveal">
+      <div class="eyebrow sec-eyebrow" style="text-align:center">Start in a browser tab</div>
+      <h2 class="sec-h" style="max-width:16em; margin-inline:auto; text-align:center">See your own kind of red build, on someone's real data.</h2>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="#">Try the live demo →</a>
+        <a class="btn btn-ghost" href="#quickstart">Self-host in 5 min</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap foot-in">
+    <span class="brand" style="font-size:14px"><span class="dot"></span>UniTrack</span>
+    <a href="#">Live demo</a><a href="#">Docs</a><a href="#">GitHub</a><a href="#compare">Compare</a>
+    <span class="sp">Allure-meets-Codecov for the JVM · self-hosted · open source</span>
+  </div>
+</footer>
+
+<script>
+  (function () {
+    var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    // ---- persona tabs ----
+    var tabs = document.querySelectorAll(".tab");
+    tabs.forEach(function (t) {
+      t.addEventListener("click", function () {
+        tabs.forEach(function (x) { x.setAttribute("aria-selected", "false"); });
+        document.querySelectorAll(".panel").forEach(function (p) { p.classList.remove("on"); p.hidden = true; });
+        t.setAttribute("aria-selected", "true");
+        var p = document.getElementById(t.getAttribute("aria-controls"));
+        p.classList.add("on"); p.hidden = false;
+      });
+    });
+
+    // ---- quickstart tabs ----
+    var qtabs = document.querySelectorAll(".qs-tab");
+    qtabs.forEach(function (t) {
+      t.addEventListener("click", function () {
+        qtabs.forEach(function (x) { x.setAttribute("aria-selected", "false"); });
+        document.querySelectorAll(".qs-pane").forEach(function (p) { p.classList.remove("on"); });
+        t.setAttribute("aria-selected", "true");
+        document.getElementById(t.getAttribute("aria-controls")).classList.add("on");
+      });
+    });
+
+    // ---- copy ----
+    var copyBtn = document.getElementById("copyBtn");
+    copyBtn.addEventListener("click", function () {
+      var pane = document.querySelector(".qs-pane.on");
+      var text = pane.innerText;
+      navigator.clipboard && navigator.clipboard.writeText(text).then(function () {
+        copyBtn.textContent = "copied ✓";
+        setTimeout(function () { copyBtn.textContent = "copy"; }, 1400);
+      });
+    });
+
+    // ---- reveals ----
+    if ("IntersectionObserver" in window && !reduce) {
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } });
+      }, { threshold: 0.12 });
+      document.querySelectorAll(".reveal").forEach(function (el) { io.observe(el); });
+    } else {
+      document.querySelectorAll(".reveal").forEach(function (el) { el.classList.add("in"); });
+    }
+
+    // ---- sparkline in the board (p99 regression) ----
+    function drawSpark() {
+      var c = document.getElementById("spark"); if (!c) return;
+      var dpr = window.devicePixelRatio || 1;
+      var w = c.clientWidth || 120, h = 34;
+      c.width = w * dpr; c.height = h * dpr;
+      var x = c.getContext("2d"); x.scale(dpr, dpr);
+      var pts = [12, 11, 13, 12, 14, 13, 12, 30, 28, 22]; // steady then a spike (the p99 jump)
+      var max = 32, min = 8, n = pts.length;
+      x.clearRect(0, 0, w, h);
+      x.beginPath();
+      for (var i = 0; i < n; i++) {
+        var px = (i / (n - 1)) * (w - 4) + 2;
+        var py = h - 3 - ((pts[i] - min) / (max - min)) * (h - 8);
+        i ? x.lineTo(px, py) : x.moveTo(px, py);
+      }
+      x.strokeStyle = "#f85149"; x.lineWidth = 1.8; x.lineJoin = "round"; x.stroke();
+      // endpoint dot
+      var ex = (w - 4) + 2, ey = h - 3 - ((pts[n - 1] - min) / (max - min)) * (h - 8);
+      x.beginPath(); x.arc(ex - 1, ey, 2.4, 0, Math.PI * 2); x.fillStyle = "#f85149"; x.fill();
+    }
+
+    // ---- ambient hero commit-trace ----
+    function drawTrace() {
+      var c = document.getElementById("trace"); if (!c) return;
+      var dpr = window.devicePixelRatio || 1;
+      var w = c.clientWidth, h = c.clientHeight;
+      c.width = w * dpr; c.height = h * dpr;
+      var x = c.getContext("2d"); x.scale(dpr, dpr);
+      x.clearRect(0, 0, w, h);
+
+      // faint vertical commit ticks
+      var cols = 26;
+      x.strokeStyle = "rgba(46,230,214,0.05)"; x.lineWidth = 1;
+      for (var i = 0; i <= cols; i++) { var gx = (i / cols) * w; x.beginPath(); x.moveTo(gx, 0); x.lineTo(gx, h); x.stroke(); }
+
+      // a percentile trace: steady, spikes (regression), recovers
+      var base = h * 0.62;
+      function y(t) {
+        var noise = Math.sin(t * 22) * 4 + Math.sin(t * 7) * 3;
+        var spike = 0;
+        if (t > 0.60 && t < 0.80) { var k = (t - 0.60) / 0.20; spike = -Math.sin(k * Math.PI) * h * 0.26; } // regression at ~a4, recovers
+        return base + noise + spike;
+      }
+      var path = new Path2D();
+      var N = 240;
+      for (var j = 0; j <= N; j++) { var t = j / N, gx2 = t * w, gy = y(t); j ? path.lineTo(gx2, gy) : path.moveTo(gx2, gy); }
+
+      function paint(prog) {
+        x.clearRect(0, 0, w, h);
+        x.strokeStyle = "rgba(46,230,214,0.05)"; x.lineWidth = 1;
+        for (var i2 = 0; i2 <= cols; i2++) { var gx3 = (i2 / cols) * w; x.beginPath(); x.moveTo(gx3, 0); x.lineTo(gx3, h); x.stroke(); }
+        x.save();
+        x.beginPath(); x.rect(0, 0, w * prog, h); x.clip();
+        x.strokeStyle = "rgba(46,230,214,0.45)"; x.lineWidth = 1.6; x.stroke(path);
+        // glow
+        x.strokeStyle = "rgba(46,230,214,0.12)"; x.lineWidth = 5; x.stroke(path);
+        x.restore();
+        // marker at the regression trough
+        if (prog > 0.72) { var mx = w * 0.70, my = y(0.70); x.beginPath(); x.arc(mx, my, 3, 0, Math.PI * 2); x.fillStyle = "#f85149"; x.fill(); }
+      }
+
+      if (reduce) { paint(1); return; }
+      var start = null;
+      function step(ts) {
+        if (!start) start = ts;
+        var prog = Math.min(1, (ts - start) / 1600);
+        paint(prog);
+        if (prog < 1) requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
+    }
+
+    function draw() { drawSpark(); drawTrace(); }
+    draw();
+    var rt; window.addEventListener("resize", function () { clearTimeout(rt); rt = setTimeout(draw, 180); });
+  })();
+</script>

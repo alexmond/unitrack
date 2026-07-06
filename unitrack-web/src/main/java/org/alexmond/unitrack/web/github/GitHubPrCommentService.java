@@ -43,11 +43,14 @@ public class GitHubPrCommentService {
 
 	private final GitHubConfigResolver config;
 
+	private final GitHubAuth auth;
+
 	public GitHubPrCommentService(GitHubProperties props, RestClient.Builder restClientBuilder,
-			GitHubConfigResolver config) {
+			GitHubConfigResolver config, GitHubAuth auth) {
 		this.props = props;
 		this.restClient = restClientBuilder.build();
 		this.config = config;
+		this.auth = auth;
 	}
 
 	/**
@@ -74,26 +77,30 @@ public class GitHubPrCommentService {
 	private void upsert(Long projectId, String repoUrl, String sha, String marker,
 			java.util.function.Supplier<String> body) {
 		GitHubConfigResolver.Effective cfg = this.config.effective(projectId);
-		if (!cfg.enabled() || !cfg.prComment() || isBlank(this.props.getToken())) {
+		if (!cfg.enabled() || !cfg.prComment()) {
 			return;
 		}
 		String[] repo = GitHubStatusService.parseOwnerRepo(repoUrl);
 		if (repo == null || isBlank(sha)) {
 			return;
 		}
+		String bearer = this.auth.bearerToken(repo[0], repo[1]);
+		if (bearer == null) {
+			return;
+		}
 		try {
-			Integer pr = resolvePullNumber(repo, sha);
+			Integer pr = resolvePullNumber(repo, sha, bearer);
 			if (pr == null) {
 				log.debug("No open PR for {}/{}@{}; skipping comment", repo[0], repo[1], sha);
 				return;
 			}
 			String rendered = body.get();
-			Long existing = findExistingComment(repo, pr, marker);
+			Long existing = findExistingComment(repo, pr, marker, bearer);
 			if (existing != null) {
-				updateComment(repo, existing, rendered);
+				updateComment(repo, existing, rendered, bearer);
 			}
 			else {
-				createComment(repo, pr, rendered);
+				createComment(repo, pr, rendered, bearer);
 			}
 			log.info("Posted UniTrack PR comment on {}/{}#{}", repo[0], repo[1], pr);
 		}
@@ -102,10 +109,10 @@ public class GitHubPrCommentService {
 		}
 	}
 
-	private Integer resolvePullNumber(String[] repo, String sha) {
+	private Integer resolvePullNumber(String[] repo, String sha, String bearer) {
 		List<Map<String, Object>> pulls = this.restClient.get()
 			.uri(this.props.getApiUrl() + "/repos/{owner}/{repo}/commits/{sha}/pulls", repo[0], repo[1], sha)
-			.headers(this::githubHeaders)
+			.headers((h) -> authHeaders(h, bearer))
 			.retrieve()
 			.body(LIST_OF_MAPS);
 		if (pulls == null || pulls.isEmpty()) {
@@ -115,10 +122,10 @@ public class GitHubPrCommentService {
 		return (number instanceof Number n) ? n.intValue() : null;
 	}
 
-	private Long findExistingComment(String[] repo, int pr, String marker) {
+	private Long findExistingComment(String[] repo, int pr, String marker, String bearer) {
 		List<Map<String, Object>> comments = this.restClient.get()
 			.uri(this.props.getApiUrl() + "/repos/{owner}/{repo}/issues/{pr}/comments", repo[0], repo[1], pr)
-			.headers(this::githubHeaders)
+			.headers((h) -> authHeaders(h, bearer))
 			.retrieve()
 			.body(LIST_OF_MAPS);
 		if (comments == null) {
@@ -134,28 +141,28 @@ public class GitHubPrCommentService {
 		return null;
 	}
 
-	private void createComment(String[] repo, int pr, String body) {
+	private void createComment(String[] repo, int pr, String body, String bearer) {
 		this.restClient.post()
 			.uri(this.props.getApiUrl() + "/repos/{owner}/{repo}/issues/{pr}/comments", repo[0], repo[1], pr)
-			.headers(this::githubHeaders)
+			.headers((h) -> authHeaders(h, bearer))
 			.contentType(MediaType.APPLICATION_JSON)
 			.body(Map.of("body", body))
 			.retrieve()
 			.toBodilessEntity();
 	}
 
-	private void updateComment(String[] repo, long commentId, String body) {
+	private void updateComment(String[] repo, long commentId, String body, String bearer) {
 		this.restClient.patch()
 			.uri(this.props.getApiUrl() + "/repos/{owner}/{repo}/issues/comments/{id}", repo[0], repo[1], commentId)
-			.headers(this::githubHeaders)
+			.headers((h) -> authHeaders(h, bearer))
 			.contentType(MediaType.APPLICATION_JSON)
 			.body(Map.of("body", body))
 			.retrieve()
 			.toBodilessEntity();
 	}
 
-	private void githubHeaders(org.springframework.http.HttpHeaders headers) {
-		headers.set("Authorization", "Bearer " + this.props.getToken());
+	private void authHeaders(org.springframework.http.HttpHeaders headers, String bearer) {
+		headers.set("Authorization", "Bearer " + bearer);
 		headers.set("Accept", "application/vnd.github+json");
 		headers.set("X-GitHub-Api-Version", "2022-11-28");
 	}

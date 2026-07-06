@@ -34,4 +34,12 @@ public class BranchProperties {
 	 */
 	private int activeDays = 30;
 
+	/**
+	 * Hard-delete a non-protected branch's runs once its latest run is older than this
+	 * many days (a daily job). 0 disables expiry — data is kept forever (the safe
+	 * default). Protected/default branches are never expired. Deleted branches are
+	 * removed immediately instead when an SCM branch-delete webhook is wired up.
+	 */
+	private int retainDays;
+
 }

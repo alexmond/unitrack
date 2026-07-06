@@ -70,8 +70,13 @@ public class SecurityConfig {
 				// The audit log can name private projects/users — admin-only, even in
 				// open
 				// mode.
-				auth.requestMatchers("/audit/**", "/api/v1/audit", "/api/v1/audit/**", "/ops", "/ops/**")
+				auth.requestMatchers("/audit/**", "/api/v1/audit", "/api/v1/audit/**", "/ops", "/ops/**", "/ingest",
+						"/api/v1/ingest-jobs")
 					.hasRole("ADMIN");
+				// A single ingest job is readable by an admin or its own uploader (CI
+				// polling its async upload) — the owner check is enforced in the
+				// controller; just require authentication here.
+				auth.requestMatchers(HttpMethod.GET, "/api/v1/ingest-jobs/*").authenticated();
 				// Provisioning projects from GitHub is a management action: always
 				// require login.
 				auth.requestMatchers("/import", "/import/**").authenticated();
@@ -98,6 +103,10 @@ public class SecurityConfig {
 					if (!props.isRequireIngestToken()) {
 						auth.requestMatchers(HttpMethod.POST, "/api/v1/ingest").permitAll();
 					}
+					// SCM webhooks authenticate by their own signature/token (verified in
+					// the
+					// controller), not by a session or API token.
+					auth.requestMatchers(HttpMethod.POST, "/api/v1/webhooks/**").permitAll();
 					auth.requestMatchers(HttpMethod.POST, "/**").authenticated();
 					auth.requestMatchers(HttpMethod.PUT, "/**").authenticated();
 					auth.requestMatchers(HttpMethod.DELETE, "/**").authenticated();
@@ -109,7 +118,7 @@ public class SecurityConfig {
 				.defaultAuthenticationEntryPointFor(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED), apiPaths)
 				.defaultAuthenticationEntryPointFor(new LoginUrlAuthenticationEntryPoint("/login"),
 						AnyRequestMatcher.INSTANCE))
-			.formLogin((form) -> form.loginPage("/login").defaultSuccessUrl("/profile", false).permitAll())
+			.formLogin((form) -> form.loginPage("/login").defaultSuccessUrl("/", false).permitAll())
 			.logout((logout) -> logout.logoutSuccessUrl("/login?logout").permitAll());
 		return http.build();
 	}

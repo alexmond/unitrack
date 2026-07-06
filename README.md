@@ -176,7 +176,7 @@ project/branch/commit/build-url/PR from `GITHUB_*`:
     gate: "true"                            # optional: fail the build on a red quality gate
 ```
 
-Pin a release with `@v0.1.0`. A ready-to-copy workflow lives in
+Pin a release with `@v0.4.0`. A ready-to-copy workflow lives in
 [`.github/workflows/upload-results-example.yml`](.github/workflows/upload-results-example.yml);
 more per-CI recipes (GitLab, Jenkins, CircleCI, raw `docker`/`java -jar`) are in the
 [CI Recipes](docs/modules/ROOT/pages/ci-recipes.adoc) docs.
@@ -278,13 +278,13 @@ Spring Boot plugin's `build-image` goal bound to `package`. Requires a running D
 
 ```bash
 ./mvnw -Pdocker -pl unitrack-web -am package        # builds image unitrack:<version>
-docker run --rm -p 8080:8080 unitrack:0.1.0-SNAPSHOT
+docker run --rm -p 8080:8080 unitrack:0.4.0
 ```
 
 Override the tag or publish to a registry:
 
 ```bash
-./mvnw -Pdocker -Ddocker.image.name=ghcr.io/alexmond/unitrack:0.1.0 -Ddocker.publish=true \
+./mvnw -Pdocker -Ddocker.image.name=ghcr.io/alexmond/unitrack:0.4.0 -Ddocker.publish=true \
   -pl unitrack-web -am package
 ```
 
@@ -339,4 +339,22 @@ coverage deltas, and quality gates.
 
 ## License
 
-Apache-2.0 (intended).
+UniTrack is **open-core**, licensed per module:
+
+| Module | License | |
+|---|---|---|
+| `unitrack-web` (the self-hosted server) | **AGPL-3.0-only** | network copyleft |
+| `unitrack-it` (server-only integration tests) | **AGPL-3.0-only** | |
+| `unitrack-core` | **Apache-2.0** | published to Maven Central |
+| `unitrack-cli` | **Apache-2.0** | published to Maven Central |
+| `unitrack-maven-plugin` | **Apache-2.0** | published to Maven Central |
+
+The artifacts on Maven Central — `org.alexmond:unitrack-core`, `unitrack-cli`, and
+`unitrack-maven-plugin` — are **Apache-2.0 and safe to depend on**; only the server is AGPL-3.0.
+Full texts: [`LICENSE-APACHE-2.0.txt`](LICENSE-APACHE-2.0.txt), [`LICENSE-AGPL-3.0.txt`](LICENSE-AGPL-3.0.txt);
+see the root [`LICENSE`](LICENSE) and each module's `LICENSE`.
+
+Any future premium/enterprise features (e.g. SSO, data retention, org-scale automation) will live in
+a **separate commercial module** under their own license — never AGPL. The open-core server stays
+fully AGPL-3.0. Contributions are accepted under [`CONTRIBUTING.md`](CONTRIBUTING.md) (DCO + a CLA
+grant that preserves dual-licensing).

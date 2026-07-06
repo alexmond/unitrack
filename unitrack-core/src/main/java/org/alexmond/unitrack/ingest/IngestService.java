@@ -45,7 +45,7 @@ public class IngestService {
 
 	private final CoverageFileEntryRepository coverageFiles;
 
-	private final JUnitXmlParser junitParser;
+	private final TestResultParsers testResultParsers;
 
 	private final CoverageParsers coverageParsers;
 
@@ -99,10 +99,11 @@ public class IngestService {
 		}
 		runs.save(run);
 
-		persistTests(run, merged);
+		String module = blankToNull(meta.module());
+		persistTests(run, merged, module);
 
 		if (!jacocoStreams.isEmpty()) {
-			persistCoverage(run, parseCoverage(jacocoStreams));
+			persistCoverage(run, parseCoverage(jacocoStreams), module);
 			runs.save(run);
 		}
 
@@ -152,24 +153,27 @@ public class IngestService {
 		List<ParsedSuite> all = new ArrayList<>();
 		for (Supplier<InputStream> supplier : streams) {
 			try (InputStream in = supplier.get()) {
-				all.addAll(junitParser.parse(in).suites());
+				all.addAll(this.testResultParsers.parse(in).results().suites());
 			}
 			catch (IOException ex) {
-				throw new IngestException("Failed reading JUnit upload: " + ex.getMessage(), ex);
+				throw new IngestException("Failed reading test-result upload: " + ex.getMessage(), ex);
 			}
 		}
 		return new JUnitResults(all);
 	}
 
-	private void persistTests(TestRun run, JUnitResults merged) {
+	private void persistTests(TestRun run, JUnitResults merged, String module) {
 		List<TestSuiteResult> suiteRows = new ArrayList<>();
 		List<TestCaseResult> caseRows = new ArrayList<>();
 		for (ParsedSuite suite : merged.suites()) {
-			suiteRows.add(new TestSuiteResult(run, suite.name(), suite.tests(), suite.failures(), suite.errors(),
-					suite.skipped(), suite.durationMs()));
+			TestSuiteResult suiteRow = new TestSuiteResult(run, suite.name(), suite.tests(), suite.failures(),
+					suite.errors(), suite.skipped(), suite.durationMs());
+			suiteRow.setModule(module);
+			suiteRows.add(suiteRow);
 			for (ParsedCase c : suite.cases()) {
 				TestCaseResult row = new TestCaseResult(run, c.suiteName(), c.className(), c.name(), c.status(),
 						c.durationMs());
+				row.setModule(module);
 				if (c.failureMessage() != null || c.failureStacktrace() != null || c.failureType() != null) {
 					row.setFailure(c.failureType(), c.failureMessage(), c.failureStacktrace());
 				}
@@ -215,7 +219,7 @@ public class IngestService {
 		return new CoverageResults(lc, lm, bc, bm, ic, im, mc, mm, files);
 	}
 
-	private void persistCoverage(TestRun run, CoverageResults cov) {
+	private void persistCoverage(TestRun run, CoverageResults cov, String module) {
 		// Merge into an existing report (sharded coverage uploads) or create a new one.
 		CoverageReport report = coverageReports.findByRunId(run.getId()).orElseGet(() -> new CoverageReport(run));
 		if (report.getId() == null) {
@@ -230,8 +234,10 @@ public class IngestService {
 
 		List<CoverageFileEntry> fileRows = new ArrayList<>();
 		for (CoverageResults.ParsedFileCoverage f : cov.files()) {
-			fileRows.add(new CoverageFileEntry(report, f.packageName(), f.fileName(), f.lineCovered(), f.lineMissed(),
-					f.branchCovered(), f.branchMissed()));
+			CoverageFileEntry fileRow = new CoverageFileEntry(report, f.packageName(), f.fileName(), f.lineCovered(),
+					f.lineMissed(), f.branchCovered(), f.branchMissed());
+			fileRow.setModule(module);
+			fileRows.add(fileRow);
 		}
 		coverageFiles.saveAll(fileRows);
 

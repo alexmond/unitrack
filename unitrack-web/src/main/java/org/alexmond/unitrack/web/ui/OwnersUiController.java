@@ -43,7 +43,7 @@ public class OwnersUiController {
 
 	@GetMapping("/projects/{id}/owners")
 	public String rules(@PathVariable Long id, Model model) {
-		Project project = access.requireReadProject(id);
+		Project project = access.requireReadProjectUi(id);
 		model.addAttribute("project", project);
 		model.addAttribute("rules", ownership.listRules(id));
 		model.addAttribute("scorecard", ownership.scorecard(id));

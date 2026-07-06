@@ -3,15 +3,16 @@ package org.alexmond.unitrack.report;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Objects;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 import lombok.RequiredArgsConstructor;
 import org.alexmond.unitrack.config.BranchProperties;
 import org.alexmond.unitrack.domain.TestRun;
+import org.alexmond.unitrack.repository.BranchRunCount;
 import org.alexmond.unitrack.repository.TestRunRepository;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,29 +35,27 @@ public class BranchService {
 	/** Branches for a project: default branch first, then most-recently-active first. */
 	public List<BranchSummary> list(Long projectId) {
 		String base = this.settings.gateConfig(projectId).baseBranch();
-		return this.runs.findDistinctBranches(projectId)
+		// Two batch queries for the whole project instead of latest-run + count per
+		// branch.
+		Map<String, Long> countByBranch = new HashMap<>();
+		for (BranchRunCount c : this.runs.countRunsPerBranch(projectId)) {
+			countByBranch.put(c.getBranch(), c.getCnt());
+		}
+		return this.runs.findLatestRunPerBranch(projectId)
 			.stream()
-			.map((branch) -> summarize(projectId, branch, base))
-			.filter(Objects::nonNull)
+			.map((latest) -> summarize(latest, base, countByBranch.getOrDefault(latest.getBranch(), 0L)))
 			.sorted(Comparator.comparing(BranchSummary::defaultBranch)
 				.reversed()
 				.thenComparing(BranchSummary::lastRunAt, Comparator.reverseOrder()))
 			.toList();
 	}
 
-	private BranchSummary summarize(Long projectId, String branch, String base) {
-		TestRun latest = this.runs.findLatestByBranch(projectId, branch, null, PageRequest.ofSize(1))
-			.stream()
-			.findFirst()
-			.orElse(null);
-		if (latest == null) {
-			return null;
-		}
+	private BranchSummary summarize(TestRun latest, String base, long runCount) {
+		String branch = latest.getBranch();
 		boolean defaultBranch = branch.equals(base);
 		boolean shown = defaultBranch || isProtected(branch) || isActive(latest.getCreatedAt());
 		return new BranchSummary(branch, latest.getStatus(), latest.passRate(), latest.getLineCoveragePct(),
-				latest.getId(), latest.getCreatedAt(), this.runs.countByProjectIdAndBranch(projectId, branch),
-				defaultBranch, shown);
+				latest.getId(), latest.getCreatedAt(), runCount, defaultBranch, shown);
 	}
 
 	private boolean isProtected(String branch) {

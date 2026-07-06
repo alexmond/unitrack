@@ -67,6 +67,41 @@ See xref:github-checks.adoc[GitHub PR Checks].
 | `pr-comment`      | `true`  | Also post/update a results-table comment on the PR.
 |===
 
+== `unitrack.branches` (branch cleanup)
+
+Branches are derived from run history, so removing a branch means deleting its runs. Two
+triggers, both of which never touch protected or default branches:
+
+[cols="2,1,3"]
+|===
+| Property | Default | Meaning
+
+| `protected-patterns` | `main, master, develop, trunk, release/*, hotfix/*` | Glob patterns for long-lived branches that are always kept and shown.
+| `active-days`         | `30` | Branches whose latest run is older than this collapse behind "show all" in the UI (display only — no deletion).
+| `retain-days`         | `0`  | Hard-delete a non-protected branch's runs once its latest run is older than this many days (a daily job). `0` keeps everything (the safe default).
+| `expiry-cron`         | `0 30 3 * * *` | Schedule for the expiry job.
+|===
+
+== `unitrack.webhooks` (SCM branch-delete)
+
+For *immediate* cleanup, point a GitHub or GitLab webhook at UniTrack so a branch deleted
+upstream is removed at once (instead of waiting for `retain-days`). The endpoints are
+disabled until a secret is set.
+
+[cols="2,1,3"]
+|===
+| Property | Default | Meaning
+
+| `secret` | _unset_ | Shared secret: GitHub `X-Hub-Signature-256` HMAC key + GitLab `X-Gitlab-Token`. Blank disables the endpoints.
+|===
+
+* GitHub: add a webhook for the **Delete branch/tag** event to `POST /api/v1/webhooks/github`
+  with this secret. The signature is verified; only branch deletes act.
+* GitLab: add a **Push events** webhook to `POST /api/v1/webhooks/gitlab` with the secret as
+  the token. A branch delete (push with an all-zero `after`) removes that branch.
+
+UniTrack never writes back to the SCM — it only consumes the event.
+
 == `unitrack.performance`
 
 See xref:unit-test-performance.adoc[Unit-test Performance] -- thresholds for slow-test
@@ -82,6 +117,18 @@ regression detection.
 | `latency-regression-pct` | `15.0` | Max allowed p95 latency increase for a load-test run vs baseline.
 | `throughput-drop-pct`    | `10.0` | Max allowed throughput drop for a load-test run vs baseline.
 | `max-error-pct`          | `1.0`  | Max allowed error rate for a load-test run.
+|===
+
+== `spring.ai.anthropic` (AI analysis)
+
+See xref:ai-analysis.adoc[AI Root-Cause Analysis]. Off unless an API key is set.
+
+[cols="2,1,3"]
+|===
+| Property | Default | Meaning
+
+| `spring.ai.anthropic.api-key` (`UNITRACK_AI_API_KEY`)          | _unset_ | Anthropic key; unset ⇒ AI disabled.
+| `spring.ai.anthropic.chat.options.model` (`UNITRACK_AI_MODEL`) | `claude-sonnet-4-6` | Analysis model.
 |===
 
 == `unitrack.demo`

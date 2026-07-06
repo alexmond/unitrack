@@ -16,9 +16,11 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -37,7 +39,7 @@ class ShareLinkIntegrationTest {
 	private ProjectRepository projects;
 
 	private MockMvc mockMvc() {
-		return MockMvcBuilders.webAppContextSetup(context).build();
+		return MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
 	}
 
 	private long ingest(MockMvc mvc, String project) throws Exception {
@@ -61,11 +63,12 @@ class ShareLinkIntegrationTest {
 	void shareTokenRendersRunReadOnlyEvenWhenProjectIsPrivate() throws Exception {
 		MockMvc mvc = mockMvc();
 		long runId = ingest(mvc, "share-private-demo");
-		// Lock the project down: anonymous browsing must 404.
+		// Lock the project down: anonymous browsing is sent to login (a private run isn't
+		// publicly viewable without the share token).
 		Project project = projects.findByName("share-private-demo").orElseThrow();
 		project.setVisibility(Visibility.PRIVATE);
 		projects.save(project);
-		mvc.perform(get("/runs/{id}", runId)).andExpect(status().isNotFound());
+		mvc.perform(get("/runs/{id}", runId)).andExpect(status().is3xxRedirection()).andExpect(redirectedUrl("/login"));
 
 		TestRun run = reporting.findRun(runId).orElseThrow();
 		String token = shareLinks.create(run, null).rawToken();

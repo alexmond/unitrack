@@ -1,0 +1,96 @@
+= Supported Formats
+
+UniTrack is polyglot: every upload's format is **auto-detected from its content**, so you
+push your tool's native output and UniTrack maps it into one model. The three upload fields
+(`junit`, `jacoco`, `perf`) are named for the common case but each accepts *any* format in
+its category.
+
+== Test results (`junit` field)
+
+[cols="1,2,3"]
+|===
+| Format | Detected by | Notes
+
+| *JUnit / Surefire XML* (`junit`) | `<testsuite>` / `<testsuites>` root | The JVM standard; also the conversion target many tools already emit.
+| *.NET TRX* (`trx`)               | `<TestRun>` in the MSTest namespace | Visual Studio / `dotnet test`. Outcome → status, `duration` timespan → ms, `ErrorInfo` → message/stacktrace; grouped by test class.
+| *xUnit.net XML* (`xunit`)        | `<assemblies>` root | xUnit.net v2 (`--logger xunit`); `result` → status, grouped by `type` (class).
+| *NUnit 3 XML* (`nunit`)          | `<test-run>` root | `<test-case result="..">`; grouped by `classname`.
+| *CTRF JSON* (`ctrf`)             | top-level `results.tests` + `results.summary` | https://ctrf.io[Common Test Report Format] — one schema with reporters for Jest, Playwright, pytest, PHPUnit, Go and more.
+| *Go `test -json`* (`go-test`)    | NDJSON action events (`"Action"` + `"Time"` + `"Package"`) | `go test -json`; events aggregated per package/test into pass/fail/skip + duration, with output captured for failures.
+|===
+
+== Coverage (`jacoco` field)
+
+[cols="1,2,3"]
+|===
+| Format | Detected by | Notes
+
+| *JaCoCo XML* (`jacoco`)       | `<report>` root | JVM. Line, branch, instruction, method counters.
+| *Cobertura XML* (`cobertura`)| `<coverage>` root | Python (coverage.py), Go (gocover-cobertura), JS, .NET (Coverlet).
+| *LCOV* (`lcov`)              | `SF:` / `DA:` records | JS/TS (Istanbul/nyc, c8), C/C++ (gcov), Rust, Swift.
+| *OpenCover XML* (`opencover`) | `<CoverageSession>` root | .NET (Coverlet `--format opencover`).
+| *Go cover profile* (`go-cover`) | `mode: set\|count\|atomic` header | `go test -coverprofile`. Statement-level → line coverage (Go has no branch/method counters).
+|===
+
+== Performance / load tests (`perf` field)
+
+[cols="1,2,3"]
+|===
+| Format | Detected by | Notes
+
+| *JMeter JTL* (`jmeter`) | CSV header with `timeStamp,elapsed,…` | Per-sample latency → real percentiles + error rate.
+| *k6 JSON summary* (`k6`) | k6 `--summary-export` JSON | Pre-aggregated metrics.
+| *JMH JSON* (`jmh`)      | JSON array with `jmhVersion` | JVM microbenchmarks (`-rf json`); `avgt`/`thrpt` normalized to ms-per-op.
+| *Go `test -bench`* (`go-bench`) | `Benchmark… ns/op` lines | The Go analog of JMH; `ns/op` → mean ms, iteration count → samples.
+| *Gatling* (`gatling`)   | tab-separated `simulation.log` with `REQUEST` rows | Per-request latency (`end - start`) → percentiles + OK/KO error rate. Located by shape, so it tolerates Gatling's per-version column shifts.
+|===
+
+[NOTE]
+====
+Adding a format is a small `TestResultParser` / `CoverageParser` / `PerfResultParser`
+implementation that self-identifies via `supports(...)` — no change to ingest wiring. See
+xref:architecture.adoc[Architecture] and `doc/parser-libraries.md`. Requests welcome.
+====
+
+== Multiple perf tests in one upload
+
+A build often runs several perf suites (an API load test, a checkout scenario, a JMH
+microbenchmark). Upload them together — each `perf` file becomes its own **series**, keyed
+by a flag, so its trend and regression are tracked independently:
+
+[source,bash]
+----
+curl -F project=myapp -F commit=$SHA \
+     -F 'perf=@api.jtl'      -F 'perfFlag=api' \
+     -F 'perf=@checkout.jtl' -F 'perfFlag=checkout' \
+     -F 'perf=@bench.json'   -F 'perfFlag=micro' \
+     http://localhost:8080/api/v1/ingest
+----
+
+`perfFlag` is matched to each `perf` file by position. If you omit it, the filename stem is
+used (`api.jtl` → `api`); a single perf file with no `perfFlag` keeps using the request
+`flag`. The Load-tests page shows a flag filter to switch between series (like the coverage
+module filter).
+
+== Perf regression detection
+
+Each perf series (flag) is watched for a *sustained level shift* in p95 latency. When a
+series steps to a worse level and stays there, the Load-tests page shows a *p95 latency
+regressed* badge with the onset commit/date and the depth (a robust z-score vs the series'
+own noise) — so a regression that hides inside normal run-to-run jitter is still caught,
+and you can see *when* it started. Detection is classical and transparent (median/MAD +
+CUSUM onset); a lone spike or a series that has since recovered does not flag.
+
+== Large reports & memory
+
+Parsing is bounded-memory, so a large report won't exhaust the heap:
+
+* *XML* (JUnit/TRX/xUnit/NUnit, JaCoCo/Cobertura/OpenCover) is parsed with streaming
+  StAX — one suite / package / module is held at a time, never the whole document tree.
+* *JSON* with an unbounded array (CTRF tests, JMH benchmarks) is streamed element by
+  element; the k6 summary is pre-aggregated and small.
+* *Perf logs* (JMeter JTL, Gatling) stream line by line into a fixed-size histogram.
+
+A hard decompressed-size guard (`unitrack.ingest.max-report-bytes` / `max-perf-bytes`)
+backs this up: a pathological upload is rejected with a clear error rather than risking an
+out-of-memory crash. See xref:ingestion.adoc[Ingestion].

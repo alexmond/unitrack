@@ -34,7 +34,10 @@ inputs:
     description: Friendly build identifier (e.g. CI run number). Auto-detected on known CI; set to override.
     required: false
   split-by-module:
-    description: Upload each module (dir before /target/) as its own coverage flag/component, plus a rollup.
+    description: >-
+      DEPRECATED and ignored. A run maps to one CI build; modules are a dimension within it
+      (see the Tests/Coverage by-module breakdown + module-scoped trend). Still accepted so
+      existing workflows don't break, but reports now upload as a single run tagged per module.
     required: false
     default: "false"
   repo:

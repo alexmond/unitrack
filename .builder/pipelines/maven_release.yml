@@ -1,0 +1,30 @@
+name: Maven release
+on:
+  - manual
+checkout: true
+variables:
+  RELEASE_VERSION: "0.0.0"
+  NEXT_VERSION: "0.0.0-SNAPSHOT"
+jobs:
+  release:
+    image: eclipse-temurin:21-jdk
+    timeout: 30m
+    when: manual
+    cache:
+      key: m2-unitrack
+      paths:
+        - .m2/repository
+    secrets:
+      - OSSRH_USERNAME
+      - OSSRH_PASSWORD
+      - GPG_PRIVATE_KEY
+      - GPG_PASSPHRASE
+    steps:
+      - name: import-gpg-key
+        run: printf '%s' "$GPG_PRIVATE_KEY" | gpg --batch --import
+      - name: set-release-version
+        run: ./mvnw -B versions:set -DnewVersion="$RELEASE_VERSION" -DgenerateBackupPoms=false -Dmaven.repo.local=.m2/repository
+      - name: build-and-verify
+        run: ./mvnw -B clean verify -Dmaven.repo.local=.m2/repository
+      - name: deploy-to-central
+        run: ./mvnw -B -Prelease -DskipTests deploy -Dgpg.passphrase="$GPG_PASSPHRASE" -Dmaven.repo.local=.m2/repository

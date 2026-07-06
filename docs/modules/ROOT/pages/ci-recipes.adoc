@@ -47,15 +47,15 @@ The silent footgun in every stack: the test runner does **not** write JUnit XML 
     url: ${{ vars.UNITRACK_URL }}
     token: ${{ secrets.UNITRACK_TOKEN }}
     # junit/jacoco default to conventional globs; override with `junit:` / `jacoco:` if needed
-    # split-by-module: "true"   # multi-module: each module becomes its own coverage component
 ----
 
 project/branch/commit/buildUrl/build number/PR number/run-key are auto-detected from `GITHUB_*`.
 
-TIP: For a multi-module build, set `split-by-module: "true"`. Each module (the directory before
-`/target/`) is uploaded as its own coverage *flag/component* — so the project shows per-module
-tests, coverage and quality gates under "Coverage by flag" — plus a merged rollup that stays the
-project's headline. Without it, every module merges into one flat run.
+TIP: Multi-module builds need no extra config. A run maps to one CI build; each report is tagged
+with its module (the directory before `/target/`) and merged into a *single* run. The project then
+shows per-module tests and coverage in the *Tests by module* breakdown, and per-module history via
+the module-scoped trend (click a module to scope the whole tab). The old `split-by-module` input is
+*deprecated and ignored* — it uploaded one run per module, which broke the one-run-per-build model.
 
 === GitLab CI
 
