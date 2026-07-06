@@ -53,6 +53,13 @@ public class CoverageFileEntry {
 	@Column(name = "module")
 	private String module;
 
+	/**
+	 * Comma-separated line numbers with no coverage, for PR annotations (#443). Populated
+	 * from JaCoCo per-line data; null/empty when the format carries no line detail.
+	 */
+	@Column(name = "uncovered_lines", columnDefinition = "text")
+	private String uncoveredLines;
+
 	public CoverageFileEntry(CoverageReport report, String packageName, String fileName, int lineCovered,
 			int lineMissed, int branchCovered, int branchMissed) {
 		this.report = report;
@@ -66,6 +73,14 @@ public class CoverageFileEntry {
 
 	public void setModule(String module) {
 		this.module = module;
+	}
+
+	public String getUncoveredLines() {
+		return this.uncoveredLines;
+	}
+
+	public void setUncoveredLines(String uncoveredLines) {
+		this.uncoveredLines = uncoveredLines;
 	}
 
 	public double getLinePct() {
