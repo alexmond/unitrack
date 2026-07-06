@@ -1,10 +1,15 @@
 package org.alexmond.unitrack.web.alert;
 
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import lombok.RequiredArgsConstructor;
+import org.alexmond.notify4j.ChannelCatalog;
 import org.alexmond.notify4j.Notifications;
 import org.alexmond.notify4j.NotificationsFactory;
 import org.alexmond.unitrack.domain.AlertChannelType;
@@ -80,56 +85,31 @@ public class Notify4jAlertSink implements AlertSink {
 	 * routing slice).
 	 */
 	static String toUrl(AlertChannelService.Resolved channel) {
-		String scheme = scheme(channel.type());
-		if (scheme == null) {
+		// EMAIL is config-based (the mail path), not a per-URL notify4j channel.
+		if (channel.type() == AlertChannelType.EMAIL) {
 			return null;
 		}
-		String tags = String.join(",", channel.tags()).toLowerCase(Locale.ROOT);
 		String endpoint = (channel.secret() != null && !channel.secret().isBlank()) ? channel.secret()
 				: channel.target();
-		return wrap(scheme, endpoint, tags);
-	}
-
-	/**
-	 * The notify4j URL scheme for an endpoint-style channel (one that wraps a pasted
-	 * incoming-webhook URL), or {@code null} for kinds notify4j doesn't deliver per-URL
-	 * (EMAIL is config-based, handled by the existing mail path).
-	 */
-	private static String scheme(AlertChannelType type) {
-		return switch (type) {
-			case SLACK -> "slack";
-			case TEAMS -> "teams";
-			case DISCORD -> "discord";
-			case MATTERMOST -> "mattermost";
-			case ROCKETCHAT -> "rocketchat";
-			case GOOGLECHAT -> "googlechat";
-			case WEBHOOK -> "webhook";
-			case EMAIL -> null;
-		};
-	}
-
-	/**
-	 * Turns an http(s) endpoint into a {@code <channel>://…} (or
-	 * {@code <channel>+http://…}) URL.
-	 */
-	private static String wrap(String channel, String endpoint, String tags) {
 		if (endpoint == null || endpoint.isBlank()) {
 			return null;
 		}
-		String url;
-		if (endpoint.startsWith("https://")) {
-			url = channel + "://" + endpoint.substring("https://".length());
+		// notify4j owns URL assembly: buildUrl strips a pasted http(s):// transport
+		// (mapping
+		// http:// to the +http form) and appends ?tags=, so UniTrack no longer hand-rolls
+		// the Apprise-style URL. The scheme is the lowercased channel type; a type
+		// notify4j
+		// doesn't know is skipped rather than throwing (keeps delivery best-effort).
+		String scheme = channel.type().name().toLowerCase(Locale.ROOT);
+		ChannelCatalog catalog = ChannelCatalog.standard();
+		if (catalog.describe(scheme).isEmpty()) {
+			return null;
 		}
-		else if (endpoint.startsWith("http://")) {
-			url = channel + "+http://" + endpoint.substring("http://".length());
-		}
-		else {
-			url = channel + "://" + endpoint;
-		}
-		if (!tags.isBlank()) {
-			url += (url.contains("?") ? "&" : "?") + "tags=" + tags;
-		}
-		return url;
+		Set<String> tags = channel.tags()
+			.stream()
+			.map((t) -> t.toLowerCase(Locale.ROOT))
+			.collect(Collectors.toCollection(LinkedHashSet::new));
+		return catalog.buildUrl(scheme, Map.of("url", endpoint), tags, false);
 	}
 
 }
