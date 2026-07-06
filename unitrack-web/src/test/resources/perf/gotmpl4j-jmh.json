@@ -1,0 +1,253 @@
+[
+    {
+        "jmhVersion" : "1.37",
+        "benchmark" : "org.alexmond.gotmpl4j.benchmarks.InterpolationBenchmark.gotmpl4jRender",
+        "mode" : "avgt",
+        "threads" : 1,
+        "forks" : 1,
+        "jvm" : "/usr/lib/jvm/java-21-openjdk/bin/java",
+        "jvmArgs" : [
+        ],
+        "jdkVersion" : "21.0.11",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "21.0.11+10",
+        "warmupIterations" : 1,
+        "warmupTime" : "1 s",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 2,
+        "measurementTime" : "1 s",
+        "measurementBatchSize" : 1,
+        "primaryMetric" : {
+            "score" : 0.5519783743947934,
+            "scoreError" : "NaN",
+            "scoreConfidence" : [
+                "NaN",
+                "NaN"
+            ],
+            "scorePercentiles" : {
+                "0.0" : 0.3867496127430168,
+                "50.0" : 0.5519783743947934,
+                "90.0" : 0.7172071360465699,
+                "95.0" : 0.7172071360465699,
+                "99.0" : 0.7172071360465699,
+                "99.9" : 0.7172071360465699,
+                "99.99" : 0.7172071360465699,
+                "99.999" : 0.7172071360465699,
+                "99.9999" : 0.7172071360465699,
+                "100.0" : 0.7172071360465699
+            },
+            "scoreUnit" : "us/op",
+            "rawData" : [
+                [
+                    0.7172071360465699,
+                    0.3867496127430168
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    },
+    {
+        "jmhVersion" : "1.37",
+        "benchmark" : "org.alexmond.gotmpl4j.benchmarks.ParseBenchmark.gotmpl4jParse",
+        "mode" : "avgt",
+        "threads" : 1,
+        "forks" : 1,
+        "jvm" : "/usr/lib/jvm/java-21-openjdk/bin/java",
+        "jvmArgs" : [
+        ],
+        "jdkVersion" : "21.0.11",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "21.0.11+10",
+        "warmupIterations" : 1,
+        "warmupTime" : "1 s",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 2,
+        "measurementTime" : "1 s",
+        "measurementBatchSize" : 1,
+        "primaryMetric" : {
+            "score" : 228.1747044290394,
+            "scoreError" : "NaN",
+            "scoreConfidence" : [
+                "NaN",
+                "NaN"
+            ],
+            "scorePercentiles" : {
+                "0.0" : 202.31402871587463,
+                "50.0" : 228.1747044290394,
+                "90.0" : 254.03538014220416,
+                "95.0" : 254.03538014220416,
+                "99.0" : 254.03538014220416,
+                "99.9" : 254.03538014220416,
+                "99.99" : 254.03538014220416,
+                "99.999" : 254.03538014220416,
+                "99.9999" : 254.03538014220416,
+                "100.0" : 254.03538014220416
+            },
+            "scoreUnit" : "us/op",
+            "rawData" : [
+                [
+                    254.03538014220416,
+                    202.31402871587463
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    },
+    {
+        "jmhVersion" : "1.37",
+        "benchmark" : "org.alexmond.gotmpl4j.benchmarks.TableBenchmark.gotmpl4jRender",
+        "mode" : "avgt",
+        "threads" : 1,
+        "forks" : 1,
+        "jvm" : "/usr/lib/jvm/java-21-openjdk/bin/java",
+        "jvmArgs" : [
+        ],
+        "jdkVersion" : "21.0.11",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "21.0.11+10",
+        "warmupIterations" : 1,
+        "warmupTime" : "1 s",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 2,
+        "measurementTime" : "1 s",
+        "measurementBatchSize" : 1,
+        "params" : {
+            "n" : "10"
+        },
+        "primaryMetric" : {
+            "score" : 23.331214846849626,
+            "scoreError" : "NaN",
+            "scoreConfidence" : [
+                "NaN",
+                "NaN"
+            ],
+            "scorePercentiles" : {
+                "0.0" : 23.236844988615772,
+                "50.0" : 23.331214846849626,
+                "90.0" : 23.425584705083477,
+                "95.0" : 23.425584705083477,
+                "99.0" : 23.425584705083477,
+                "99.9" : 23.425584705083477,
+                "99.99" : 23.425584705083477,
+                "99.999" : 23.425584705083477,
+                "99.9999" : 23.425584705083477,
+                "100.0" : 23.425584705083477
+            },
+            "scoreUnit" : "us/op",
+            "rawData" : [
+                [
+                    23.425584705083477,
+                    23.236844988615772
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    },
+    {
+        "jmhVersion" : "1.37",
+        "benchmark" : "org.alexmond.gotmpl4j.benchmarks.TableBenchmark.gotmpl4jRender",
+        "mode" : "avgt",
+        "threads" : 1,
+        "forks" : 1,
+        "jvm" : "/usr/lib/jvm/java-21-openjdk/bin/java",
+        "jvmArgs" : [
+        ],
+        "jdkVersion" : "21.0.11",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "21.0.11+10",
+        "warmupIterations" : 1,
+        "warmupTime" : "1 s",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 2,
+        "measurementTime" : "1 s",
+        "measurementBatchSize" : 1,
+        "params" : {
+            "n" : "100"
+        },
+        "primaryMetric" : {
+            "score" : 217.285366617145,
+            "scoreError" : "NaN",
+            "scoreConfidence" : [
+                "NaN",
+                "NaN"
+            ],
+            "scorePercentiles" : {
+                "0.0" : 215.0276208082545,
+                "50.0" : 217.285366617145,
+                "90.0" : 219.5431124260355,
+                "95.0" : 219.5431124260355,
+                "99.0" : 219.5431124260355,
+                "99.9" : 219.5431124260355,
+                "99.99" : 219.5431124260355,
+                "99.999" : 219.5431124260355,
+                "99.9999" : 219.5431124260355,
+                "100.0" : 219.5431124260355
+            },
+            "scoreUnit" : "us/op",
+            "rawData" : [
+                [
+                    219.5431124260355,
+                    215.0276208082545
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    },
+    {
+        "jmhVersion" : "1.37",
+        "benchmark" : "org.alexmond.gotmpl4j.benchmarks.TableBenchmark.gotmpl4jRender",
+        "mode" : "avgt",
+        "threads" : 1,
+        "forks" : 1,
+        "jvm" : "/usr/lib/jvm/java-21-openjdk/bin/java",
+        "jvmArgs" : [
+        ],
+        "jdkVersion" : "21.0.11",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "21.0.11+10",
+        "warmupIterations" : 1,
+        "warmupTime" : "1 s",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 2,
+        "measurementTime" : "1 s",
+        "measurementBatchSize" : 1,
+        "params" : {
+            "n" : "1000"
+        },
+        "primaryMetric" : {
+            "score" : 2118.8164651073876,
+            "scoreError" : "NaN",
+            "scoreConfidence" : [
+                "NaN",
+                "NaN"
+            ],
+            "scorePercentiles" : {
+                "0.0" : 2073.7985155279503,
+                "50.0" : 2118.8164651073876,
+                "90.0" : 2163.834414686825,
+                "95.0" : 2163.834414686825,
+                "99.0" : 2163.834414686825,
+                "99.9" : 2163.834414686825,
+                "99.99" : 2163.834414686825,
+                "99.999" : 2163.834414686825,
+                "99.9999" : 2163.834414686825,
+                "100.0" : 2163.834414686825
+            },
+            "scoreUnit" : "us/op",
+            "rawData" : [
+                [
+                    2163.834414686825,
+                    2073.7985155279503
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    }
+]
+
+

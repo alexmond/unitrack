@@ -39,6 +39,7 @@ public class TokenExpiryReminder {
 
 	/** Runs daily (override with {@code unitrack.notifications.token-expiry-cron}). */
 	@Scheduled(cron = "${unitrack.notifications.token-expiry-cron:0 0 8 * * *}")
+	@Transactional
 	public void run() {
 		int sent = sendDueReminders(Instant.now());
 		if (sent > 0) {

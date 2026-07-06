@@ -56,6 +56,25 @@ class PerfIngestIntegrationTest {
 	}
 
 	@Test
+	void jmhJsonUploadFromGotmpl4jCreatesPerfRun() throws Exception {
+		// Real `jmh -rf json` output from the gotmpl4j benchmark suite (the exact bytes
+		// its CI
+		// uploads). Exercises the JMH path end-to-end: avgt time-per-op, a no-param
+		// benchmark,
+		// and a @Param'd one (TableBenchmark.gotmpl4jRender[n=...]) all in one report.
+		byte[] jmh = getClass().getResourceAsStream("/perf/gotmpl4j-jmh.json").readAllBytes();
+		mockMvc()
+			.perform(multipart("/api/v1/ingest")
+				.file(new MockMultipartFile("perf", "jmh-result.json", "application/json", jmh))
+				.param("project", "gotmpl4j-jmh")
+				.param("branch", "main")
+				.param("commit", "c1"))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.perfRunId").isNumber())
+			.andExpect(jsonPath("$.perfP95Ms").isNumber());
+	}
+
+	@Test
 	void uploadWithoutAnyFileIsRejected() throws Exception {
 		mockMvc().perform(multipart("/api/v1/ingest").param("project", "perf-none"))
 			.andExpect(status().is4xxClientError());

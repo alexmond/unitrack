@@ -182,10 +182,10 @@ class UploadClient {
 		Map<String, String> map = new LinkedHashMap<>();
 		if (headerArgs != null) {
 			for (String header : headerArgs) {
-				int colon = (header != null) ? header.indexOf(':') : -1;
-				if (colon <= 0) {
+				if (header == null || header.indexOf(':') <= 0) {
 					throw new IllegalArgumentException("Invalid --header '" + header + "': expected 'Name: Value'");
 				}
+				int colon = header.indexOf(':');
 				map.put(header.substring(0, colon).trim(), header.substring(colon + 1).trim());
 			}
 		}

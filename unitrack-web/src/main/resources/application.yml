@@ -19,6 +19,13 @@ spring:
       hibernate:
         jdbc:
           time_zone: UTC
+          # Batch the many same-type inserts an ingest emits (test cases, coverage files) into
+          # multi-row JDBC batches — one ingest can persist hundreds of rows, and un-batched that
+          # is a network round-trip each on Postgres. order_inserts groups them by type so the
+          # batch isn't broken up. (#314-class: dev H2 is in-process so this shows on Postgres.)
+          batch_size: 50
+        order_inserts: true
+        order_updates: true
 
   flyway:
     enabled: true
@@ -41,6 +48,15 @@ spring:
       max-request-size: 100MB
 
   ai:
+    # In-app AI failure analysis (#346) via Spring AI's Anthropic ChatClient. **Off by default** —
+    # bring-your-own-key: with no api-key the AiAnalyzer reports disabled and never calls an LLM
+    # (the ChatModel bean is still published with a blank key, which is inert). Cost-controlled:
+    # analysed once per failure signature, cached. Set UNITRACK_AI_API_KEY to enable.
+    anthropic:
+      api-key: ${UNITRACK_AI_API_KEY:}
+      chat:
+        options:
+          model: ${UNITRACK_AI_MODEL:claude-sonnet-4-6}
     mcp:
       server:
         name: unitrack
@@ -74,7 +90,7 @@ management:
     # (health, metrics, prometheus, env stay internal). The chart points probes + the prometheus
     # scrape at this port and exposes only the app port on the Service. Set MANAGEMENT_PORT=8080 to
     # fold it back onto the app port for a simple all-in-one local run.
-    port: ${MANAGEMENT_PORT:9001}
+    port: ${MANAGEMENT_PORT:9090}
   endpoints:
     web:
       exposure:
@@ -100,6 +116,18 @@ info:
     component: unitrack-web
 
 unitrack:
+  # Ingest size guards — hard caps on the DECOMPRESSED bytes of a single uploaded part, so a
+  # pathologically large (or gzip-bombed) report fails fast with a clear message instead of
+  # OOM-ing the process. Reports are still DOM/full-document parsed, so their cap is sized to
+  # the heap; perf logs stream into a bounded histogram, so theirs is a generous backstop. Set
+  # either to 0 to disable.
+  ingest:
+    max-report-bytes: ${UNITRACK_INGEST_MAX_REPORT_BYTES:256MB}
+    max-perf-bytes: ${UNITRACK_INGEST_MAX_PERF_BYTES:1GB}
+    # Async ingest (POST /api/v1/ingest?async=true): bounded worker pool + queue. Once both
+    # are full, a new async upload is rejected with 429. Synchronous ingest is unaffected.
+    async-pool-size: ${UNITRACK_INGEST_ASYNC_POOL_SIZE:2}
+    async-queue-capacity: ${UNITRACK_INGEST_ASYNC_QUEUE_CAPACITY:20}
   notifications:
     enabled: ${UNITRACK_NOTIFICATIONS_ENABLED:false}
     from-address: ${UNITRACK_MAIL_FROM:unitrack@localhost}
@@ -120,6 +148,22 @@ unitrack:
       read-timeout: 10s
       max-attempts: 3      # 1 disables retry
       retry-backoff: 500ms
+  # GitHub integration — post commit statuses + PR comments (disabled by default). Auth is
+  # EITHER a shared PAT (unitrack.github.token, repo:status scope) OR a GitHub App
+  # (unitrack.github.app.*): when an App is configured, UniTrack mints short-lived
+  # per-installation tokens and the PAT is only the fallback (#442).
+  github:
+    enabled: ${UNITRACK_GITHUB_ENABLED:false}
+    token: ${UNITRACK_GITHUB_TOKEN:}
+    api-url: ${UNITRACK_GITHUB_API_URL:https://api.github.com}
+    server-base-url: ${UNITRACK_BASE_URL:http://localhost:8080}
+    app:
+      app-id: ${UNITRACK_GITHUB_APP_ID:}
+      # PKCS#8 PEM. Convert GitHub's PKCS#1 download first:
+      #   openssl pkcs8 -topk8 -nocrypt -in app.private-key.pem -out app.pk8
+      private-key: ${UNITRACK_GITHUB_APP_PRIVATE_KEY:}
+      # Optional — omit to resolve the installation per repo.
+      installation-id: ${UNITRACK_GITHUB_APP_INSTALLATION_ID:}
 
 # To actually deliver mail, configure an SMTP server, e.g.:
 #   spring.mail.host: smtp.example.com

@@ -18,6 +18,19 @@ class JmeterJtlParserTest {
 	}
 
 	@Test
+	void toleratesATruncatedTailFromAnAbortedRun() {
+		// An aborted/killed load test leaves a half-written final row. Streaming
+		// line-parsing
+		// keeps every complete sample and just drops the partial tail (no all-or-nothing
+		// fail).
+		String jtl = "timeStamp,elapsed,label,responseCode,success\n" + "1000,100,GET /a,200,true\n"
+				+ "1100,200,GET /a,200,true\n" + "1200,30"; // <- truncated mid-row
+		PerfResults r = parse(jtl);
+		assertThat(r.sampleCount()).isEqualTo(2);
+		assertThat(r.maxMs()).isEqualTo(200);
+	}
+
+	@Test
 	void detectsJtlAndIgnoresOtherFormats() {
 		assertThat(parser.supports("timeStamp,elapsed,label,success\n")).isTrue();
 		assertThat(parser.supports("{\"metrics\":{}}")).isFalse(); // k6 JSON

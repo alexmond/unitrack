@@ -46,6 +46,13 @@ public class CoverageFileEntry {
 	@Column(name = "branch_missed")
 	private int branchMissed;
 
+	/**
+	 * Explicit build module from the uploader (#393), or null to fall back to package
+	 * derivation.
+	 */
+	@Column(name = "module")
+	private String module;
+
 	public CoverageFileEntry(CoverageReport report, String packageName, String fileName, int lineCovered,
 			int lineMissed, int branchCovered, int branchMissed) {
 		this.report = report;
@@ -55,6 +62,10 @@ public class CoverageFileEntry {
 		this.lineMissed = lineMissed;
 		this.branchCovered = branchCovered;
 		this.branchMissed = branchMissed;
+	}
+
+	public void setModule(String module) {
+		this.module = module;
 	}
 
 	public double getLinePct() {

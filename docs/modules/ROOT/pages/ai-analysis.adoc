@@ -1,0 +1,57 @@
+= AI Root-Cause Analysis
+
+When a failure cluster shares one root cause across several tests, UniTrack can ask an LLM to
+read the failure and suggest *why* it broke and *where* to look -- a starting point for triage,
+not a verdict.
+
+== What it does
+
+On the xref:failure-clustering.adoc[Failure clusters] page, every genuine cluster (one signature
+spanning more than one test) gets an *Analyze with AI* button. Click it and UniTrack sends the
+cluster's exception type, message, normalized signature and the affected test names to the model,
+which returns:
+
+* a one-to-two sentence *root cause*,
+* a concrete *fix direction* (what to change or where to look), and
+* a *confidence* (low / medium / high).
+
+The result renders inline as a card on the cluster. It is *click-to-run* -- nothing is sent to a
+model on a normal page view.
+
+== Cost & privacy
+
+* *Off by default.* Bring your own key: no key configured means no button and no calls (the
+  feature reports itself disabled).
+* *Cached per signature.* A given failure signature is analysed once; repeat clicks reuse the
+  cached answer, so a recurring failure costs one call, not one per view.
+* *Login required.* Only authenticated users can trigger an analysis (LLM calls cost money).
+* *Data leaves your server.* The exception type, message, signature and affected test names are
+  sent to the configured model provider. Don't enable this if those must not leave your network.
+
+== Configuration
+
+UniTrack uses https://docs.spring.io/spring-ai[Spring AI]'s `ChatClient`, so the model is
+configured with Spring AI's own properties. Today the Anthropic provider is wired; set an API key
+to enable it.
+
+[cols="2,1,3"]
+|===
+| Property | Default | Meaning
+
+| `spring.ai.anthropic.api-key` (`UNITRACK_AI_API_KEY`)            | _unset_ | Anthropic API key. Unset ⇒ AI disabled.
+| `spring.ai.anthropic.chat.options.model` (`UNITRACK_AI_MODEL`)   | `claude-sonnet-4-6` | Model used for analysis.
+|===
+
+[source,yaml]
+----
+spring:
+  ai:
+    anthropic:
+      api-key: ${UNITRACK_AI_API_KEY}   # set this to turn the feature on
+      chat:
+        options:
+          model: claude-sonnet-4-6
+----
+
+NOTE: The analyzer degrades gracefully: any API or parsing error just renders an "unavailable"
+card -- a missing key or a provider outage never breaks the page.

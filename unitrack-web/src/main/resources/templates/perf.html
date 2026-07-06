@@ -1,50 +1,123 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout}">
-<head><title th:text="'UniTrack — ' + ${project.name} + ' load tests'">UniTrack</title></head>
+<head><title th:text="'UniTrack — ' + ${page.project.name} + ' load tests'">UniTrack</title></head>
 <body>
 
 <main class="container" layout:fragment="content">
     <p class="crumbs">
         <a th:href="@{/}">Projects</a> /
-        <a th:href="@{/projects/{id}(id=${project.id})}" th:text="${project.name}">project</a> /
+        <a th:href="@{/projects/{id}(id=${page.project.id})}" th:text="${page.project.name}">project</a> /
         <span>Load tests</span>
     </p>
-    <h1 th:text="${project.name} + ' — load tests'">project — load tests</h1>
-    <nav th:replace="~{fragments/common :: subnav(${project.id}, 'load')}"></nav>
+    <h1 th:text="${page.project.name} + ' — load tests'">project — load tests</h1>
+    <nav th:replace="~{fragments/common :: subnav(${page.project.id}, ${page.tab})}"></nav>
+    <!-- Flag scope: each perf flag is its own series; the shared dropdown scopes the whole tab
+         (replaces the old pill bar — the resolved "flag = dropdown" idiom). -->
+    <div th:replace="~{fragments/common :: scopeBar(${page.scope})}"></div>
 
-    <div th:unless="${hasPerf}" class="empty">
-        <i class="bi bi-rocket-takeoff empty-icon" aria-hidden="true"></i>
-        <h3>No load tests yet</h3>
-        <p>Upload a JMeter JTL or k6 JSON summary with an ingest (<code class="mono">--perf results.jtl</code>)
-            to chart latency, throughput and errors.</p>
+    <!-- Empty state: no perf data yet. -->
+    <th:block th:unless="${page.hasRun}">
+        <div th:replace="~{fragments/analytics :: emptyState(${page.empty.icon}, ${page.empty.title}, ${page.empty.message})}"></div>
+    </th:block>
+
+    <th:block th:if="${page.hasRun}">
+        <!-- Shared KPI tiles (p95 +Δ, throughput +Δ, error +Δ, samples). -->
+        <div th:replace="~{fragments/analytics :: kpiRow(${page.kpis})}"></div>
+
+        <!-- Change-point detection (#379): a sustained p95 step on this series, with onset + depth. -->
+        <div th:if="${page.regression != null}" class="gate"
+             style="border-left-color: var(--c-fail); margin-bottom:18px">
+            <strong><i class="bi bi-graph-down-arrow" aria-hidden="true"></i> p95 latency regressed</strong>
+            — since
+            <a th:if="${page.regression.onsetRunId() != null}" th:href="@{/perf-runs/{id}(id=${page.regression.onsetRunId()})}"><code
+                    class="mono" th:text="${page.regression.onsetCommit() != null ? #strings.abbreviate(page.regression.onsetCommit(),9) : '#' + page.regression.onsetRunId()}">abc1234</code></a>
+            <code th:unless="${page.regression.onsetRunId() != null}" class="mono"
+                  th:text="${page.regression.onsetCommit() != null ? #strings.abbreviate(page.regression.onsetCommit(),9) : '—'}">abc1234</code>
+            <span class="muted" th:text="'(' + ${#temporals.format(page.regression.onsetAt(),'MMM dd')} + ')'">(Jun 20)</span>:
+            <span th:text="${#numbers.formatDecimal(page.regression.baselineMedian(),1,0)}">120</span> →
+            <span th:text="${#numbers.formatDecimal(page.regression.recentMedian(),1,0)}">180</span> ms
+            <span class="muted">(+<span th:text="${#numbers.formatDecimal(page.regression.depthZ(),1,1)}">4.2</span>σ vs its own noise)</span>
+        </div>
+
+        <!-- Single-run state: the trends need ≥2 runs, so show a hint instead of one-dot charts (D6). -->
+        <p th:unless="${page.trend.present}" class="muted" style="margin-top:14px">
+            First run — the latency, throughput and error trends appear once there are at least two runs.</p>
+
+        <th:block th:if="${page.trend.present}">
+            <!-- Latency = the shared primary trend (renders #trendChart + #trendModeToggle). -->
+            <div th:replace="~{fragments/analytics :: trend(${page.trend.present}, ${page.trend.title}, ${page.trend.subtitle})}"></div>
+
+            <!-- Throughput + error share the one toggle above (driven by the same trend.js). -->
+            <h2>Throughput <span class="muted">(req/s)</span></h2>
+            <div class="chart-wrap"><canvas id="throughputChart" height="80"></canvas></div>
+
+            <h2>Error rate <span class="muted">(%)</span></h2>
+            <div class="chart-wrap"><canvas id="errorChart" height="70"></canvas></div>
+        </th:block>
+
+        <!-- By transaction (latest run) — the per-label breakdown; Δ p95 vs baseline shows which
+             transaction regressed. Sortable + searchable via the shared roster.js. -->
+        <div class="trend-head" style="margin-top:24px" th:unless="${page.transactions.isEmpty()}">
+            <h2 style="margin:0">By transaction <span class="muted">(latest run)</span></h2>
+            <input type="search" class="form-control form-control-sm" style="max-width:280px"
+                   data-roster-search="txn-body" placeholder="Search transactions…" aria-label="Search transactions">
+        </div>
+        <table class="table table-hover align-middle sortable" th:unless="${page.transactions.isEmpty()}">
+            <thead>
+            <tr><th>Transaction</th><th class="num">Samples</th><th class="num">p50</th><th class="num">p95</th>
+                <th class="num">Δ p95</th><th class="num">Errors</th></tr>
+            </thead>
+            <tbody id="txn-body">
+            <tr th:each="t : ${page.transactions}" th:attr="data-search=${#strings.toLowerCase(t.label())}">
+                <td><a th:href="@{/projects/{id}/perf/transaction(id=${page.project.id},label=${t.label()},flag=${page.selectedFlag})}"><code
+                        class="mono" th:text="${t.label()}">GET /</code></a></td>
+                <td class="num" th:attr="data-sort=${t.sampleCount()}" th:text="${t.sampleCount()}">0</td>
+                <td class="num" th:attr="data-sort=${t.p50Ms()}" th:text="${#numbers.formatDecimal(t.p50Ms(),1,0)} + ' ms'">0 ms</td>
+                <td class="num" th:attr="data-sort=${t.p95Ms()}" th:text="${#numbers.formatDecimal(t.p95Ms(),1,0)} + ' ms'">0 ms</td>
+                <td class="num" th:attr="data-sort=${t.p95DeltaPct()}">
+                    <span th:if="${t.p95DeltaPct() == null}" class="muted">new</span>
+                    <span th:unless="${t.p95DeltaPct() == null}" class="delta"
+                          th:classappend="${t.p95DeltaPct() > 0.5} ? 'down' : (${t.p95DeltaPct() < -0.5} ? 'up' : 'flat')"
+                          th:text="(${t.p95DeltaPct() >= 0} ? '+' : '') + ${#numbers.formatDecimal(t.p95DeltaPct(),1,1)} + '%'">+0%</span>
+                </td>
+                <td class="num" th:attr="data-sort=${t.errorPct()}">
+                    <span class="badge" th:classappend="${t.errorPct() > 0} ? 'fail' : 'pass'"
+                          th:text="${#numbers.formatDecimal(t.errorPct(),1,2)} + '%'">0%</span>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+        <p class="muted" data-roster-empty="txn-body" style="display:none">No transactions match your search.</p>
+
+    <!-- Recent perf runs — sortable + searchable via the shared roster.js. Inside the hasRun
+         guard so it can't render alongside the empty state (perfRuns is a separate query). -->
+    <div class="trend-head" style="margin-top:24px" th:unless="${page.perfRuns.isEmpty()}">
+        <h2 style="margin:0">Recent perf runs</h2>
+        <input type="search" class="form-control form-control-sm" style="max-width:280px"
+               data-roster-search="perf-body" placeholder="Search commit / flag…" aria-label="Search perf runs">
     </div>
-
-    <div th:if="${hasPerf}">
-        <h2>Latency <span class="muted">(p50 / p90 / p99, ms)</span></h2>
-        <div class="chart-wrap"><canvas id="latencyChart" height="90"></canvas></div>
-
-        <h2>Throughput <span class="muted">(req/s)</span></h2>
-        <div class="chart-wrap"><canvas id="throughputChart" height="80"></canvas></div>
-
-        <h2>Error rate <span class="muted">(%)</span></h2>
-        <div class="chart-wrap"><canvas id="errorChart" height="70"></canvas></div>
-    </div>
-
-    <h2>Recent perf runs</h2>
-    <table class="table table-hover align-middle" th:unless="${perfRuns.isEmpty()}">
+    <table class="table table-hover align-middle sortable" th:unless="${page.perfRuns.isEmpty()}">
         <thead>
-        <tr><th>When</th><th>Commit</th><th>Format</th><th class="num">Samples</th><th class="num">p95</th>
-            <th class="num">Throughput</th><th class="num">Errors</th><th></th><th></th></tr>
+        <tr><th>When</th><th>Flag</th><th>Commit</th><th>Format</th><th class="num">Samples</th><th class="num">p95</th>
+            <th class="num">Throughput</th><th class="num">Errors</th><th></th></tr>
         </thead>
-        <tbody>
-        <tr th:each="r : ${perfRuns}">
+        <tbody id="perf-body">
+        <tr th:each="r : ${page.perfRuns}"
+            th:attr="data-search=${#strings.toLowerCase((r.commitSha != null ? r.commitSha : '') + ' ' + r.flag)}">
             <td class="muted" th:text="${#temporals.format(r.createdAt, 'MMM dd HH:mm')}">when</td>
-            <td><code class="mono" th:text="${r.commitSha != null ? #strings.abbreviate(r.commitSha,9) : '—'}">sha</code></td>
+            <td><code class="mono" th:text="${r.flag}">default</code></td>
+            <td>
+                <a th:if="${page.repoCommitBase != null and r.commitSha != null}"
+                   th:href="${page.repoCommitBase + r.commitSha}" target="_blank" rel="noopener"><code class="mono"
+                        th:text="${#strings.abbreviate(r.commitSha,9)}">sha</code></a>
+                <code th:unless="${page.repoCommitBase != null and r.commitSha != null}" class="mono"
+                      th:text="${r.commitSha != null ? #strings.abbreviate(r.commitSha,9) : '—'}">sha</code>
+            </td>
             <td class="muted" th:text="${r.format}">jmeter</td>
-            <td class="num" th:text="${r.sampleCount}">0</td>
-            <td class="num" th:text="${#numbers.formatDecimal(r.p95Ms,1,0)} + ' ms'">0 ms</td>
-            <td class="num" th:text="${#numbers.formatDecimal(r.throughputRps,1,1)} + ' rps'">0 rps</td>
-            <td class="num">
+            <td class="num" th:attr="data-sort=${r.sampleCount}" th:text="${r.sampleCount}">0</td>
+            <td class="num" th:attr="data-sort=${r.p95Ms}" th:text="${#numbers.formatDecimal(r.p95Ms,1,0)} + ' ms'">0 ms</td>
+            <td class="num" th:attr="data-sort=${r.throughputRps}" th:text="${#numbers.formatDecimal(r.throughputRps,1,1)} + ' rps'">0 rps</td>
+            <td class="num" th:attr="data-sort=${r.errorPct}">
                 <span class="badge" th:classappend="${r.ok} ? 'pass' : 'fail'"
                       th:text="${#numbers.formatDecimal(r.errorPct,1,2)} + '%'">0%</span>
             </td>
@@ -52,48 +125,22 @@
         </tr>
         </tbody>
     </table>
+    <p class="muted" data-roster-empty="perf-body" style="display:none">No perf runs match your search.</p>
+    </th:block>
 </main>
 <th:block layout:fragment="scripts">
 
-<script th:src="@{/webjars/chart.js/4.4.1/dist/chart.umd.js}"></script>
-<script th:inline="javascript">
-    const labels = JSON.parse(/*[[${trendLabels}]]*/ '[]');
-    const p50 = JSON.parse(/*[[${trendP50}]]*/ '[]');
-    const p90 = JSON.parse(/*[[${trendP90}]]*/ '[]');
-    const p99 = JSON.parse(/*[[${trendP99}]]*/ '[]');
-    const throughput = JSON.parse(/*[[${trendThroughput}]]*/ '[]');
-    const errorPct = JSON.parse(/*[[${trendError}]]*/ '[]');
-    if (labels.length > 0 && window.Chart) {
-        const css = getComputedStyle(document.documentElement);
-        const muted = css.getPropertyValue('--muted').trim() || '#8b98a5';
-        const text = css.getPropertyValue('--text').trim() || '#e6edf3';
-        const grid = css.getPropertyValue('--border').trim() || '#2c343d';
-        const axes = { y: { beginAtZero: true, ticks: { color: muted }, grid: { color: grid } },
-                       x: { ticks: { color: muted }, grid: { color: grid } } };
-        const legend = { plugins: { legend: { labels: { color: text } } } };
-        window.__chart(document.getElementById('latencyChart'), {
-            type: 'line',
-            data: { labels: labels, datasets: [
-                { label: 'p50', data: p50, borderColor: '#2ea043', tension: .25, spanGaps: true },
-                { label: 'p90', data: p90, borderColor: '#d29922', tension: .25, spanGaps: true },
-                { label: 'p99', data: p99, borderColor: '#f85149', tension: .25, spanGaps: true } ] },
-            options: { scales: axes, ...legend }
-        });
-        window.__chart(document.getElementById('throughputChart'), {
-            type: 'line',
-            data: { labels: labels, datasets: [
-                { label: 'req/s', data: throughput, borderColor: '#4493f8',
-                  backgroundColor: 'rgba(68,147,248,.12)', tension: .25, spanGaps: true } ] },
-            options: { scales: axes, ...legend }
-        });
-        window.__chart(document.getElementById('errorChart'), {
-            type: 'line',
-            data: { labels: labels, datasets: [
-                { label: 'error %', data: errorPct, borderColor: '#f85149',
-                  backgroundColor: 'rgba(248,81,73,.12)', tension: .25, spanGaps: true } ] },
-            options: { scales: axes, ...legend }
-        });
-    }
+<!-- Shared table behaviour: sortable columns, run search. -->
+<script th:src="@{/js/roster.js}"></script>
+<script th:src="@{/js/scope.js}"></script>
+
+<!-- Three charts, one shared time/run toggle, all via the shared trend.js. Points → perf-run detail. -->
+<script th:if="${page.trend.present}" th:src="@{/webjars/chart.js/4.4.1/dist/chart.umd.js}"></script>
+<script th:if="${page.trend.present}" th:src="@{/js/trend.js}"></script>
+<script th:if="${page.trend.present}" th:inline="javascript">
+    window.__trendChart('trendChart', 'trendModeToggle', JSON.parse(/*[[${page.trend.configJson}]]*/ '{}'));
+    window.__trendChart('throughputChart', 'trendModeToggle', JSON.parse(/*[[${page.throughputTrend.configJson}]]*/ '{}'));
+    window.__trendChart('errorChart', 'trendModeToggle', JSON.parse(/*[[${page.errorTrend.configJson}]]*/ '{}'));
 </script>
 </th:block>
 </body>

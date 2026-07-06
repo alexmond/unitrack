@@ -36,6 +36,12 @@ import java.util.function.Function;
 @RequiredArgsConstructor
 public class ReportingService {
 
+	/**
+	 * Package-segment separator (dot or slash), compiled once — {@code splitPackage} is
+	 * per-case.
+	 */
+	private static final java.util.regex.Pattern PKG_SEPARATOR = java.util.regex.Pattern.compile("[./]+");
+
 	private final ProjectRepository projects;
 
 	private final TestRunRepository runs;
@@ -49,6 +55,8 @@ public class ReportingService {
 	private final CoverageFileEntryRepository coverageFiles;
 
 	private final org.alexmond.unitrack.repository.PerfRunRepository perfRuns;
+
+	private final org.alexmond.unitrack.repository.PerfTransactionRepository perfTransactions;
 
 	public List<Project> listProjects() {
 		return projects.findAllByOrderByNameAsc();
@@ -131,9 +139,74 @@ public class ReportingService {
 		return runs.findById(id);
 	}
 
+	/**
+	 * Id of the run just before/after this one in its project+branch+flag series, or
+	 * null.
+	 */
+	public Long previousRunId(TestRun run) {
+		return runs
+			.findPrevious(run.getProject().getId(), run.getBranch(), run.getFlag(), run.getCreatedAt(),
+					PageRequest.ofSize(1))
+			.stream()
+			.findFirst()
+			.map(TestRun::getId)
+			.orElse(null);
+	}
+
+	public Long nextRunId(TestRun run) {
+		return runs
+			.findNext(run.getProject().getId(), run.getBranch(), run.getFlag(), run.getCreatedAt(),
+					PageRequest.ofSize(1))
+			.stream()
+			.findFirst()
+			.map(TestRun::getId)
+			.orElse(null);
+	}
+
+	public Long previousPerfRunId(org.alexmond.unitrack.domain.PerfRun run) {
+		return perfRuns
+			.findPrevious(run.getProject().getId(), run.getBranch(), run.getFlag(), run.getCreatedAt(),
+					PageRequest.ofSize(1))
+			.stream()
+			.findFirst()
+			.map(org.alexmond.unitrack.domain.PerfRun::getId)
+			.orElse(null);
+	}
+
+	public Long nextPerfRunId(org.alexmond.unitrack.domain.PerfRun run) {
+		return perfRuns
+			.findNext(run.getProject().getId(), run.getBranch(), run.getFlag(), run.getCreatedAt(),
+					PageRequest.ofSize(1))
+			.stream()
+			.findFirst()
+			.map(org.alexmond.unitrack.domain.PerfRun::getId)
+			.orElse(null);
+	}
+
 	/** Recent perf runs (newest first) for a project. */
 	public List<org.alexmond.unitrack.domain.PerfRun> recentPerfRuns(Long projectId, int limit) {
 		return perfRuns.findByProjectIdOrderByCreatedAtDesc(projectId, PageRequest.ofSize(limit));
+	}
+
+	/** Recent perf runs (newest first), optionally scoped to one flag (series). */
+	public List<org.alexmond.unitrack.domain.PerfRun> recentPerfRuns(Long projectId, String flag, int limit) {
+		PageRequest page = PageRequest.ofSize(limit);
+		return (flag == null || flag.isBlank()) ? perfRuns.findByProjectIdOrderByCreatedAtDesc(projectId, page)
+				: perfRuns.findByProjectIdAndFlagOrderByCreatedAtDesc(projectId, flag, page);
+	}
+
+	/** Distinct perf flags (series) for a project — for the perf flag filter. */
+	public List<String> perfFlags(Long projectId) {
+		return perfRuns.findDistinctFlagsByProjectId(projectId);
+	}
+
+	/**
+	 * One transaction's history (oldest run first) for a project + flag — powers the
+	 * per-transaction detail page's latency-over-runs trend.
+	 */
+	public List<org.alexmond.unitrack.domain.PerfTransaction> perfTransactionSeries(Long projectId, String label,
+			String flag) {
+		return perfTransactions.findSeries(projectId, label, flag);
 	}
 
 	public Optional<org.alexmond.unitrack.domain.PerfRun> findPerfRun(Long id) {
@@ -195,8 +268,166 @@ public class ReportingService {
 				List.of(TestStatus.FAILED, TestStatus.ERROR));
 	}
 
+	/**
+	 * Distinct flags (series) a project has test runs for — for the Tests-page flag
+	 * filter.
+	 */
+	public List<String> testFlags(Long projectId) {
+		return runs.findDistinctFlags(projectId);
+	}
+
+	/**
+	 * Distinct branch names (alphabetical) a project has runs for — for the analytics
+	 * scope dropdown. One query, unlike {@link BranchService#list} which also computes
+	 * each branch's latest-run status/coverage/count (a per-branch N+1); use that only
+	 * when the summary columns are actually shown (the Overview branches list).
+	 */
+	public List<String> branchNames(Long projectId) {
+		return runs.findDistinctBranches(projectId);
+	}
+
+	/**
+	 * Per-module test totals for a run, for the Tests page. The module is the explicit
+	 * one the uploader sent (#393) when present; otherwise — since Surefire/JUnit XML
+	 * carries no module — it's derived from each test's package exactly as
+	 * {@link #moduleCoverage} derives coverage modules (segment after the longest common
+	 * package prefix), so the two breakdowns line up. Returns empty for a single-module
+	 * project so the caller can hide the section.
+	 */
+	public List<TestModuleRow> testModules(Long runId) {
+		List<TestCaseResult> all = cases.findByRunIdOrderByStatusAscClassNameAscNameAsc(runId);
+		if (all.isEmpty()) {
+			return List.of();
+		}
+		List<String> modules = moduleOfEach(all);
+		Map<String, int[]> byModule = new TreeMap<>();
+		for (int i = 0; i < all.size(); i++) {
+			int[] a = byModule.computeIfAbsent(modules.get(i), (k) -> new int[3]);
+			a[0]++;
+			TestStatus st = all.get(i).getStatus();
+			if (st == TestStatus.PASSED) {
+				a[1]++;
+			}
+			else if (st == TestStatus.SKIPPED) {
+				a[2]++;
+			}
+		}
+		if (byModule.size() <= 1) {
+			return List.of();
+		}
+		return byModule.entrySet()
+			.stream()
+			.map((e) -> new TestModuleRow(e.getKey(), e.getValue()[0], e.getValue()[1],
+					e.getValue()[0] - e.getValue()[1] - e.getValue()[2], e.getValue()[2]))
+			.toList();
+	}
+
+	/**
+	 * Per-module suite-time totals for a run, for the Test timing page. Same module
+	 * resolution as {@link #testModules} (the explicit module the uploader tagged); empty
+	 * for a single-module project so the caller can hide the section.
+	 */
+	public List<TestModuleTiming> testModuleTiming(Long runId) {
+		List<TestCaseResult> all = cases.findByRunIdOrderByStatusAscClassNameAscNameAsc(runId);
+		if (all.isEmpty()) {
+			return List.of();
+		}
+		List<String> modules = moduleOfEach(all);
+		Map<String, long[]> byModule = new TreeMap<>();
+		for (int i = 0; i < all.size(); i++) {
+			long[] a = byModule.computeIfAbsent(modules.get(i), (k) -> new long[2]);
+			a[0]++;
+			a[1] += all.get(i).getDurationMs();
+		}
+		if (byModule.size() <= 1) {
+			return List.of();
+		}
+		return byModule.entrySet()
+			.stream()
+			.map((e) -> new TestModuleTiming(e.getKey(), (int) e.getValue()[0], e.getValue()[1]))
+			.toList();
+	}
+
+	/**
+	 * The module of each test case, in order — the explicit module the uploader tagged on
+	 * the result (#393/#423), or {@code (none)} when untagged. Modules come from tags,
+	 * not from guessing the package tree: a run with no tagged modules collapses to a
+	 * single {@code (none)} group, so {@link #testModules} suppresses the by-module
+	 * breakdown. (Test results carry an explicit module; coverage — which has no per-test
+	 * module — still derives modules from the package tree in {@link #moduleCoverage}.)
+	 */
+	private static List<String> moduleOfEach(List<TestCaseResult> cases) {
+		return cases.stream()
+			.map((c) -> (c.getModule() != null && !c.getModule().isBlank()) ? c.getModule() : "(none)")
+			.toList();
+	}
+
 	public List<TestCaseResult> allCasesFor(Long runId) {
 		return cases.findByRunIdOrderByStatusAscClassNameAscNameAsc(runId);
+	}
+
+	/**
+	 * The module label of each case in {@code cases} (explicit uploader module, else
+	 * package-derived) in input order — exposed for module-scoped Tests views so a caller
+	 * can filter the roster and KPI tiles to one module without re-deriving the prefix.
+	 */
+	public List<String> moduleOf(List<TestCaseResult> cases) {
+		return moduleOfEach(cases);
+	}
+
+	/**
+	 * Per-run {@code [passed, failed+errors]} counts for a single module across the given
+	 * runs (kept in input order), so clicking a "Tests by module" row can scope the whole
+	 * Tests page — the trend graph included. Module resolution matches
+	 * {@link #testModules}. NB: this loads each run's cases (one query per run); fine for
+	 * the on-demand module-scoped view, but a SQL aggregate would scale better on large
+	 * histories.
+	 */
+	public List<int[]> testModuleTrend(List<Long> runIds, String module) {
+		List<int[]> out = new ArrayList<>(runIds.size());
+		for (Long runId : runIds) {
+			List<TestCaseResult> all = cases.findByRunIdOrderByStatusAscClassNameAscNameAsc(runId);
+			List<String> mods = moduleOfEach(all);
+			int passed = 0;
+			int failed = 0;
+			for (int i = 0; i < all.size(); i++) {
+				if (!module.equals(mods.get(i))) {
+					continue;
+				}
+				TestStatus st = all.get(i).getStatus();
+				if (st == TestStatus.PASSED) {
+					passed++;
+				}
+				else if (st == TestStatus.FAILED || st == TestStatus.ERROR) {
+					failed++;
+				}
+			}
+			out.add(new int[] { passed, failed });
+		}
+		return out;
+	}
+
+	/**
+	 * Per-run {@code [sumDurationMs, testCount]} for one module across the given runs —
+	 * the module-scoped Test-timing trend (suite time and how many tests produced it).
+	 */
+	public List<long[]> moduleTimingTrend(List<Long> runIds, String module) {
+		List<long[]> out = new ArrayList<>(runIds.size());
+		for (Long runId : runIds) {
+			List<TestCaseResult> all = cases.findByRunIdOrderByStatusAscClassNameAscNameAsc(runId);
+			List<String> mods = moduleOfEach(all);
+			long sumMs = 0;
+			long count = 0;
+			for (int i = 0; i < all.size(); i++) {
+				if (!module.equals(mods.get(i))) {
+					continue;
+				}
+				sumMs += all.get(i).getDurationMs();
+				count++;
+			}
+			out.add(new long[] { sumMs, count });
+		}
+		return out;
 	}
 
 	public Optional<CoverageReport> coverageFor(Long runId) {
@@ -217,14 +448,44 @@ public class ReportingService {
 		if (module == null || module.isBlank()) {
 			return coverageFiles(reportId, limit);
 		}
+		if (coverageFiles.existsByReportIdAndModuleIsNotNull(reportId)) {
+			List<CoverageFileEntry> inModule = coverageFiles.findByReportIdAndStoredModule(reportId, storedKey(module));
+			return (inModule.size() > limit) ? inModule.subList(0, limit) : inModule;
+		}
 		List<CoverageFileEntry> inModule = filterByModule(
 				coverageFiles.findByReportIdOrderByLineMissedDescPackageNameAsc(reportId), module,
 				CoverageFileEntry::getPackageName);
 		return (inModule.size() > limit) ? inModule.subList(0, limit) : inModule;
 	}
 
+	/** Display label for an explicit module: {@code (none)} for untagged files. */
+	private static String moduleLabel(String module) {
+		return (module == null || module.isBlank()) ? "(none)" : module;
+	}
+
+	/**
+	 * Inverse of {@link #moduleLabel}: the {@code (none)} label maps back to a null
+	 * module.
+	 */
+	private static String storedKey(String moduleLabel) {
+		return "(none)".equals(moduleLabel) ? null : moduleLabel;
+	}
+
 	/** Per-package coverage within one module (null/blank = all packages). */
 	public List<CoveragePackage> coveragePackages(Long reportId, String module) {
+		if (module != null && !module.isBlank() && coverageFiles.existsByReportIdAndModuleIsNotNull(reportId)) {
+			Map<String, long[]> byPackage = new TreeMap<>();
+			for (PackageCoverage p : coverageFiles.aggregateByPackageForModule(reportId, storedKey(module))) {
+				String pkg = (p.getPackageName() == null || p.getPackageName().isBlank()) ? "(default)"
+						: p.getPackageName();
+				byPackage.merge(pkg, sums(p), ReportingService::addSums);
+			}
+			return byPackage.entrySet()
+				.stream()
+				.map((e) -> new CoveragePackage(e.getKey(), (int) e.getValue()[0], (int) e.getValue()[1],
+						(int) e.getValue()[2], (int) e.getValue()[3]))
+				.toList();
+		}
 		return filterByModule(coveragePackages(reportId), module, CoveragePackage::packageName);
 	}
 
@@ -275,13 +536,23 @@ public class ReportingService {
 	}
 
 	/**
-	 * Per-module line/branch totals for a coverage report. A multi-module project is
-	 * uploaded flat (no module concept), so the module is derived from the package tree:
-	 * the segment that follows the longest package prefix common to every package (e.g.
-	 * {@code …builder/<module>/…}). Returns at most one entry for a single-module
-	 * project, so callers can hide the view. Aggregated per package in SQL, not per file.
+	 * Per-module line/branch totals for a coverage report. When the uploader attached
+	 * explicit modules (#393) those are used directly; otherwise — for a flat
+	 * multi-module upload with no module concept — the module is derived from the package
+	 * tree (the segment that follows the longest package prefix common to every package,
+	 * e.g. {@code …builder/<module>/…}). Returns at most one entry for a single-module
+	 * project, so callers can hide the view. Aggregated in SQL, not per file.
 	 */
 	public List<ModuleCoverage> moduleCoverage(Long reportId) {
+		if (coverageFiles.existsByReportIdAndModuleIsNotNull(reportId)) {
+			return coverageFiles.aggregateByModule(reportId)
+				.stream()
+				.map((m) -> new ModuleCoverage(moduleLabel(m.getModule()), (int) m.getLineCovered(),
+						(int) m.getLineMissed(), (int) m.getBranchCovered(), (int) m.getBranchMissed(),
+						(int) m.getFiles()))
+				.sorted(Comparator.comparing(ModuleCoverage::name))
+				.toList();
+		}
 		List<PackageCoverage> packages = coverageFiles.aggregateByPackage(reportId);
 		if (packages.isEmpty()) {
 			return List.of();
@@ -319,7 +590,7 @@ public class ReportingService {
 	}
 
 	private static String[] splitPackage(String pkg) {
-		return (pkg == null || pkg.isBlank()) ? new String[0] : pkg.split("[./]+");
+		return (pkg == null || pkg.isBlank()) ? new String[0] : PKG_SEPARATOR.split(pkg);
 	}
 
 	/** The number of leading package segments shared by every file. */

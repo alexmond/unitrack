@@ -1,0 +1,22 @@
+name: CI
+on:
+  - push
+  - manual
+push:
+  branches:
+    - main
+checkout: true
+jobs:
+  build:
+    image: eclipse-temurin:21-jdk
+    timeout: 30m
+    cache:
+      key: m2-unitrack
+      paths:
+        - .m2/repository
+    artifacts:
+      - unitrack-*/target/surefire-reports/*.xml
+      - unitrack-*/target/site/jacoco/jacoco.xml
+    steps:
+      - name: build-and-test
+        run: ./mvnw -B verify -Dmaven.repo.local=.m2/repository

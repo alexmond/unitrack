@@ -1,6 +1,7 @@
 package org.alexmond.unitrack.ingest;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -35,7 +36,7 @@ public class CoverageParsers {
 		try {
 			content = in.readAllBytes();
 		}
-		catch (Exception ex) {
+		catch (IOException ex) {
 			throw new IngestException("Failed reading coverage upload: " + ex.getMessage(), ex);
 		}
 		int sampleLen = Math.min(content.length, HEAD_SAMPLE_BYTES);
@@ -49,7 +50,8 @@ public class CoverageParsers {
 			}
 		}
 		if (fallback == null) {
-			throw new IngestException("Unrecognized coverage format (expected JaCoCo, Cobertura, LCOV, or OpenCover)");
+			throw new IngestException(
+					"Unrecognized coverage format (expected JaCoCo, Cobertura, LCOV, OpenCover, or Go cover)");
 		}
 
 		Supplier<edu.hm.hafner.coverage.CoverageParser> model = coverageModelParser(fallback.format());
@@ -70,7 +72,7 @@ public class CoverageParsers {
 	 * parser. JaCoCo + Cobertura are validated faithful (line/branch match). LCOV stays
 	 * hand-rolled — coverage-model under-counts LCOV branch coverage; OpenCover stays
 	 * hand-rolled — its coverage-model parser requires {@code cyclomaticComplexity} that
-	 * some producers omit. Both are tracked for follow-up in #339.
+	 * some producers omit; Go cover has no coverage-model parser. Tracked in #339.
 	 */
 	private static Supplier<edu.hm.hafner.coverage.CoverageParser> coverageModelParser(String format) {
 		return switch (format) {

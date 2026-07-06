@@ -7,7 +7,7 @@
     <parent>
         <groupId>org.alexmond</groupId>
         <artifactId>unitrack-parent</artifactId>
-        <version>0.2.0-SNAPSHOT</version>
+        <version>0.5.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>unitrack-it</artifactId>
@@ -17,6 +17,15 @@
         sweeps) that run against any environment selected by a Spring config profile. Replaces
         ad-hoc shell scripts; not published to Maven Central.
     </description>
+
+    <!-- Server-only test scaffolding -> AGPL-3.0 (overrides the parent's Apache; see root LICENSE). -->
+    <licenses>
+        <license>
+            <name>GNU Affero General Public License v3.0 only</name>
+            <url>https://www.gnu.org/licenses/agpl-3.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
 
     <properties>
         <!-- Task tests are tagged "it" and excluded by default, so a normal `verify` only compiles

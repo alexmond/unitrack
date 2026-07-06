@@ -6,6 +6,7 @@ import org.alexmond.unitrack.domain.Project;
 import org.alexmond.unitrack.domain.TestRun;
 import org.alexmond.unitrack.report.ReportingService;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -89,6 +90,65 @@ public class ProjectAccessService {
 		Project project = reporting.findProject(projectId).orElseThrow(this::notFound);
 		requireWrite(project);
 		return project;
+	}
+
+	// --- UI variants (browser pages) ---
+	// A browser visitor who isn't logged in is sent to the login page (they may gain
+	// access once
+	// identified) instead of a dead 404; an authenticated-but-unauthorized user, or a
+	// missing
+	// project, still gets 404 so a private project's existence isn't leaked to a known
+	// user. The
+	// plain require*Read methods above stay 404 for API/MCP callers (probe-resistance,
+	// non-HTML
+	// clients), and share/badge keep their own handling.
+
+	/**
+	 * Loads + read-checks a project for a browser page (existing-but-unreadable: anon →
+	 * login).
+	 */
+	public Project requireReadProjectUi(Long projectId) {
+		Project project = reporting.findProject(projectId).orElseThrow(this::notFound);
+		return readableForUi(project);
+	}
+
+	/**
+	 * Loads + read-checks a test run for a browser page (existing-but-unreadable: anon →
+	 * login).
+	 */
+	public TestRun requireReadRunUi(Long runId) {
+		TestRun run = reporting.findRun(runId).orElseThrow(this::notFound);
+		readableForUi(run.getProject());
+		return run;
+	}
+
+	/**
+	 * Loads + read-checks a perf run for a browser page (existing-but-unreadable: anon →
+	 * login).
+	 */
+	public PerfRun requireReadPerfRunUi(Long perfRunId) {
+		PerfRun run = reporting.findPerfRun(perfRunId).orElseThrow(this::notFound);
+		readableForUi(run.getProject());
+		return run;
+	}
+
+	/**
+	 * For a project that exists but the caller can't read: an anonymous visitor gets an
+	 * {@link AccessDeniedException}, which the security entry point turns into a login
+	 * redirect (they may gain access once identified) rather than a dead 404; an
+	 * authenticated-but-unauthorized user gets 404, so a private project's existence
+	 * isn't revealed to an identified user. (A missing project is a plain 404 for
+	 * everyone via the callers; the trade-off is that an anonymous prober can still tell
+	 * an existing-private id — login — from an unused one — 404.)
+	 */
+	private Project readableForUi(Project project) {
+		if (membership.canRead(currentUsername(), project)) {
+			return project;
+		}
+		if (currentUsername() == null) {
+			throw new AccessDeniedException("Authentication required to view this resource");
+		}
+		throw notFound();
 	}
 
 	private ResponseStatusException notFound() {

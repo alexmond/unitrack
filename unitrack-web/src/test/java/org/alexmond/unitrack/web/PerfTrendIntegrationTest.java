@@ -10,6 +10,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -56,11 +57,17 @@ class PerfTrendIntegrationTest {
 			.andExpect(jsonPath("$[0].p95Ms").value(300.0))
 			.andExpect(jsonPath("$[0].errorPct").exists());
 
-		// Dashboard page renders with the chart canvases.
+		// Dashboard page renders with the chart canvases (shared latency #trendChart +
+		// the
+		// Load-specific throughput/error canvases).
 		mvc.perform(get("/projects/{id}/perf", projectId))
 			.andExpect(status().isOk())
 			.andExpect(content().string(containsString("load tests")))
-			.andExpect(content().string(containsString("latencyChart")));
+			.andExpect(content().string(containsString("trendChart")))
+			.andExpect(content().string(containsString("throughputChart")))
+			// With runs present the empty state must NOT render (th:replace/th:unless
+			// precedence trap).
+			.andExpect(content().string(not(containsString("No load tests yet"))));
 	}
 
 	@Test

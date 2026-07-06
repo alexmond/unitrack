@@ -185,6 +185,15 @@ a:hover { text-decoration: underline; }
     font-weight: 600;
 }
 .subnav a:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+/* Module filter: the selected module reads as clearly blue (the faint default
+   .current panel highlight is hard to see, esp. in dark theme). Matches the blue
+   selected-state used for branches and segmented controls. */
+.subnav.module-filter a.current {
+    background: var(--blue);
+    border-color: var(--blue);
+    color: #fff;
+}
+.subnav.module-filter a.current:hover { background: var(--blue); color: #fff; }
 .subnav .subnav-sep {
     align-self: stretch;
     width: 1px;
@@ -213,9 +222,31 @@ h2 { font-size: 17px; margin: 28px 0 12px; }
 .crumbs { color: var(--muted); font-size: 13px; margin-bottom: 18px; }
 
 .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+/* A card is a panel — same chrome (bg/border/radius) as the .stat KPI tiles and the
+   .verdict-band, so boxed UI coheres across every page. */
+.card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
 .card h3 { margin: 0 0 6px; font-size: 16px; }
 .card .meta { color: var(--muted); font-size: 13px; }
 .card:hover { border-color: var(--muted); }
+
+/* Project Overview: the aspect cards (one signal per tab) + the health verdict band.
+   Typography tracks the .stat KPI tiles (24px value) so the strip reads as first-class,
+   not bolted on. */
+.aspect-card { display: block; text-decoration: none; color: var(--text); }
+.aspect-card:hover { text-decoration: none; }
+.aspect-card .ac-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.aspect-card h3 { display: flex; align-items: center; gap: 7px; margin: 0; font-size: 15px; }
+.aspect-card .value { font-size: 24px; font-weight: 700; margin: 8px 0 2px; }
+.aspect-card .value.lvl-good { color: var(--green); }
+.aspect-card .value.lvl-warn { color: var(--amber); }
+.aspect-card .value.lvl-bad { color: var(--red); }
+.aspect-card .go { display: flex; align-items: center; gap: 5px; margin-top: 10px; color: var(--muted); font-size: 13px; }
+.verdict-band {
+    display: flex; gap: 22px; align-items: center; flex-wrap: wrap; margin: 16px 0 4px;
+    padding: 18px; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+}
+.verdict-word { font-size: 22px; font-weight: 800; }
+.verdict-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
 
 .stat-row { display: flex; gap: 14px; flex-wrap: wrap; margin: 14px 0 6px; }
 .stat {
@@ -227,6 +258,13 @@ h2 { font-size: 17px; margin: 28px 0 12px; }
 }
 .stat .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
 .stat .value { font-size: 24px; font-weight: 700; margin-top: 4px; }
+/* Optional change-vs-previous line under a KPI value. */
+.stat .delta { font-size: 12px; font-weight: 600; margin-top: 3px; }
+/* Direction colours are general (KPI tiles, roster Δ cells, breakdown Δ cells) so a delta
+   reads the same wherever it appears — not only inside a .stat tile. */
+.delta.up { color: var(--green); }
+.delta.down { color: var(--red); }
+.delta.flat { color: var(--muted); }
 
 /* Bootstrap .table provides bg/borders/hover (themed via the --bs-table-* bridge above);
    these add UniTrack's polish: a panel surface, uppercase muted headers, right-aligned numbers. */
@@ -235,6 +273,12 @@ h2 { font-size: 17px; margin: 28px 0 12px; }
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 /* numeric data cells in monospace for column alignment (headers stay in the label font) */
 td.num { font-family: var(--font-mono); font-size: var(--fs-sm); }
+
+/* Sortable tables: headers are clickable; the active column shows a direction caret. */
+.table.sortable thead tr th { cursor: pointer; user-select: none; }
+.table.sortable thead tr th:hover { color: var(--text); }
+.table.sortable thead tr th[aria-sort="ascending"]::after { content: " \2191"; }
+.table.sortable thead tr th[aria-sort="descending"]::after { content: " \2193"; }
 
 /* Tinted chip with a hue-matched border (color-mix derives the tint per theme, so light
    mode reads correctly too — replaces the hard-coded rgba fills). */
@@ -369,6 +413,15 @@ details.failure pre {
 /* Inline mono (flags, SHAs) — use the theme text colour, not the dark code-block colour
    (Bootstrap's --bs-code-color maps to --code-text, which is near-invisible on the light page). */
 code.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; color: var(--text); }
+/* A mono identifier inside a link should read as a link (blue), not body text — otherwise
+   e.g. the "Coverage by module" names look unclickable next to the blue branch links. */
+a code.mono { color: var(--blue); }
+a:hover code.mono { text-decoration: underline; }
+/* A table row that is itself selectable (filters/drills on click) reads as a link:
+   its name is blue and underlines on hover, like an anchored name. */
+tr.mod-row { cursor: pointer; }
+tr.mod-row code.mono { color: var(--blue); }
+tr.mod-row:hover code.mono { text-decoration: underline; }
 
 .gate {
     border: 1px solid var(--border);
@@ -450,3 +503,15 @@ details.output pre {
 .donut-pct { font-size: 23px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text); line-height: 1; }
 .donut-pct.lvl-bad { color: var(--red); }
 .donut-sub { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-top: 3px; }
+
+/* AI root-cause card on the clusters page (subtle, blue-accented; only shown when AI is enabled). */
+.ai-analysis { background: var(--panel-2); border: 1px solid var(--border); border-left: 3px solid var(--blue);
+    border-radius: 8px; padding: 10px 12px; margin: 8px 0; font-size: 13px; }
+.ai-head { display: flex; align-items: center; gap: 6px; color: var(--blue); font-weight: 600; margin-bottom: 4px; }
+.ai-conf { margin-left: auto; font-size: 11px; font-weight: 500; color: var(--muted); }
+.ai-conf.conf-high { color: var(--green); }
+.ai-conf.conf-low { color: var(--amber); }
+.ai-cause, .ai-fix { margin: 4px 0; color: var(--text); }
+.ai-model { font-size: 11px; margin-top: 4px; }
+.ai-slot { margin: 8px 0; }
+.ai-slot .ai-target { margin-top: 6px; }

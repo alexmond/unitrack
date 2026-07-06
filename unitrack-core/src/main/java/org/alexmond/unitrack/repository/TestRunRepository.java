@@ -15,6 +15,24 @@ public interface TestRunRepository extends JpaRepository<TestRun, Long> {
 	List<TestRun> findByProjectIdOrderByCreatedAtDesc(Long projectId, Pageable pageable);
 
 	/**
+	 * The run just before this one in the same project+branch+flag series (for ←/→ nav).
+	 */
+	@Query("select r from TestRun r where r.project.id = :pid and r.flag = :flag "
+			+ "and ((:branch is null and r.branch is null) or r.branch = :branch) and r.createdAt < :ts "
+			+ "order by r.createdAt desc, r.id desc")
+	List<TestRun> findPrevious(@Param("pid") Long pid, @Param("branch") String branch, @Param("flag") String flag,
+			@Param("ts") Instant ts, Pageable pageable);
+
+	/**
+	 * The run just after this one in the same project+branch+flag series (for ←/→ nav).
+	 */
+	@Query("select r from TestRun r where r.project.id = :pid and r.flag = :flag "
+			+ "and ((:branch is null and r.branch is null) or r.branch = :branch) and r.createdAt > :ts "
+			+ "order by r.createdAt asc, r.id asc")
+	List<TestRun> findNext(@Param("pid") Long pid, @Param("branch") String branch, @Param("flag") String flag,
+			@Param("ts") Instant ts, Pageable pageable);
+
+	/**
 	 * The latest two runs of every project in one query — the board's batch fetch (avoids
 	 * a per-project query). Returns rows for all projects that have runs; group by
 	 * project in memory. The extra {@code rn} column is ignored by the entity mapping.
@@ -75,6 +93,29 @@ public interface TestRunRepository extends JpaRepository<TestRun, Long> {
 			""")
 	List<BrokenSince> findBrokenSince();
 
+	/**
+	 * The latest run of every branch of a project in one query — the branches list's
+	 * batch fetch (avoids a per-branch latest-run query). The extra {@code rn} column is
+	 * ignored by the entity mapping.
+	 */
+	@Query(nativeQuery = true, value = """
+			SELECT z.* FROM (
+			    SELECT t.*, ROW_NUMBER() OVER (PARTITION BY t.branch ORDER BY t.created_at DESC, t.id DESC) AS rn
+			    FROM test_run t
+			    WHERE t.project_id = :projectId AND t.branch IS NOT NULL
+			) z
+			WHERE z.rn = 1
+			""")
+	List<TestRun> findLatestRunPerBranch(@Param("projectId") Long projectId);
+
+	/**
+	 * Run count per branch for a project in one query — pairs with
+	 * {@link #findLatestRunPerBranch}.
+	 */
+	@Query("select t.branch as branch, count(t) as cnt from TestRun t "
+			+ "where t.project.id = :projectId and t.branch is not null group by t.branch")
+	List<BranchRunCount> countRunsPerBranch(@Param("projectId") Long projectId);
+
 	List<TestRun> findByProjectIdOrderByCreatedAtAsc(Long projectId, Pageable pageable);
 
 	/** Recent runs on a single branch, newest first — for branch-scoped Overview. */
@@ -133,6 +174,16 @@ public interface TestRunRepository extends JpaRepository<TestRun, Long> {
 	@Query("select distinct t.prNumber from TestRun t "
 			+ "where t.project.id = :projectId and t.prNumber is not null order by t.prNumber desc")
 	List<Integer> findDistinctPrNumbers(@Param("projectId") Long projectId);
+
+	/**
+	 * Ids of every run on a branch — for hard-deleting a removed/expired branch (#400).
+	 */
+	@Query("select t.id from TestRun t where t.project.id = :projectId and t.branch = :branch")
+	List<Long> findIdsByProjectIdAndBranch(@Param("projectId") Long projectId, @Param("branch") String branch);
+
+	/** The id of a project's single most recent run — kept as a safety during expiry. */
+	@Query("select t.id from TestRun t where t.project.id = :projectId order by t.createdAt desc limit 1")
+	Long findLatestRunId(@Param("projectId") Long projectId);
 
 	/** All runs belonging to one pull/merge request, newest first (the PR timeline). */
 	List<TestRun> findByProjectIdAndPrNumberOrderByCreatedAtDesc(Long projectId, Integer prNumber);

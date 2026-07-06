@@ -47,6 +47,10 @@ Config is env-var driven (`unitrack-web/src/main/resources/application.yml`): `U
 - **PMD** 3.28.0 — config `pmd-ruleset.xml`.
 - **JaCoCo** 0.8.14 — 80% line gate on `unitrack-web` (excludes `web/demo/**`, `UnitrackApplication`).
 - **Lombok** `@RequiredArgsConstructor` for constructor injection; `@ConfigurationProperties` for config.
+- **File size** — aim to keep source files **under ~500 lines**; split god-classes into focused
+  services (e.g. a fat controller → per-page `*PageService` helpers). This is a guideline, not a
+  gate — Checkstyle only hard-fails `FileLength` at **800** lines. `DashboardController` rides that
+  ceiling, so new routes there need a trim or an extract; new work should target 500, not 800.
 
 Recurring lint rules that bite: **SpringTernary** wants `(a != b) ? x : y` (parenthesized, prefer
 `!=`); **InnerTypeLast** (nested types after methods); **UseUnderscoresInNumericLiterals**

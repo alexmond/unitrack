@@ -1,0 +1,17 @@
+UniTrack is multi-licensed (open-core).
+
+SERVER — GNU Affero General Public License v3.0 only (AGPL-3.0-only):
+  * unitrack-web   (the self-hosted server)
+  * unitrack-it    (server-only integration tests)
+  Full text: LICENSE-AGPL-3.0.txt
+
+LIBRARIES — Apache License, Version 2.0 (Apache-2.0):
+  * unitrack-core           (domain + ingestion library)
+  * unitrack-cli            (CI uploader / quality-gate checker)
+  * unitrack-maven-plugin   (build integration)
+  Full text: LICENSE-APACHE-2.0.txt
+
+The artifacts published to Maven Central — org.alexmond:unitrack-core,
+unitrack-cli, and unitrack-maven-plugin — are Apache-2.0 and safe to depend on.
+Only the server (unitrack-web) is AGPL-3.0. Each module also carries its own
+LICENSE file.

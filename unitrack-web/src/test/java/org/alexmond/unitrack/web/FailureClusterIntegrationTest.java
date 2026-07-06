@@ -61,7 +61,8 @@ class FailureClusterIntegrationTest {
 			.andExpect(jsonPath("$[1].failureType").value("java.lang.NullPointerException"))
 			.andExpect(jsonPath("$[1].occurrences").value(1));
 
-		mvc.perform(get("/projects/{id}/clusters", projectId))
+		// Failure clusters are folded into the Tests page (epic #390).
+		mvc.perform(get("/projects/{id}/tests", projectId))
 			.andExpect(status().isOk())
 			.andExpect(content().string(containsString("Failure clusters")))
 			.andExpect(content().string(containsString("2×")));

@@ -1,5 +1,6 @@
 package org.alexmond.unitrack.report;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -68,7 +69,7 @@ public class TriageService {
 		if (run == null) {
 			return new TriageResult(List.of(), List.of());
 		}
-		List<TriageRule> ruleList = rules.findByProjectIdOrderByPriorityAscIdAsc(run.getProject().getId());
+		List<CompiledRule> ruleList = compile(rules.findByProjectIdOrderByPriorityAscIdAsc(run.getProject().getId()));
 		List<TestCaseResult> failures = cases.findByRunIdAndStatusInOrderByClassNameAscNameAsc(runId, FAILED);
 
 		Map<String, Integer> counts = new LinkedHashMap<>();
@@ -87,7 +88,7 @@ public class TriageService {
 
 	/** Category per case id for a set of cases (for the run page). */
 	public Map<Long, String> categoryByCaseId(Long projectId, List<TestCaseResult> caseList) {
-		List<TriageRule> ruleList = rules.findByProjectIdOrderByPriorityAscIdAsc(projectId);
+		List<CompiledRule> ruleList = compile(rules.findByProjectIdOrderByPriorityAscIdAsc(projectId));
 		Map<Long, String> result = new LinkedHashMap<>();
 		for (TestCaseResult c : caseList) {
 			result.put(c.getId(), categorize(c, ruleList));
@@ -95,26 +96,42 @@ public class TriageService {
 		return result;
 	}
 
-	private String categorize(TestCaseResult c, List<TriageRule> ruleList) {
-		String text = failureText(c);
+	/**
+	 * Compiles each enabled rule's pattern once (in priority order) so a batch
+	 * categorizes many cases without recompiling per case — the categorize loop is
+	 * O(rules) per case, but compilation must not be (it was O(rules × cases) via
+	 * {@code Pattern.compile} in the inner loop).
+	 */
+	private static List<CompiledRule> compile(List<TriageRule> ruleList) {
+		List<CompiledRule> compiled = new ArrayList<>();
 		for (TriageRule rule : ruleList) {
-			if (rule.isEnabled() && matches(rule.getPattern(), text)) {
-				return rule.getCategory();
+			if (!rule.isEnabled()) {
+				continue;
+			}
+			try {
+				Pattern p = Pattern.compile(rule.getPattern(), Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
+				compiled.add(new CompiledRule(p, null, rule.getCategory()));
+			}
+			catch (PatternSyntaxException ex) {
+				// Invalid regex → literal (case-insensitive) contains, matching
+				// matches()'s fallback.
+				compiled.add(new CompiledRule(null, rule.getPattern().toLowerCase(Locale.ROOT), rule.getCategory()));
+			}
+		}
+		return compiled;
+	}
+
+	private static String categorize(TestCaseResult c, List<CompiledRule> ruleList) {
+		String text = failureText(c);
+		if (text == null || text.isBlank()) {
+			return UNTRIAGED;
+		}
+		for (CompiledRule rule : ruleList) {
+			if (rule.matches(text)) {
+				return rule.category();
 			}
 		}
 		return UNTRIAGED;
-	}
-
-	private static boolean matches(String pattern, String text) {
-		if (text == null || text.isBlank()) {
-			return false;
-		}
-		try {
-			return Pattern.compile(pattern, Pattern.CASE_INSENSITIVE | Pattern.DOTALL).matcher(text).find();
-		}
-		catch (PatternSyntaxException ex) {
-			return text.toLowerCase(Locale.ROOT).contains(pattern.toLowerCase(Locale.ROOT));
-		}
 	}
 
 	private static String failureText(TestCaseResult c) {
@@ -134,6 +151,21 @@ public class TriageService {
 	private static String testName(TestCaseResult c) {
 		String cls = (c.getClassName() != null) ? c.getClassName() : "";
 		return cls.isBlank() ? c.getName() : cls + "#" + c.getName();
+	}
+
+	/**
+	 * A rule with its pattern compiled once. {@code pattern} is the compiled regex, or
+	 * null when the rule's pattern was invalid — then {@code literal} holds the
+	 * lower-cased text for a case-insensitive contains fallback (preserving the old
+	 * per-call behaviour).
+	 */
+	private record CompiledRule(Pattern pattern, String literal, String category) {
+
+		boolean matches(String text) {
+			return (this.pattern != null) ? this.pattern.matcher(text).find()
+					: text.toLowerCase(Locale.ROOT).contains(this.literal);
+		}
+
 	}
 
 }

@@ -13,7 +13,7 @@
 
     <groupId>org.alexmond</groupId>
     <artifactId>unitrack-parent</artifactId>
-    <version>0.2.0-SNAPSHOT</version>
+    <version>0.5.0-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>unitrack-parent</name>
     <description>UniTrack parent POM — JUnit &amp; coverage tracking server</description>
@@ -50,6 +50,12 @@
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
 
+        <!-- Browser-driven screenshot/capture tests (@Tag("ui")) are presentation tooling,
+             not correctness gates: they need a real Chrome and are timing/seed-sensitive, so
+             they're excluded from the default build (and CI's `mvn verify`) to keep the gate
+             reliable. Run them on demand with `-DexcludedGroups=`. -->
+        <excludedGroups>ui</excludedGroups>
+
         <jacoco-maven-plugin.version>0.8.15</jacoco-maven-plugin.version>
         <maven-pmd-plugin.version>3.28.0</maven-pmd-plugin.version>
         <maven-checkstyle-plugin.version>3.6.0</maven-checkstyle-plugin.version>
@@ -65,7 +71,21 @@
         <bootstrap-icons.version>1.11.3</bootstrap-icons.version>
         <thymeleaf-layout-dialect.version>3.4.0</thymeleaf-layout-dialect.version>
         <htmx.version>2.0.4</htmx.version>
-        <notify4j.version>0.5.0</notify4j.version>
+        <notify4j.version>1.1.0</notify4j.version>
+
+        <!-- SonarQube analysis scope. Demo seeding is illustrative fixture data, not
+             product code; the CLI is a console app whose stdout IS its output (S106); and
+             test sources aren't a quality gate. Excluding these keeps the dashboard focused
+             on shippable code. Host URL + token are passed at scan time (not committed). -->
+        <sonar.projectKey>unitrack</sonar.projectKey>
+        <sonar.projectName>unitrack</sonar.projectName>
+        <sonar.exclusions>**/web/demo/**</sonar.exclusions>
+        <sonar.coverage.exclusions>**/web/demo/**</sonar.coverage.exclusions>
+        <sonar.issue.ignore.multicriteria>cliStdout,testSources</sonar.issue.ignore.multicriteria>
+        <sonar.issue.ignore.multicriteria.cliStdout.ruleKey>java:S106</sonar.issue.ignore.multicriteria.cliStdout.ruleKey>
+        <sonar.issue.ignore.multicriteria.cliStdout.resourceKey>**/unitrack-cli/**</sonar.issue.ignore.multicriteria.cliStdout.resourceKey>
+        <sonar.issue.ignore.multicriteria.testSources.ruleKey>*</sonar.issue.ignore.multicriteria.testSources.ruleKey>
+        <sonar.issue.ignore.multicriteria.testSources.resourceKey>**/src/test/**</sonar.issue.ignore.multicriteria.testSources.resourceKey>
     </properties>
 
     <!--

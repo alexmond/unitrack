@@ -1,5 +1,8 @@
 package org.alexmond.unitrack.web;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,7 +12,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -67,7 +72,10 @@ class CoveragePageIntegrationTest {
 			.andExpect(content().string(containsString("com/acme/web")))
 			.andExpect(content().string(containsString("Worst-covered files")))
 			.andExpect(content().string(containsString("Bad.java")))
-			.andExpect(content().string(containsString("Good.java")));
+			.andExpect(content().string(containsString("Good.java")))
+			// With a report present the empty state must NOT render (th:replace/th:unless
+			// precedence trap — the guard belongs on a wrapper, not the replaced div).
+			.andExpect(content().string(not(containsString("No coverage yet"))));
 	}
 
 	@Test
@@ -83,6 +91,46 @@ class CoveragePageIntegrationTest {
 	@Test
 	void coverageUnknownProjectIsNotFound() throws Exception {
 		mockMvc().perform(get("/projects/{id}/coverage", 999999)).andExpect(status().isNotFound());
+	}
+
+	/**
+	 * The all-modules page shows the by-module picker, and its rows link to each module's
+	 * dedicated page ({@code /coverage/module/{module}}), not the old {@code ?module=}
+	 * scope.
+	 */
+	@Test
+	void modulePickerLinksToDedicatedModulePages() throws Exception {
+		MockMvc mvc = mockMvc();
+		long projectId = ingest(mvc, "cov-modpick", true);
+
+		mvc.perform(get("/projects/{id}/coverage", projectId))
+			.andExpect(status().isOk())
+			.andExpect(content().string(containsString("Coverage by module")))
+			.andExpect(content().string(containsString("/projects/" + projectId + "/coverage/module/")));
+	}
+
+	/**
+	 * A module's dedicated page is module-filtered (by-package still there) and drops the
+	 * module picker ("Coverage by module") — you're already in the module.
+	 */
+	@Test
+	void modulePageIsScopedAndDropsThePicker() throws Exception {
+		MockMvc mvc = mockMvc();
+		long projectId = ingest(mvc, "cov-modpage", true);
+
+		// Discover a real module URL from the picker, then follow it (robust to module
+		// naming).
+		String all = mvc.perform(get("/projects/{id}/coverage", projectId))
+			.andReturn()
+			.getResponse()
+			.getContentAsString();
+		Matcher m = Pattern.compile("/projects/" + projectId + "/coverage/module/[\\w.%-]+").matcher(all);
+		assertThat(m.find()).as("a dedicated module link on the all-modules page").isTrue();
+
+		mvc.perform(get(m.group()))
+			.andExpect(status().isOk())
+			.andExpect(content().string(containsString("By package")))
+			.andExpect(content().string(not(containsString("Coverage by module"))));
 	}
 
 }

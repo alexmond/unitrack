@@ -42,20 +42,43 @@ public class PerfIngestService {
 	@Value("${unitrack.security.default-visibility:PRIVATE}")
 	private Visibility defaultVisibility = Visibility.PRIVATE;
 
+	/**
+	 * Back-compat single-file ingest: stores one {@link PerfRun} under the request flag.
+	 */
 	@Transactional
 	public PerfRun ingest(IngestRequest meta, List<Supplier<InputStream>> perfStreams) {
+		List<PerfPart> parts = perfStreams.stream().map((s) -> new PerfPart(s, meta.flag())).toList();
+		return ingestAll(meta, parts).get(0);
+	}
+
+	/**
+	 * Stores each uploaded performance result as its own {@link PerfRun}, tagged with its
+	 * part's flag so multiple perf tests can ride one upload and each becomes an
+	 * independent series (regression/trend are flag-scoped). Returns the runs in upload
+	 * order.
+	 */
+	@Transactional
+	public List<PerfRun> ingestAll(IngestRequest meta, List<PerfPart> parts) {
 		if (meta.project() == null || meta.project().isBlank()) {
 			throw new IngestException("'project' is required");
 		}
-		if (perfStreams.isEmpty()) {
+		if (parts.isEmpty()) {
 			throw new IngestException("At least one performance result file is required");
 		}
 
 		Project project = findOrCreateProject(meta.project(), meta.repoUrl());
-		PerfParsers.Parsed parsed = parse(perfStreams.get(0));
+		List<PerfRun> runs = new ArrayList<>();
+		for (PerfPart part : parts) {
+			runs.add(persist(meta, project, part));
+		}
+		return runs;
+	}
+
+	private PerfRun persist(IngestRequest meta, Project project, PerfPart part) {
+		PerfParsers.Parsed parsed = parse(part.stream());
 		PerfResults r = parsed.results();
 
-		PerfRun run = new PerfRun(project, blankToNull(meta.branch()), meta.flag(), blankToNull(meta.commit()),
+		PerfRun run = new PerfRun(project, blankToNull(meta.branch()), part.flag(), blankToNull(meta.commit()),
 				blankToNull(meta.buildUrl()), blankToNull(meta.ciProvider()), parsed.format());
 		run.setRunKey(blankToNull(meta.runKey()));
 		run.setSampleCount(r.sampleCount());
@@ -87,8 +110,9 @@ public class PerfIngestService {
 		}
 		perfTransactions.saveAll(rows);
 
-		log.info("Ingested perf run {} for project '{}' ({} samples, {} errors, {} labels, format {})", run.getId(),
-				project.getName(), run.getSampleCount(), run.getErrorCount(), rows.size(), parsed.format());
+		log.info("Ingested perf run {} for project '{}' flag '{}' ({} samples, {} errors, {} labels, format {})",
+				run.getId(), project.getName(), run.getFlag(), run.getSampleCount(), run.getErrorCount(), rows.size(),
+				parsed.format());
 		return run;
 	}
 
@@ -111,6 +135,10 @@ public class PerfIngestService {
 
 	private static String blankToNull(String value) {
 		return (value == null || value.isBlank()) ? null : value.trim();
+	}
+
+	/** One uploaded performance result and the flag (series) it belongs to. */
+	public record PerfPart(Supplier<InputStream> stream, String flag) {
 	}
 
 }

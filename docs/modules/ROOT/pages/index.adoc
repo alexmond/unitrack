@@ -1,4 +1,5 @@
 = UniTrack -- JUnit & Coverage Tracking Server
+:description: Self-hosted server tracking JUnit results and JaCoCo coverage over time — flaky-test detection, quality gates, and GitHub commit status. Allure meets Codecov for the JVM.
 
 UniTrack is a self-hosted server that tracks and reports on JUnit test execution and
 JaCoCo code coverage over time. Think *Allure-meets-Codecov for the JVM*: push your

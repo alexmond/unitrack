@@ -148,10 +148,9 @@ class FullPageScreenshotUiTest {
 		Map<String, String> routes = new LinkedHashMap<>();
 		routes.put("index", base + "/");
 		routes.put("project", base + "/projects/" + projectId);
-		routes.put("flaky", base + "/projects/" + projectId + "/flaky");
+		routes.put("tests", base + "/projects/" + projectId + "/tests");
 		routes.put("timing", base + "/projects/" + projectId + "/performance");
 		routes.put("load", base + "/projects/" + projectId + "/perf");
-		routes.put("clusters", base + "/projects/" + projectId + "/clusters");
 		routes.put("triage", base + "/projects/" + projectId + "/triage");
 		routes.put("run", base + "/runs/" + runId);
 		routes.put("perf-run", base + "/perf-runs/" + perfRunId);

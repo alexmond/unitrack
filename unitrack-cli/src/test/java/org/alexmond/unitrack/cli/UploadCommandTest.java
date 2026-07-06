@@ -31,7 +31,8 @@ class UploadCommandTest {
 	}
 
 	private UploadCommand command(CiMetadataDetector detector) {
-		UploadCommand c = new UploadCommand(this.client, new ReportResolver(), detector);
+		ReportResolver resolver = new ReportResolver();
+		UploadCommand c = new UploadCommand(this.client, resolver, detector, new ReportDiscovery(resolver));
 		c.url = "http://unitrack.test";
 		c.project = "demo";
 		return c;
@@ -114,6 +115,29 @@ class UploadCommandTest {
 	}
 
 	@Test
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	void scanDiscoversReportsAndTagsEachModule(@TempDir Path root) throws IOException {
+		Files.createDirectories(root.resolve("alpha/target/surefire-reports"));
+		Files.writeString(root.resolve("alpha/target/surefire-reports/TEST-a.xml"), "<testsuite name=\"a\"/>");
+		Files.createDirectories(root.resolve("beta/target/surefire-reports"));
+		Files.writeString(root.resolve("beta/target/surefire-reports/TEST-b.xml"), "<testsuite name=\"b\"/>");
+		given(this.client.ingest(any(), any(), any(), any(), any())).willReturn(new IngestResponse(1L));
+
+		UploadCommand c = command();
+		c.scan = true;
+		c.scanRoot = root.toString();
+		c.runKey = "rk-scan";
+
+		assertThat(c.call()).isEqualTo(ExitCodes.OK);
+
+		ArgumentCaptor<Map> fields = ArgumentCaptor.forClass(Map.class);
+		verify(this.client, times(2)).ingest(any(), any(), any(), fields.capture(), any());
+		List<Object> modules = fields.getAllValues().stream().map((f) -> f.get("module")).toList();
+		assertThat(modules).containsExactlyInAnyOrder("alpha", "beta");
+		assertThat(fields.getAllValues()).allMatch((f) -> "rk-scan".equals(f.get("runKey")));
+	}
+
+	@Test
 	void perFileErrorFlagsAnOversizedFile(@TempDir Path dir) throws IOException {
 		Files.write(dir.resolve("big.xml"), new byte[2048]);
 		Files.write(dir.resolve("small.xml"), new byte[600]);
@@ -180,25 +204,29 @@ class UploadCommandTest {
 	}
 
 	@Test
-	void splitByModuleUploadsEachModulePlusRollup(@TempDir Path dir) throws IOException {
+	void splitByModuleIsDeprecatedAndIgnoredUploadsSingleRunTaggedPerModule(@TempDir Path dir) throws IOException {
 		Files.createDirectories(dir.resolve("modA/target/surefire-reports"));
 		Files.createDirectories(dir.resolve("modB/target/surefire-reports"));
 		Files.writeString(dir.resolve("modA/target/surefire-reports/TEST-a.xml"), "<testsuite/>");
 		Files.writeString(dir.resolve("modB/target/surefire-reports/TEST-b.xml"), "<testsuite/>");
 		given(this.client.ingest(any(), any(), any(), any(), any())).willReturn(new IngestResponse(1L));
 		UploadCommand c = command();
-		c.splitByModule = true;
+		c.splitByModule = true; // deprecated + ignored — must NOT split into separate
+								// runs
 		c.junit = List.of(dir + "/**/target/surefire-reports/TEST-*.xml");
 
 		assertThat(c.call()).isEqualTo(ExitCodes.OK);
 
-		// Two modules as their own flags, plus the merged rollup under the default flag
-		// (null).
+		// One run: each module's reports uploaded tagged with its module under a shared
+		// run
+		// key (merged server-side), with no per-module flags and no separate rollup
+		// upload.
 		@SuppressWarnings("unchecked")
 		ArgumentCaptor<Map<String, String>> fields = ArgumentCaptor.forClass(Map.class);
-		verify(this.client, times(3)).ingest(any(), any(), any(), fields.capture(), any());
-		assertThat(fields.getAllValues()).extracting((f) -> f.get("flag"))
-			.containsExactlyInAnyOrder("modA", "modB", null);
+		verify(this.client, times(2)).ingest(any(), any(), any(), fields.capture(), any());
+		assertThat(fields.getAllValues()).extracting((f) -> f.get("module")).containsExactlyInAnyOrder("modA", "modB");
+		assertThat(fields.getAllValues()).extracting((f) -> f.get("flag")).containsOnlyNulls();
+		assertThat(fields.getAllValues().stream().map((f) -> f.get("runKey")).distinct()).hasSize(1);
 	}
 
 	@Test

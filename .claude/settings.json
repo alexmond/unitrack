@@ -2,6 +2,7 @@
   "enabledPlugins": {
     "roles@alexmskills": true,
     "research-sweep@alexmskills": true,
-    "brainstorm-panel@alexmskills": true
+    "brainstorm-panel@alexmskills": true,
+    "evolving-claude-md@alexmskills": true
   }
 }

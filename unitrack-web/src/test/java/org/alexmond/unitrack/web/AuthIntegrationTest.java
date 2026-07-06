@@ -68,7 +68,7 @@ class AuthIntegrationTest {
 		// config). POST to the form-login processing URL with a CSRF token (CSRF is on).
 		mvc.perform(post("/login").with(csrf()).param("username", "admin").param("password", "testadmin"))
 			.andExpect(status().is3xxRedirection())
-			.andExpect(header().string("Location", "/profile"));
+			.andExpect(header().string("Location", "/"));
 	}
 
 	@Test

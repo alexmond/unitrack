@@ -42,6 +42,13 @@ public class TestSuiteResult {
 	@Column(name = "duration_ms")
 	private long durationMs;
 
+	/**
+	 * Explicit build module from the uploader (#393), or null to fall back to package
+	 * derivation.
+	 */
+	@Column(name = "module")
+	private String module;
+
 	public TestSuiteResult(TestRun run, String name, int tests, int failures, int errors, int skipped,
 			long durationMs) {
 		this.run = run;
@@ -51,6 +58,10 @@ public class TestSuiteResult {
 		this.errors = errors;
 		this.skipped = skipped;
 		this.durationMs = durationMs;
+	}
+
+	public void setModule(String module) {
+		this.module = module;
 	}
 
 }

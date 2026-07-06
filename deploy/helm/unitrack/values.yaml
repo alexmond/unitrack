@@ -46,8 +46,16 @@ service:
 # Actuator runs on this internal container port (the probes and any prometheus scrape target it).
 # The Service exposes only service.port, so health/metrics/prometheus are never reachable through
 # the ingress / Cloudflare Tunnel. Set to 8080 to fold actuator back onto the app port (handy for a
-# simple local run; not recommended for a public-facing install).
-managementPort: 9001
+# simple local run; not recommended for a public-facing install). 9090 matches the lab-services
+# Spring Boot Admin convention.
+managementPort: 9090
+
+# When true, also expose the management port on the Service (a named `management` port) with the
+# `bootapp: "true"` label + `management.*` annotations a Spring Cloud Kubernetes discovery client
+# (Spring Boot Admin) reads to auto-discover and scrape actuator (#458). Off by default — actuator
+# stays reachable in-cluster via the pod either way; this only adds the Service port + metadata so a
+# monitoring server can find the app. Stays ClusterIP-internal; the ingress still routes only `http`.
+managementDiscoverable: false
 
 ingress:
   enabled: false

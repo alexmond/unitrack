@@ -7,7 +7,7 @@
     <parent>
         <groupId>org.alexmond</groupId>
         <artifactId>unitrack-parent</artifactId>
-        <version>0.2.0-SNAPSHOT</version>
+        <version>0.5.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>unitrack-maven-plugin</artifactId>
@@ -15,6 +15,15 @@
     <name>UniTrack Maven Plugin</name>
     <description>Upload test/coverage reports and check the quality gate from a Maven build,
         reusing the unitrack-cli engine.</description>
+
+    <!-- Published to Maven Central / build integration -> permissive (see root LICENSE). -->
+    <licenses>
+        <license>
+            <name>The Apache Software License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
 
     <properties>
         <maven.version>3.9.9</maven.version>

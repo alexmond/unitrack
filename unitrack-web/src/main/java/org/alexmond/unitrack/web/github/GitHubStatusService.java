@@ -27,11 +27,14 @@ public class GitHubStatusService {
 
 	private final GitHubConfigResolver config;
 
+	private final GitHubAuth auth;
+
 	public GitHubStatusService(GitHubProperties props, RestClient.Builder restClientBuilder,
-			GitHubConfigResolver config) {
+			GitHubConfigResolver config, GitHubAuth auth) {
 		this.props = props;
 		this.restClient = restClientBuilder.build();
 		this.config = config;
+		this.auth = auth;
 	}
 
 	/**
@@ -39,12 +42,16 @@ public class GitHubStatusService {
 	 */
 	public void publish(TestRun run, QualityGateResult gate, Double coverageDelta) {
 		GitHubConfigResolver.Effective cfg = config.effective(run.getProject().getId());
-		if (!cfg.enabled() || props.getToken() == null || props.getToken().isBlank()) {
+		if (!cfg.enabled()) {
 			return;
 		}
 		String[] repo = parseOwnerRepo(run.getProject().getRepoUrl());
 		String sha = run.getCommitSha();
 		if (repo == null || sha == null || sha.isBlank()) {
+			return;
+		}
+		String bearer = auth.bearerToken(repo[0], repo[1]);
+		if (bearer == null) {
 			return;
 		}
 
@@ -55,7 +62,7 @@ public class GitHubStatusService {
 		try {
 			restClient.post()
 				.uri(props.getApiUrl() + "/repos/{owner}/{repo}/statuses/{sha}", repo[0], repo[1], sha)
-				.header("Authorization", "Bearer " + props.getToken())
+				.header("Authorization", "Bearer " + bearer)
 				.header("Accept", "application/vnd.github+json")
 				.header("X-GitHub-Api-Version", "2022-11-28")
 				.contentType(MediaType.APPLICATION_JSON)
