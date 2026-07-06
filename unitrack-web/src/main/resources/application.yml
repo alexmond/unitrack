@@ -148,6 +148,22 @@ unitrack:
       read-timeout: 10s
       max-attempts: 3      # 1 disables retry
       retry-backoff: 500ms
+  # GitHub integration — post commit statuses + PR comments (disabled by default). Auth is
+  # EITHER a shared PAT (unitrack.github.token, repo:status scope) OR a GitHub App
+  # (unitrack.github.app.*): when an App is configured, UniTrack mints short-lived
+  # per-installation tokens and the PAT is only the fallback (#442).
+  github:
+    enabled: ${UNITRACK_GITHUB_ENABLED:false}
+    token: ${UNITRACK_GITHUB_TOKEN:}
+    api-url: ${UNITRACK_GITHUB_API_URL:https://api.github.com}
+    server-base-url: ${UNITRACK_BASE_URL:http://localhost:8080}
+    app:
+      app-id: ${UNITRACK_GITHUB_APP_ID:}
+      # PKCS#8 PEM. Convert GitHub's PKCS#1 download first:
+      #   openssl pkcs8 -topk8 -nocrypt -in app.private-key.pem -out app.pk8
+      private-key: ${UNITRACK_GITHUB_APP_PRIVATE_KEY:}
+      # Optional — omit to resolve the installation per repo.
+      installation-id: ${UNITRACK_GITHUB_APP_INSTALLATION_ID:}
 
 # To actually deliver mail, configure an SMTP server, e.g.:
 #   spring.mail.host: smtp.example.com

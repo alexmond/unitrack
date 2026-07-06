@@ -53,7 +53,8 @@ class GitHubStatusServiceTest {
 		GitHubProperties props = props(true);
 		RestClient.Builder builder = RestClient.builder();
 		MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
-		GitHubStatusService service = new GitHubStatusService(props, builder, resolver(props));
+		GitHubStatusService service = new GitHubStatusService(props, builder, resolver(props),
+				GitHubAuth.patOnly(props));
 
 		server.expect(requestTo("https://api.github.com/repos/octo/repo/statuses/abc123"))
 			.andExpect(method(HttpMethod.POST))
@@ -72,7 +73,8 @@ class GitHubStatusServiceTest {
 		GitHubProperties props = props(false);
 		RestClient.Builder builder = RestClient.builder();
 		MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
-		GitHubStatusService service = new GitHubStatusService(props, builder, resolver(props));
+		GitHubStatusService service = new GitHubStatusService(props, builder, resolver(props),
+				GitHubAuth.patOnly(props));
 
 		// No request expected.
 		service.publish(run(), new QualityGateResult(true, List.of()), null);
@@ -86,7 +88,7 @@ class GitHubStatusServiceTest {
 		MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
 		GitHubConfigResolver resolver = mock(GitHubConfigResolver.class);
 		given(resolver.effective(any())).willReturn(new GitHubConfigResolver.Effective(true, "custom/ctx", true));
-		GitHubStatusService service = new GitHubStatusService(props, builder, resolver);
+		GitHubStatusService service = new GitHubStatusService(props, builder, resolver, GitHubAuth.patOnly(props));
 
 		server.expect(requestTo("https://api.github.com/repos/octo/repo/statuses/abc123"))
 			.andExpect(jsonPath("$.context").value("custom/ctx"))
