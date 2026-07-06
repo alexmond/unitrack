@@ -22,6 +22,7 @@ import org.alexmond.unitrack.report.TestRegressionService;
 import org.alexmond.unitrack.web.account.AuditService;
 import org.alexmond.unitrack.web.account.MembershipService;
 import org.alexmond.unitrack.web.account.ProjectAccessService;
+import org.alexmond.unitrack.web.github.GitHubCheckRunService;
 import org.alexmond.unitrack.web.github.GitHubPrCommentService;
 import org.alexmond.unitrack.web.github.GitHubStatusService;
 import io.micrometer.observation.Observation;
@@ -88,6 +89,8 @@ public class IngestController {
 	private final QualityGateService qualityGate;
 
 	private final GitHubStatusService gitHubStatus;
+
+	private final GitHubCheckRunService gitHubCheckRun;
 
 	private final GitHubPrCommentService gitHubPrComment;
 
@@ -315,9 +318,14 @@ public class IngestController {
 	private void publishGitHubStatus(TestRun run) {
 		QualityGateResult gate = qualityGate.evaluate(run.getId()).orElse(null);
 		Double delta = qualityGate.coverageDelta(run.getId()).orElse(null);
-		gitHubStatus.publish(run, gate, delta);
 		int newFailures = testRegression.diff(run.getId()).map(TestRegressionResult::newFailureCount).orElse(0);
 		int slowerTests = perfRegression.diff(run.getId()).map(PerfRegressionResult::slowerCount).orElse(0);
+		// App deployments get a rich check run (summary + inline PR annotations);
+		// PAT-only
+		// deployments fall back to the classic commit status.
+		if (!gitHubCheckRun.publish(run, gate, delta, newFailures)) {
+			gitHubStatus.publish(run, gate, delta);
+		}
 		gitHubPrComment.publish(run, gate, delta, newFailures, slowerTests);
 		gitLab.publishStatus(run, gate, delta);
 		gitLab.publishMrNote(run, gate, delta, newFailures);

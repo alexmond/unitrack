@@ -52,8 +52,11 @@ final class CoverageModelAdapter {
 		for (FileNode file : module.getAllFileNodes()) {
 			Coverage fileLine = cov(file, Metric.LINE);
 			Coverage fileBranch = cov(file, Metric.BRANCH);
+			// getMissedLines() = the fully-uncovered line numbers, for PR annotations
+			// (#443).
 			files.add(new CoverageResults.ParsedFileCoverage(packageName(file), fileName(file), fileLine.getCovered(),
-					fileLine.getMissed(), fileBranch.getCovered(), fileBranch.getMissed()));
+					fileLine.getMissed(), fileBranch.getCovered(), fileBranch.getMissed(),
+					new ArrayList<>(file.getMissedLines())));
 		}
 		return new CoverageResults(line.getCovered(), line.getMissed(), branch.getCovered(), branch.getMissed(),
 				instruction.getCovered(), instruction.getMissed(), method.getCovered(), method.getMissed(), files);
