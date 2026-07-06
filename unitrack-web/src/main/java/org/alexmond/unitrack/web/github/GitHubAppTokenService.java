@@ -11,10 +11,13 @@ import java.util.Base64;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
 
 /**
  * Mints short-lived GitHub App installation tokens: signs an RS256 JWT with the App
@@ -25,6 +28,8 @@ import org.springframework.web.client.RestClient;
  */
 @Service
 public class GitHubAppTokenService {
+
+	private static final Logger log = LoggerFactory.getLogger(GitHubAppTokenService.class);
 
 	/** JWTs live ≤10 min; use 9 to stay clear of GitHub's ceiling with clock skew. */
 	private static final long JWT_TTL_SECONDS = 540;
@@ -73,15 +78,25 @@ public class GitHubAppTokenService {
 	 * expiry.
 	 */
 	public String installationToken(String owner, String repo) {
-		long installationId = resolveInstallationId(owner, repo);
-		CachedToken cached = this.tokenCache.get(installationId);
-		Instant now = this.clock.instant();
-		if (cached != null && now.isBefore(cached.expiresAt().minusSeconds(TOKEN_REFRESH_SKEW_SECONDS))) {
-			return cached.token();
+		try {
+			long installationId = resolveInstallationId(owner, repo);
+			CachedToken cached = this.tokenCache.get(installationId);
+			Instant now = this.clock.instant();
+			if (cached != null && now.isBefore(cached.expiresAt().minusSeconds(TOKEN_REFRESH_SKEW_SECONDS))) {
+				return cached.token();
+			}
+			CachedToken fresh = exchange(installationId);
+			this.tokenCache.put(installationId, fresh);
+			return fresh.token();
 		}
-		CachedToken fresh = exchange(installationId);
-		this.tokenCache.put(installationId, fresh);
-		return fresh.token();
+		catch (RestClientException | IllegalStateException ex) {
+			// Best-effort: a repo the App isn't installed on (404 on resolve), a bad key,
+			// or a GitHub outage must never break ingest — skip the post, don't
+			// propagate.
+			log.warn("No GitHub App token for {}/{} (App not installed, or key/exchange error): {}", owner, repo,
+					ex.getMessage());
+			return null;
+		}
 	}
 
 	private long resolveInstallationId(String owner, String repo) {

@@ -13,6 +13,7 @@ import java.util.Base64;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
@@ -23,6 +24,7 @@ import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 class GitHubAppTokenServiceTest {
@@ -120,6 +122,22 @@ class GitHubAppTokenServiceTest {
 		assertThatThrownBy(service::jwt).isInstanceOf(IllegalStateException.class)
 			.hasMessageContaining("PKCS#1")
 			.hasMessageContaining("openssl pkcs8 -topk8");
+	}
+
+	@Test
+	void returnsNullWhenAppNotInstalledOnRepo() {
+		RestClient.Builder builder = RestClient.builder();
+		MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+		// installationId unset -> resolves per repo; GitHub 404s -> null (skip), never
+		// throws.
+		GitHubAppTokenService service = new GitHubAppTokenService(app(null), props(), builder);
+
+		server.expect(requestTo("https://api.github.com/repos/octo/repo/installation"))
+			.andExpect(method(HttpMethod.GET))
+			.andRespond(withStatus(HttpStatus.NOT_FOUND));
+
+		assertThat(service.installationToken("octo", "repo")).isNull();
+		server.verify();
 	}
 
 	/** A hand-advanced clock so the cache-expiry path is deterministic. */
