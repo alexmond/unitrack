@@ -91,7 +91,11 @@ and up to 50 *annotations* placed on the PR's changed lines:
 
 * *Uncovered coverage* -- a line the PR added or changed that no test covers is flagged
   `warning: This line is not covered by tests.` Coverage line numbers come from JaCoCo /
-  Cobertura per-line data; UniTrack suffix-matches the coverage path to the PR's file path.
+  Cobertura per-line data. Coverage reports carry only a package-relative path
+  (`org/ex/Foo.java`), so to match it to the PR's repo-relative file UniTrack uses the
+  repo-relative path resolved at upload time from the uploader's *source manifest* (see
+  xref:cli-reference.adoc[the uploader]), falling back to suffix-matching the coverage path
+  against the PR's changed files.
 * *New test failures* -- a failing test whose source file the PR changed is flagged `failure`
   at the assertion line parsed from its stack trace.
 

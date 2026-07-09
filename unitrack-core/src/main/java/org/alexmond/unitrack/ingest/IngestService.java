@@ -103,7 +103,7 @@ public class IngestService {
 		persistTests(run, merged, module);
 
 		if (!jacocoStreams.isEmpty()) {
-			persistCoverage(run, parseCoverage(jacocoStreams), module);
+			persistCoverage(run, parseCoverage(jacocoStreams), module, meta.sourceManifest());
 			runs.save(run);
 		}
 
@@ -219,7 +219,7 @@ public class IngestService {
 		return new CoverageResults(lc, lm, bc, bm, ic, im, mc, mm, files);
 	}
 
-	private void persistCoverage(TestRun run, CoverageResults cov, String module) {
+	private void persistCoverage(TestRun run, CoverageResults cov, String module, List<String> sourceManifest) {
 		// Merge into an existing report (sharded coverage uploads) or create a new one.
 		CoverageReport report = coverageReports.findByRunId(run.getId()).orElseGet(() -> new CoverageReport(run));
 		if (report.getId() == null) {
@@ -238,6 +238,7 @@ public class IngestService {
 					f.lineMissed(), f.branchCovered(), f.branchMissed());
 			fileRow.setModule(module);
 			fileRow.setUncoveredLines(packUncoveredLines(f.uncoveredLines()));
+			fileRow.setRepoPath(SourcePathResolver.resolve(fileRow.getPath(), module, sourceManifest));
 			fileRows.add(fileRow);
 		}
 		coverageFiles.saveAll(fileRows);

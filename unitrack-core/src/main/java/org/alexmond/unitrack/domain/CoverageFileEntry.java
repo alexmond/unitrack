@@ -60,6 +60,15 @@ public class CoverageFileEntry {
 	@Column(name = "uncovered_lines", columnDefinition = "text")
 	private String uncoveredLines;
 
+	/**
+	 * Repo-relative path (e.g. {@code unitrack-core/src/main/java/org/ex/Foo.java})
+	 * resolved from the uploader's source manifest (#454), or null when no manifest was
+	 * sent or nothing matched. Drives working GitHub source links; falls back to
+	 * {@link #getPath()} (package-relative) for display.
+	 */
+	@Column(name = "repo_path", columnDefinition = "text")
+	private String repoPath;
+
 	public CoverageFileEntry(CoverageReport report, String packageName, String fileName, int lineCovered,
 			int lineMissed, int branchCovered, int branchMissed) {
 		this.report = report;
@@ -81,6 +90,21 @@ public class CoverageFileEntry {
 
 	public void setUncoveredLines(String uncoveredLines) {
 		this.uncoveredLines = uncoveredLines;
+	}
+
+	public String getRepoPath() {
+		return this.repoPath;
+	}
+
+	public void setRepoPath(String repoPath) {
+		this.repoPath = repoPath;
+	}
+
+	/**
+	 * Repo-relative path when resolved from a manifest, else the package-relative path.
+	 */
+	public String getLinkPath() {
+		return (this.repoPath != null && !this.repoPath.isBlank()) ? this.repoPath : getPath();
 	}
 
 	public double getLinePct() {

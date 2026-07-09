@@ -49,9 +49,12 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.BufferedInputStream;
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermissions;
@@ -140,6 +143,7 @@ public class IngestController {
 			@RequestParam(name = "jacoco", required = false) List<MultipartFile> jacoco,
 			@RequestParam(name = "perf", required = false) List<MultipartFile> perf,
 			@RequestParam(name = "perfFlag", required = false) List<String> perfFlag,
+			@RequestParam(name = "sourceManifest", required = false) MultipartFile sourceManifest,
 			@RequestParam(name = "async", defaultValue = "false") boolean async) {
 
 		boolean hasJunit = nonEmpty(junit);
@@ -159,8 +163,11 @@ public class IngestController {
 		}
 		boolean newProject = (existing == null);
 
+		// Read the source manifest (git ls-files) up front — it's small text and `meta`
+		// flows in memory through the async path, so no need to spool it.
+		List<String> manifest = readManifest(sourceManifest);
 		IngestRequest meta = new IngestRequest(project, repoUrl, branch, flag, commit, buildUrl, buildName, ciProvider,
-				runKey, baseBranch, prNumber, module);
+				runKey, baseBranch, prNumber, module, manifest);
 		long reportLimit = ingestProperties.maxReportBytesValue();
 		long perfLimit = ingestProperties.maxPerfBytesValue();
 
@@ -300,6 +307,39 @@ public class IngestController {
 			}
 		}
 		return false;
+	}
+
+	/**
+	 * Cap on manifest entries — a huge checkout adds no path-resolution value past this.
+	 */
+	private static final int MAX_MANIFEST_ENTRIES = 50_000;
+
+	/**
+	 * Parse the newline-delimited source manifest ({@code git ls-files}) into
+	 * repo-relative paths, or an empty list when absent/unreadable. Best-effort: a
+	 * manifest we can't read must never fail the ingest (coverage links just fall back to
+	 * package-relative).
+	 */
+	private static List<String> readManifest(MultipartFile manifest) {
+		if (manifest == null || manifest.isEmpty()) {
+			return List.of();
+		}
+		List<String> paths = new ArrayList<>();
+		try (BufferedReader reader = new BufferedReader(
+				new InputStreamReader(manifest.getInputStream(), StandardCharsets.UTF_8))) {
+			String line;
+			while ((line = reader.readLine()) != null && paths.size() < MAX_MANIFEST_ENTRIES) {
+				String trimmed = line.trim();
+				if (!trimmed.isEmpty()) {
+					paths.add(trimmed);
+				}
+			}
+		}
+		catch (IOException ex) {
+			log.warn("Could not read source manifest ({} bytes): {}", manifest.getSize(), ex.getMessage());
+			return List.of();
+		}
+		return paths;
 	}
 
 	/** Total uploaded bytes across all parts, for the ingest-job record. */

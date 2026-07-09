@@ -172,7 +172,7 @@ public class GitHubCheckRunService {
 			if (entry.getUncoveredLines() == null || out.size() >= MAX_ANNOTATIONS) {
 				continue;
 			}
-			PrFile match = matchBySuffix(prFiles, entry.getPath());
+			PrFile match = matchFor(prFiles, entry);
 			if (match == null) {
 				continue;
 			}
@@ -243,6 +243,21 @@ public class GitHubCheckRunService {
 			}
 		}
 		return null;
+	}
+
+	/**
+	 * The PR file for a coverage entry: an exact match on the manifest-resolved repo path
+	 * (#454) when present, else the package-relative suffix bridge.
+	 */
+	private static PrFile matchFor(List<PrFile> prFiles, CoverageFileEntry entry) {
+		if (entry.getRepoPath() != null && !entry.getRepoPath().isBlank()) {
+			for (PrFile f : prFiles) {
+				if (f.filename().equals(entry.getRepoPath())) {
+					return f;
+				}
+			}
+		}
+		return matchBySuffix(prFiles, entry.getPath());
 	}
 
 	/** New-file line numbers added by a unified-diff patch. */

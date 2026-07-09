@@ -73,7 +73,7 @@ Recurring lint rules that bite: **SpringTernary** wants `(a != b) ? x : y` (pare
 - **Disable Compose lifecycle in containers**: the app sets `spring.docker.compose.enabled=true`
   for local dev, so deployments must set `SPRING_DOCKER_COMPOSE_ENABLED=false`.
 - **Flyway migrations are immutable + versioned** in `unitrack-web/src/main/resources/db/migration/`.
-  Latest is `V26__coverage_uncovered_lines.sql`; **next is V27**. Never edit a shipped migration.
+  Latest is `V27__coverage_repo_path.sql`; **next is V28**. Never edit a shipped migration.
 - **Open mode by default** (`unitrack.security.open-mode=true`): all endpoints public so CI/uploader
   keep working. `/profile`, `/api/v1/me`, `/import`, and project settings/members always need auth.
 - **Image build fails under rootless Podman** (buildpacks lifecycle bind-mounts the docker socket) —
