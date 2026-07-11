@@ -176,7 +176,7 @@ project/branch/commit/build-url/PR from `GITHUB_*`:
     gate: "true"                            # optional: fail the build on a red quality gate
 ```
 
-Pin a release with `@v0.4.0`. A ready-to-copy workflow lives in
+Pin a release with `@v0.5.0`. A ready-to-copy workflow lives in
 [`.github/workflows/upload-results-example.yml`](.github/workflows/upload-results-example.yml);
 more per-CI recipes (GitLab, Jenkins, CircleCI, raw `docker`/`java -jar`) are in the
 [CI Recipes](docs/modules/ROOT/pages/ci-recipes.adoc) docs.
@@ -278,13 +278,13 @@ Spring Boot plugin's `build-image` goal bound to `package`. Requires a running D
 
 ```bash
 ./mvnw -Pdocker -pl unitrack-web -am package        # builds image unitrack:<version>
-docker run --rm -p 8080:8080 unitrack:0.4.0
+docker run --rm -p 8080:8080 unitrack:0.5.0
 ```
 
 Override the tag or publish to a registry:
 
 ```bash
-./mvnw -Pdocker -Ddocker.image.name=ghcr.io/alexmond/unitrack:0.4.0 -Ddocker.publish=true \
+./mvnw -Pdocker -Ddocker.image.name=ghcr.io/alexmond/unitrack:0.5.0 -Ddocker.publish=true \
   -pl unitrack-web -am package
 ```
 
