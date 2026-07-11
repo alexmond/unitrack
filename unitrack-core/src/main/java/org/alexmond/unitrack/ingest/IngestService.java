@@ -103,7 +103,7 @@ public class IngestService {
 		persistTests(run, merged, module);
 
 		if (!jacocoStreams.isEmpty()) {
-			persistCoverage(run, parseCoverage(jacocoStreams), module);
+			persistCoverage(run, parseCoverage(jacocoStreams), module, meta.sourceManifest());
 			runs.save(run);
 		}
 
@@ -219,7 +219,7 @@ public class IngestService {
 		return new CoverageResults(lc, lm, bc, bm, ic, im, mc, mm, files);
 	}
 
-	private void persistCoverage(TestRun run, CoverageResults cov, String module) {
+	private void persistCoverage(TestRun run, CoverageResults cov, String module, List<String> sourceManifest) {
 		// Merge into an existing report (sharded coverage uploads) or create a new one.
 		CoverageReport report = coverageReports.findByRunId(run.getId()).orElseGet(() -> new CoverageReport(run));
 		if (report.getId() == null) {
@@ -237,6 +237,8 @@ public class IngestService {
 			CoverageFileEntry fileRow = new CoverageFileEntry(report, f.packageName(), f.fileName(), f.lineCovered(),
 					f.lineMissed(), f.branchCovered(), f.branchMissed());
 			fileRow.setModule(module);
+			fileRow.setUncoveredLines(packUncoveredLines(f.uncoveredLines()));
+			fileRow.setRepoPath(SourcePathResolver.resolve(fileRow.getPath(), module, sourceManifest));
 			fileRows.add(fileRow);
 		}
 		coverageFiles.saveAll(fileRows);
@@ -247,6 +249,31 @@ public class IngestService {
 
 	private static String blankToNull(String value) {
 		return (value == null || value.isBlank()) ? null : value.trim();
+	}
+
+	/**
+	 * Cap on stored uncovered-line numbers per file — a huge list adds no annotation
+	 * value.
+	 */
+	private static final int MAX_UNCOVERED_LINES = 2_000;
+
+	/**
+	 * Comma-join the uncovered line numbers (capped) for storage; null when there are
+	 * none.
+	 */
+	private static String packUncoveredLines(List<Integer> lines) {
+		if (lines == null || lines.isEmpty()) {
+			return null;
+		}
+		StringBuilder sb = new StringBuilder();
+		int limit = Math.min(lines.size(), MAX_UNCOVERED_LINES);
+		for (int i = 0; i < limit; i++) {
+			if (i > 0) {
+				sb.append(',');
+			}
+			sb.append(lines.get(i).intValue());
+		}
+		return sb.toString();
 	}
 
 }

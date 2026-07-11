@@ -34,6 +34,24 @@ class CoverageModelFidelityTest {
 	}
 
 	@Test
+	void jacocoFilePathsAreCleanRepoRelative() throws Exception {
+		CoverageResults model;
+		try (InputStream in = getClass().getResourceAsStream("/samples/jacoco-sample.xml")) {
+			model = CoverageModelAdapter.parse(new JacocoParser(ProcessingMode.IGNORE_ERRORS), in, "jacoco");
+		}
+		// Guards the #454 regression: file paths must be clean package-relative
+		// (org/ex/Foo.java), so GitHub source links + PR annotations resolve — not a
+		// dotted
+		// package doubled onto the full relative path (org.ex/org/ex/Foo.java).
+		assertThat(model.files()).isNotEmpty().allSatisfy((f) -> {
+			assertThat(f.fileName()).as("bare file name").doesNotContain("/");
+			assertThat(f.packageName()).as("slashed package, not dotted").doesNotContain(".");
+			assertThat(f.packageName() + "/" + f.fileName()).as("no doubled package")
+				.doesNotContain(f.packageName() + "/" + f.packageName());
+		});
+	}
+
+	@Test
 	void coberturaLineAndBranchMatch() {
 		CoverageResults hand = new CoberturaXmlParser().parse(bytes(COBERTURA));
 		CoverageResults model = CoverageModelAdapter.parse(new CoberturaParser(ProcessingMode.IGNORE_ERRORS),

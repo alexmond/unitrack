@@ -66,9 +66,11 @@
             <tbody id="files-body">
             <tr th:each="f : ${page.worstFiles}" th:attr="data-search=${#strings.toLowerCase(f.path)}">
                 <td>
-                    <a th:if="${page.repoBlobBase != null}" th:href="${page.repoBlobBase + f.path}"
+                    <!-- Link only when a repo-relative path was resolved from the uploader's source
+                         manifest (#454); otherwise the package-relative path would 404, so show plain text. -->
+                    <a th:if="${page.repoBlobBase != null and f.repoPath != null}" th:href="${page.repoBlobBase + f.repoPath}"
                        target="_blank" rel="noopener"><code class="mono" th:text="${f.path}">path</code></a>
-                    <code th:unless="${page.repoBlobBase != null}" class="mono" th:text="${f.path}">path</code>
+                    <code th:unless="${page.repoBlobBase != null and f.repoPath != null}" class="mono" th:text="${f.path}">path</code>
                 </td>
                 <td class="num pct" th:attr="data-sort=${f.linePct}" th:text="${#numbers.formatDecimal(f.linePct,1,1)} + '%'">0%</td>
                 <td style="width:140px">

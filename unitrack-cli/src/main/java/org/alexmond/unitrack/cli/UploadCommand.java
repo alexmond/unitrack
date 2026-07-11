@@ -146,6 +146,14 @@ class UploadCommand implements Callable<Integer> {
 
 	private final ReportDiscovery discovery;
 
+	/**
+	 * The checkout's source-file manifest ({@code git ls-files}, #454), computed once
+	 * when coverage is uploaded and attached to each coverage shard so the server can
+	 * resolve package-relative coverage paths to working repo-relative source links. Null
+	 * when there's no coverage or git isn't available.
+	 */
+	private Resource sourceManifest;
+
 	UploadCommand(UploadClient client, ReportResolver resolver, CiMetadataDetector detector,
 			ReportDiscovery discovery) {
 		this.client = client;
@@ -194,6 +202,13 @@ class UploadCommand implements Callable<Integer> {
 		}
 		if (ci.ciProvider() != null) {
 			System.out.println("Detected CI: " + ci.ciProvider());
+		}
+
+		// Coverage links to GitHub need the repo-relative path, which the report doesn't
+		// carry — send the checkout's source manifest so the server can resolve it
+		// (#454).
+		if (!jacocoFiles.isEmpty()) {
+			this.sourceManifest = gitSourceManifest(this.scanRoot);
 		}
 
 		// --split-by-module is deprecated + ignored: a run maps 1:1 to a CI build. Route
@@ -369,7 +384,7 @@ class UploadCommand implements Callable<Integer> {
 					pauseBetweenShards();
 				}
 				IngestResponse r = this.client.ingest(this.url, this.token, UploadClient.parseHeaders(this.headers),
-						fields, batches.get(i));
+						fields, withManifest(batches.get(i)));
 				response = (response != null) ? response : r;
 				if (batches.size() > 1) {
 					System.out.printf("  shard %d/%d uploaded.%n", i + 1, batches.size());
@@ -391,6 +406,84 @@ class UploadCommand implements Callable<Integer> {
 			System.err.println("error: " + ex.getMessage());
 			return ex.exitCode();
 		}
+	}
+
+	/**
+	 * Attaches the source manifest to a shard that carries coverage (so the server can
+	 * resolve coverage paths to repo-relative source links); shards without coverage, and
+	 * uploads where git wasn't available, are returned unchanged.
+	 */
+	private Map<String, List<Resource>> withManifest(Map<String, List<Resource>> batch) {
+		if (this.sourceManifest == null || !batch.containsKey("jacoco") || batch.get("jacoco").isEmpty()) {
+			return batch;
+		}
+		Map<String, List<Resource>> withIt = new LinkedHashMap<>(batch);
+		withIt.put("sourceManifest", List.of(this.sourceManifest));
+		return withIt;
+	}
+
+	/**
+	 * Source-file extensions kept in the manifest — enough to cover the languages we
+	 * parse.
+	 */
+	private static final java.util.Set<String> SOURCE_EXTENSIONS = java.util.Set.of("java", "kt", "kts", "scala",
+			"groovy", "go", "py", "js", "jsx", "ts", "tsx", "cs", "rb", "php", "c", "h", "cc", "cpp", "cxx", "hpp",
+			"rs", "swift", "m", "mm");
+
+	/** Cap on manifest entries sent — matches the server's own cap. */
+	private static final int MAX_MANIFEST_ENTRIES = 50_000;
+
+	/**
+	 * The checkout's tracked source files as a newline-delimited manifest, via
+	 * {@code git ls-files} run in {@code root}, filtered to source extensions and capped.
+	 * Best-effort: returns null when git is absent, errors, or the dir isn't a repo — an
+	 * upload must never fail for want of a manifest (coverage links just fall back to the
+	 * package-relative path).
+	 */
+	private static Resource gitSourceManifest(String root) {
+		try {
+			Process process = new ProcessBuilder("git", "ls-files").directory(new java.io.File(root))
+				.redirectErrorStream(false)
+				.start();
+			StringBuilder manifest = new StringBuilder();
+			int kept = 0;
+			try (java.io.BufferedReader reader = new java.io.BufferedReader(
+					new java.io.InputStreamReader(process.getInputStream(), java.nio.charset.StandardCharsets.UTF_8))) {
+				String line;
+				while ((line = reader.readLine()) != null && kept < MAX_MANIFEST_ENTRIES) {
+					if (isSourceFile(line)) {
+						manifest.append(line).append('\n');
+						kept++;
+					}
+				}
+			}
+			boolean ok = process.waitFor(10, java.util.concurrent.TimeUnit.SECONDS) && process.exitValue() == 0;
+			if (!ok || kept == 0) {
+				return null;
+			}
+			return new ByteArrayResource(manifest.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8)) {
+				@Override
+				public String getFilename() {
+					return "sourceManifest.txt";
+				}
+			};
+		}
+		catch (InterruptedException ex) {
+			Thread.currentThread().interrupt();
+			return null;
+		}
+		catch (IOException | RuntimeException ex) {
+			return null;
+		}
+	}
+
+	private static boolean isSourceFile(String path) {
+		int dot = path.lastIndexOf('.');
+		int slash = path.lastIndexOf('/');
+		if (dot <= slash || dot == path.length() - 1) {
+			return false;
+		}
+		return SOURCE_EXTENSIONS.contains(path.substring(dot + 1).toLowerCase(java.util.Locale.ROOT));
 	}
 
 	private void printVerbose(Map<String, String> fields, List<Resource> files) {

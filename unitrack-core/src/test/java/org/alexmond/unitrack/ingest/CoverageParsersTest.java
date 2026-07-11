@@ -125,7 +125,10 @@ class CoverageParsersTest {
 		assertThat(r.branchMissed()).isEqualTo(1);
 		assertThat(r.files()).hasSize(1);
 		assertThat(r.files().get(0).packageName()).isEqualTo("app");
-		assertThat(r.files().get(0).fileName()).isEqualTo("app/foo.py");
+		assertThat(r.files().get(0).fileName()).isEqualTo("foo.py");
+		// getPath() rebuilds a clean package-relative path (no doubled package) for
+		// links.
+		assertThat(r.files().get(0).packageName() + "/" + r.files().get(0).fileName()).isEqualTo("app/foo.py");
 	}
 
 	@Test
@@ -162,7 +165,8 @@ class CoverageParsersTest {
 		assertThat(r.lineCovered()).isEqualTo(1);
 		assertThat(r.lineMissed()).isEqualTo(1);
 		assertThat(r.files()).hasSize(1);
-		assertThat(r.files().get(0).fileName()).isEqualTo("proj/foo.py");
+		assertThat(r.files().get(0).fileName()).isEqualTo("foo.py");
+		assertThat(r.files().get(0).packageName()).isEqualTo("proj");
 	}
 
 	@Test

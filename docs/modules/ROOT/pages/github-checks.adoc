@@ -1,8 +1,16 @@
 = GitHub PR Checks
 
-UniTrack can post the xref:quality-gate.adoc[quality-gate] verdict back to GitHub as a
-*commit status*, so the result of a build shows up directly on the pull request next to the
-other checks.
+UniTrack posts the xref:quality-gate.adoc[quality-gate] verdict back to GitHub so the result
+of a build shows up directly on the pull request. There are two levels, chosen by how you
+authenticate:
+
+* *Personal access token (PAT)* -- UniTrack posts a *commit status* (a pass/fail dot with a
+  one-line description).
+* *GitHub App* -- UniTrack posts a richer *check run*: a markdown summary plus *inline
+  annotations* on the PR's changed lines (newly-uncovered coverage lines and new test
+  failures). The Checks API requires App auth, so this is the App-only upgrade over the
+  status. When an App is configured it replaces the commit status; otherwise the status is
+  the fallback.
 
 == What gets posted
 
@@ -42,6 +50,58 @@ These are global defaults. `enabled`, the status `context`, and `pr-comment` can
 *overridden per project* from its xref:quality-gate.adoc[Settings] page -- e.g. enable GitHub
 for one repo only, or use a different status context. The token always stays global and is
 never set per project.
+
+== Authenticating as a GitHub App
+
+Configure a GitHub App to unlock check runs (below) and short-lived, per-repository tokens
+instead of a single long-lived PAT. Create an App with *Checks: write*, *Commit statuses:
+write*, *Pull requests: write* and *Contents: read* permissions, install it on your repos,
+and set:
+
+[cols="2,3"]
+|===
+| Property | Meaning
+
+| `app.app-id`          | The App's numeric ID (App settings page).
+| `app.private-key`     | The App private key in *PKCS#8* PEM. GitHub downloads PKCS#1 (`BEGIN RSA PRIVATE KEY`) -- convert once with `openssl pkcs8 -topk8 -nocrypt -in app.pem -out app.pk8`.
+| `app.installation-id` | Optional. Pin the installation; otherwise UniTrack resolves it per repo.
+|===
+
+[source,yaml]
+----
+unitrack:
+  github:
+    enabled: true
+    server-base-url: https://unitrack.example.com
+    app:
+      app-id: 123456
+      private-key: ${UNITRACK_GITHUB_APP_PRIVATE_KEY}   # PKCS#8 PEM
+----
+
+UniTrack signs a short-lived App JWT, exchanges it for an installation token, and caches that
+token until just before it expires. When the App isn't configured it uses `token` (the PAT)
+and posts the plain commit status. A repo the App isn't installed on is skipped, never
+failing the ingest.
+
+== Check runs with inline annotations
+
+With an App configured, UniTrack posts a *check run* named after the status `context`. Its
+output carries a summary (gate verdict, coverage delta, new-failure count, a link to the run)
+and up to 50 *annotations* placed on the PR's changed lines:
+
+* *Uncovered coverage* -- a line the PR added or changed that no test covers is flagged
+  `warning: This line is not covered by tests.` Coverage line numbers come from JaCoCo /
+  Cobertura per-line data. Coverage reports carry only a package-relative path
+  (`org/ex/Foo.java`), so to match it to the PR's repo-relative file UniTrack uses the
+  repo-relative path resolved at upload time from the uploader's *source manifest* (see
+  xref:cli-reference.adoc[the uploader]), falling back to suffix-matching the coverage path
+  against the PR's changed files.
+* *New test failures* -- a failing test whose source file the PR changed is flagged `failure`
+  at the assertion line parsed from its stack trace.
+
+Only lines in the pull request's diff are annotated, so the check surfaces exactly the
+problems the change introduced. Formats without per-line coverage (LCOV, OpenCover) still get
+the summary; only the coverage annotations are skipped.
 
 == Pull-request comment
 

@@ -37,6 +37,17 @@ scripts/unitrack-upload.sh \
 Quote the `--junit`/`--jacoco` globs so the shell does not expand them before the script
 does.
 
+[NOTE]
+====
+*Coverage source links.* When you upload coverage, the CLI also sends a *source manifest*
+(the checkout's tracked source files, via `git ls-files`) so the server can turn each
+coverage file's package-relative path into a working link to the source on GitHub -- and
+match it to a PR's changed files for
+xref:github-checks.adoc[inline coverage annotations]. It is best-effort: if the upload
+does not run inside a git checkout, the manifest is skipped and coverage paths simply
+show as plain text. No flag is needed.
+====
+
 == GitHub Actions
 
 Two workflows live under `.github/workflows/`:

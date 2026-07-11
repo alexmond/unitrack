@@ -67,8 +67,22 @@ public class JacocoXmlParser implements CoverageParser {
 				applyCounter(counter, c);
 			}
 			files.add(new CoverageResults.ParsedFileCoverage(packageName, sourceFile.attr("name"), c.lineCovered,
-					c.lineMissed, c.branchCovered, c.branchMissed));
+					c.lineMissed, c.branchCovered, c.branchMissed, uncoveredLines(sourceFile)));
 		}
+	}
+
+	/**
+	 * Line numbers with zero covered instructions ({@code ci="0"} and {@code mi>0}) — a
+	 * fully-uncovered line, the clean signal for a "not covered" PR annotation (#443).
+	 */
+	private static List<Integer> uncoveredLines(XmlNode sourceFile) {
+		List<Integer> lines = new ArrayList<>();
+		for (XmlNode line : sourceFile.children("line")) {
+			if (line.attrInt("ci", 0) == 0 && line.attrInt("mi", 0) > 0) {
+				lines.add(line.attrInt("nr", 0));
+			}
+		}
+		return lines;
 	}
 
 	private void applyCounter(XmlNode counter, Counters c) {

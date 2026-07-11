@@ -53,8 +53,15 @@ public class CoberturaXmlParser implements CoverageParser {
 			int bm = 0;
 			for (Map.Entry<String, int[]> e : byFile.entrySet()) {
 				int[] a = e.getValue();
-				String packageName = packageOf.get(e.getKey());
-				String fileName = e.getKey().substring(e.getKey().indexOf(' ') + 1);
+				// Cobertura's filename attr is the source-relative path (e.g.
+				// app/foo.py);
+				// split it into (dir, bare) so getPath() rebuilds that path instead of
+				// doubling the package (#454). Fall back to the package attr when the
+				// filename carries no directory.
+				String rawFile = e.getKey().substring(e.getKey().indexOf(' ') + 1).replace('\\', '/');
+				int slash = rawFile.lastIndexOf('/');
+				String fileName = (slash >= 0) ? rawFile.substring(slash + 1) : rawFile;
+				String packageName = (slash >= 0) ? rawFile.substring(0, slash) : packageOf.get(e.getKey());
 				files.add(new CoverageResults.ParsedFileCoverage(packageName, fileName, a[0], a[1], a[2], a[3]));
 				lc += a[0];
 				lm += a[1];

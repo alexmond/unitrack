@@ -52,8 +52,18 @@ final class CoverageModelAdapter {
 		for (FileNode file : module.getAllFileNodes()) {
 			Coverage fileLine = cov(file, Metric.LINE);
 			Coverage fileBranch = cov(file, Metric.BRANCH);
-			files.add(new CoverageResults.ParsedFileCoverage(packageName(file), fileName(file), fileLine.getCovered(),
-					fileLine.getMissed(), fileBranch.getCovered(), fileBranch.getMissed()));
+			// Store (slashed package dir, bare file name) so getPath() rebuilds a clean
+			// `org/ex/Foo.java` that matches the repo layout (git ls-files) and the
+			// hand-rolled parser's shape. Combining the dotted PackageNode name with the
+			// already-package-qualified relative path would double the package and break
+			// source links + PR annotations (#454).
+			String bareName = lastSegment(file.getFileName());
+			String packageDir = packageDir(file, bareName);
+			// getMissedLines() = the fully-uncovered line numbers, for PR annotations
+			// (#443).
+			files.add(new CoverageResults.ParsedFileCoverage(packageDir, bareName, fileLine.getCovered(),
+					fileLine.getMissed(), fileBranch.getCovered(), fileBranch.getMissed(),
+					new ArrayList<>(file.getMissedLines())));
 		}
 		return new CoverageResults(line.getCovered(), line.getMissed(), branch.getCovered(), branch.getMissed(),
 				instruction.getCovered(), instruction.getMissed(), method.getCovered(), method.getMissed(), files);
@@ -63,18 +73,39 @@ final class CoverageModelAdapter {
 		return node.getTypedValue(metric, Coverage.nullObject(metric));
 	}
 
-	/** Prefer the relative path (e.g. {@code app/foo.py}) over the bare file name. */
-	private static String fileName(FileNode file) {
+	/**
+	 * The file's slashed package directory ({@code org/ex}). Prefers the parser's
+	 * relative path (which carries the real source layout) with the bare file name
+	 * stripped off; when the relative path is just the file name, falls back to the
+	 * parent {@link edu.hm.hafner.coverage.PackageNode}'s name normalized to slashes.
+	 */
+	private static String packageDir(FileNode file, String bareName) {
 		String rel = file.getRelativePath();
-		return (rel != null && !rel.isBlank()) ? rel : file.getFileName();
+		if (rel != null && !rel.isBlank()) {
+			rel = rel.replace('\\', '/');
+			String suffix = "/" + bareName;
+			if (rel.endsWith(suffix)) {
+				return rel.substring(0, rel.length() - suffix.length());
+			}
+			if (!rel.equals(bareName)) {
+				int slash = rel.lastIndexOf('/');
+				return (slash >= 0) ? rel.substring(0, slash) : "";
+			}
+		}
+		Node parent = file.getParent();
+		return (parent != null) ? parent.getName().replace('.', '/') : "";
 	}
 
 	/**
-	 * A file's package is its parent {@link edu.hm.hafner.coverage.PackageNode}'s name.
+	 * The bare last path segment, guarding against a parser returning a qualified name.
 	 */
-	private static String packageName(FileNode file) {
-		Node parent = file.getParent();
-		return (parent != null) ? parent.getName() : "";
+	private static String lastSegment(String name) {
+		if (name == null) {
+			return "";
+		}
+		String normalized = name.replace('\\', '/');
+		int slash = normalized.lastIndexOf('/');
+		return (slash >= 0) ? normalized.substring(slash + 1) : normalized;
 	}
 
 }

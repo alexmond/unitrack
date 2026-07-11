@@ -54,7 +54,9 @@ class CoverageFormatsIntegrationTest {
 		mvc.perform(get("/api/v1/runs/{id}", runId))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.coverage.linePct").value(closeTo(66.67, 0.1)))
-			.andExpect(jsonPath("$.coverage.files[0].path").value("app/app/foo.py"));
+			// Cobertura filename "app/foo.py" -> clean package-relative path, not the old
+			// doubled "app/app/foo.py" (#454).
+			.andExpect(jsonPath("$.coverage.files[0].path").value("app/foo.py"));
 	}
 
 }
