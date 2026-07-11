@@ -194,31 +194,36 @@ public class JmhJsonParser implements PerfResultParser {
 	}
 
 	/**
-	 * Sample-weighted roll-up across benchmarks; per-benchmark labels are the real
-	 * signal.
+	 * Roll-up across benchmarks; per-benchmark labels are the real signal. The mean is a
+	 * sample-weighted mean (linear, so the pooled mean is exact). Percentiles must NOT be
+	 * averaged across heterogeneous benchmarks — the tail collapses onto the mean (a run
+	 * "p99" lower than the slowest benchmark's median). Instead each run percentile is
+	 * the worst (max) across benchmarks, so the run line tracks the slowest operation's
+	 * tail and stays monotone (p50 &le; p90 &le; p95 &le; p99, since each benchmark's own
+	 * is).
 	 */
 	private static PerfResults aggregate(List<PerfResults.LabelStats> labels) {
 		long total = 0;
 		double wMean = 0;
-		double wP50 = 0;
-		double wP90 = 0;
-		double wP95 = 0;
-		double wP99 = 0;
+		double p50 = 0;
+		double p90 = 0;
+		double p95 = 0;
+		double p99 = 0;
 		double min = Double.MAX_VALUE;
 		double max = 0;
 		for (PerfResults.LabelStats l : labels) {
 			long n = Math.max(1, l.sampleCount());
 			total += n;
 			wMean += l.meanMs() * n;
-			wP50 += l.p50Ms() * n;
-			wP90 += l.p90Ms() * n;
-			wP95 += l.p95Ms() * n;
-			wP99 += l.p99Ms() * n;
+			p50 = Math.max(p50, l.p50Ms());
+			p90 = Math.max(p90, l.p90Ms());
+			p95 = Math.max(p95, l.p95Ms());
+			p99 = Math.max(p99, l.p99Ms());
 			min = Math.min(min, l.meanMs());
 			max = Math.max(max, l.meanMs());
 		}
 		double w = (total > 0) ? total : 1;
-		return new PerfResults(total, 0, 0.0, 0.0, 0, wMean / w, wP50 / w, wP90 / w, wP95 / w, wP99 / w,
+		return new PerfResults(total, 0, 0.0, 0.0, 0, wMean / w, p50, p90, p95, p99,
 				(min == Double.MAX_VALUE) ? 0 : min, max, labels);
 	}
 
