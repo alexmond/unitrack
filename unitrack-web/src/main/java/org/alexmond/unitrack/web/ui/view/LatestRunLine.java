@@ -9,6 +9,8 @@ package org.alexmond.unitrack.web.ui.view;
  * @param label the run label (short SHA, or "#id")
  * @param branch the run's branch, or null
  * @param whenText the formatted timestamp
+ * @param commitUrl the run's commit on the repo host ({@code <base>/commit/<sha>}), or
+ * null when there's no repo or no commit — rendered as an extra GitHub link on the sha
  */
-public record LatestRunLine(Long runId, String label, String branch, String whenText) {
+public record LatestRunLine(Long runId, String label, String branch, String whenText, String commitUrl) {
 }

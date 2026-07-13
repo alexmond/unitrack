@@ -77,8 +77,9 @@ class CoveragePageService {
 		// The module page is a dedicated, module-filtered view — it drops the by-module
 		// picker (you're already in a module; the breadcrumb is the way back to all).
 		BreakdownTable byModule = (selected != null) ? null : breakdown(id, modules, null);
-		return new CoveragePage(project, selected != null, selected, all, true, kpis, AnalyticsView.latestRunLine(run),
-				trendView, byModule, EMPTY, reporting.coveragePackages(c.getId(), selected),
+		return new CoveragePage(project, selected != null, selected, all, true, kpis,
+				AnalyticsView.latestRunLine(run, (base != null) ? (base + "/commit/") : null), trendView, byModule,
+				EMPTY, reporting.coveragePackages(c.getId(), selected),
 				reporting.coverageFiles(c.getId(), selected, FILE_LIMIT), repoBlobBase);
 	}
 

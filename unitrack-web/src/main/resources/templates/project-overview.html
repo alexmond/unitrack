@@ -106,7 +106,13 @@
                        th:text="${#temporals.format(r.createdAt, 'MMM dd HH:mm')}">date</a></td>
                 <td th:text="${r.branch} ?: '—'">main</td>
                 <td><code class="mono" th:text="${r.flag}">default</code></td>
-                <td><code class="mono" th:text="${r.shortSha} ?: '—'">abc1234</code></td>
+                <td>
+                    <a th:if="${page.repoCommitBase != null and r.commitSha != null}"
+                       th:href="${page.repoCommitBase + r.commitSha}" target="_blank" rel="noopener"
+                       title="View commit on GitHub"><code class="mono" th:text="${r.shortSha}">abc1234</code></a>
+                    <code th:unless="${page.repoCommitBase != null and r.commitSha != null}" class="mono"
+                          th:text="${r.shortSha} ?: '—'">abc1234</code>
+                </td>
                 <td><span th:replace="~{fragments/components :: statusPill(${r.status})}"></span></td>
                 <td class="num" th:text="${r.totalTests}">0</td>
                 <td class="num" th:text="${r.failed + r.errors}">0</td>
@@ -205,6 +211,8 @@
     (function () {
         var projectId = /*[[${page.project.id}]]*/ 0;
         var selBranch = /*[[${selectedBranch}]]*/ null;
+        // Repo commit-link base (<repo>/commit/), server-validated to http(s); null when no repo.
+        var commitBase = /*[[${page.repoCommitBase}]]*/ null;
         function pillClass(s) {
             return s === 'PASSED' ? 'pill--pass'
                  : s === 'FAILED' ? 'pill--fail'
@@ -224,6 +232,23 @@
             code.className = 'mono';
             code.textContent = text;
             td.appendChild(code);
+            return td;
+        }
+        // Commit cell: links the sha to the repo host when a base + sha exist (GitHub resolves
+        // an abbreviated sha), else a plain code cell. Scheme is fixed by the validated base.
+        function commitCell(shortSha) {
+            if (!commitBase || !shortSha) { return monoCell(shortSha || '—'); }
+            var td = document.createElement('td');
+            var a = document.createElement('a');
+            a.setAttribute('href', commitBase + shortSha);
+            a.setAttribute('target', '_blank');
+            a.setAttribute('rel', 'noopener');
+            a.setAttribute('title', 'View commit on GitHub');
+            var code = document.createElement('code');
+            code.className = 'mono';
+            code.textContent = shortSha;
+            a.appendChild(code);
+            td.appendChild(a);
             return td;
         }
         function fmtPct(v) { return (v === null || v === undefined) ? '—' : Number(v).toFixed(1) + '%'; }
@@ -247,7 +272,7 @@
 
             tr.appendChild(cell(u.branch || '—'));
             tr.appendChild(monoCell(u.flag || 'default'));
-            tr.appendChild(monoCell(u.shortSha || '—'));
+            tr.appendChild(commitCell(u.shortSha));
 
             var statusTd = document.createElement('td');
             var pill = document.createElement('span');

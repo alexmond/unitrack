@@ -454,7 +454,8 @@ public class DashboardController {
 		ClusterSections cs = clusterSections(cur, id, flakyViews);
 		String allUrl = AnalyticsView.scopeUrl("tests", id, selectedFlag, "").replace("&module=", "");
 		TestsPage page = new TestsPage(project, scoped, selectedModule, allUrl, cur != null,
-				(tiles != null) ? tiles.kpis() : List.of(), AnalyticsView.latestRunLine(cur),
+				(tiles != null) ? tiles.kpis() : List.of(),
+				AnalyticsView.latestRunLine(cur, AnalyticsView.repoCommitBase(project.getRepoUrl())),
 				testsTrend(trend, scoped, selectedModule),
 				scoped ? null : testsBreakdown(id, selectedFlag, null, modules),
 				new EmptyState("bi-check2-square", "No test runs yet",

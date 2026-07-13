@@ -27,6 +27,9 @@ class NewOverviewPageIntegrationTest {
 	@Autowired
 	private WebApplicationContext context;
 
+	@Autowired
+	private org.alexmond.unitrack.repository.ProjectRepository projects;
+
 	private static byte[] junit(boolean pass) {
 		String failures = pass ? "0" : "1";
 		String caseBody = pass ? "<testcase name=\"t\" classname=\"com.x.X\" time=\"0.1\"/>"
@@ -52,6 +55,21 @@ class NewOverviewPageIntegrationTest {
 			.getResponse()
 			.getContentAsString();
 		return ((Number) JsonPath.read(body, "$.projectId")).longValue();
+	}
+
+	@Test
+	void recentRunCommitLinksToRepoHostWhenRepoUrlSet() throws Exception {
+		MockMvc mvc = mockMvc();
+		long id = ingest(mvc, "overview-commitlink", "abcdef1", true);
+		// Give the project a repo so the commit column becomes a GitHub /commit/<sha>
+		// link.
+		var p = projects.findById(id).orElseThrow();
+		p.setRepoUrl("https://github.com/acme/demo.git");
+		projects.save(p);
+		mvc.perform(get("/projects/{id}", id))
+			.andExpect(status().isOk())
+			// .git stripped, /commit/<full sha> appended by repoCommitBase
+			.andExpect(content().string(containsString("https://github.com/acme/demo/commit/abcdef1")));
 	}
 
 	@Test

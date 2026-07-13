@@ -76,9 +76,9 @@ class TimingPageService {
 		List<TimingRosterRow> roster = roster(curCases, curMods, selected, prev);
 
 		return new TimingPage(project, scoped, selected, all, true, kpis(curScope, prevScope, prev != null, roster),
-				AnalyticsView.latestRunLine(cur), trend(trend, scoped, selected),
-				scoped ? null : breakdown(id, selectedFlag, cur, prev, null), EMPTY, roster,
-				new ScopeBar(all, flags, selectedFlag, branches, selectedBranch, selected));
+				AnalyticsView.latestRunLine(cur, AnalyticsView.repoCommitBase(project.getRepoUrl())),
+				trend(trend, scoped, selected), scoped ? null : breakdown(id, selectedFlag, cur, prev, null), EMPTY,
+				roster, new ScopeBar(all, flags, selectedFlag, branches, selectedBranch, selected));
 	}
 
 	/**
