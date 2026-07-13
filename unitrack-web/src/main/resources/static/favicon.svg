@@ -1,7 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="UniTrack">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="UniTrack">
   <!-- UniTrack favicon: a trend line "tracked" over time along a baseline track.
        Blue accent (#4493f8) matches the "Track" half of the wordmark; dark tile
-       matches the app's default theme (--bg #0f1419, --border #2c343d, --radius). -->
+       matches the app's default theme (bg #0f1419, border #2c343d, rounded). -->
   <defs>
     <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#1a2027"/>

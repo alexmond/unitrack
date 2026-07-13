@@ -93,15 +93,22 @@ class JmhJsonParserTest {
 	}
 
 	@Test
-	void aggregatesSampleWeightedAcrossBenchmarks() {
+	void rollsUpMeanWeightedButPercentilesAsWorstAcrossBenchmarks() {
 		PerfResults r = parser.parse(new ByteArrayInputStream(REPORT.getBytes(StandardCharsets.UTF_8)));
 		assertThat(r.labels()).hasSize(2);
 		assertThat(r.sampleCount()).isEqualTo(35); // 25 + 10
 		assertThat(r.errorCount()).isZero();
-		// weighted mean: (0.120*25 + 0.5*10) / 35
+		// Mean is sample-weighted (linear → exact pooled mean): (0.120*25 + 0.5*10) / 35.
 		assertThat(r.meanMs()).isCloseTo((0.120 * 25 + 0.5 * 10) / 35.0, within(1e-6));
 		assertThat(r.minMs()).isCloseTo(0.120, within(1e-6));
 		assertThat(r.maxMs()).isCloseTo(0.5, within(1e-6));
+		// Percentiles are the WORST across benchmarks, not the sample-weighted average
+		// (which would have hidden the tput benchmark's flat 0.5 behind render's smaller
+		// 0.118-0.140 tail). tput is 0.5 at every percentile → run-level max = 0.5.
+		assertThat(r.p50Ms()).isCloseTo(0.5, within(1e-6));
+		assertThat(r.p90Ms()).isCloseTo(0.5, within(1e-6));
+		assertThat(r.p95Ms()).isCloseTo(0.5, within(1e-6));
+		assertThat(r.p99Ms()).isCloseTo(0.5, within(1e-6));
 	}
 
 	@Test
