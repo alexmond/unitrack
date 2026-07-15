@@ -28,10 +28,12 @@ import org.alexmond.unitrack.domain.Project;
  * @param latestRun the latest-run line ({@code null} when there are no runs)
  * @param cards the aspect strip, ordered trouble-first (Load omitted when absent)
  * @param trend the "Health over time" multi-series trend
+ * @param repoCommitBase repo commit-link base ({@code <repo>/commit/}) for linking each
+ * recent run's commit to the repo host, or null when there's no linkable repo
  */
 public record OverviewPage(Project project, String tab, boolean hasRuns, String verdictWord, String verdictLevel,
 		String verdictLine, List<VerdictChip> chips, double passRate, double donutPass, double failPct,
-		String heroStatus, LatestRunLine latestRun, List<AspectCard> cards, TrendView trend) {
+		String heroStatus, LatestRunLine latestRun, List<AspectCard> cards, TrendView trend, String repoCommitBase) {
 
 	/**
 	 * A verdict-band chip naming one deciding condition and linking to the tab that owns

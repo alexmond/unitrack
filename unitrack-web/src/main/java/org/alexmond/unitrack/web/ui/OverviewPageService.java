@@ -65,10 +65,11 @@ public class OverviewPageService {
 	 * (oldest first) for the "Health over time" chart.
 	 */
 	public OverviewPage build(Project project, Long id, List<TestRun> runs, List<TestRun> trend) {
+		String repoCommitBase = AnalyticsView.repoCommitBase(project.getRepoUrl());
 		if (runs.isEmpty()) {
 			return new OverviewPage(project, "overview", false, "No runs", "lvl-warn",
 					"No runs yet — push results from CI to start tracking health.", List.of(), 0, 0, 0, null, null,
-					List.of(), new TrendView(false, "Health over time", null, "{}"));
+					List.of(), new TrendView(false, "Health over time", null, "{}"), repoCommitBase);
 		}
 
 		TestRun cur = runs.get(0);
@@ -119,7 +120,8 @@ public class OverviewPageService {
 		String heroStatus = (gate != null) ? gate.status() : cur.getStatus();
 
 		return new OverviewPage(project, "overview", true, v.word(), v.level(), v.line(), v.chips(), cur.passRate(),
-				donutPass, failPct, heroStatus, AnalyticsView.latestRunLine(cur), cards, trendView(trend));
+				donutPass, failPct, heroStatus, AnalyticsView.latestRunLine(cur, repoCommitBase), cards,
+				trendView(trend), repoCommitBase);
 	}
 
 	// --- verdict

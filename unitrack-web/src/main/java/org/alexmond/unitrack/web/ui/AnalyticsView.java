@@ -39,12 +39,33 @@ final class AnalyticsView {
 
 	/** The latest-run line view for an analytics tab (null when there is no run). */
 	static LatestRunLine latestRunLine(TestRun cur) {
+		return latestRunLine(cur, null);
+	}
+
+	/**
+	 * The latest-run line view, with an optional GitHub-style commit link. When
+	 * {@code repoCommitBase} ({@code <repo>/commit/}) is non-null and the run has a
+	 * commit, the sha also links to the commit on the repo host.
+	 */
+	static LatestRunLine latestRunLine(TestRun cur, String repoCommitBase) {
 		if (cur == null) {
 			return null;
 		}
 		String label = (cur.getShortSha() != null && !cur.getShortSha().isBlank()) ? cur.getShortSha()
 				: ("#" + cur.getId());
-		return new LatestRunLine(cur.getId(), label, cur.getBranch(), RUN_TIME.format(cur.getCreatedAt()));
+		String sha = cur.getCommitSha();
+		String commitUrl = (repoCommitBase != null && sha != null && !sha.isBlank()) ? (repoCommitBase + sha) : null;
+		return new LatestRunLine(cur.getId(), label, cur.getBranch(), RUN_TIME.format(cur.getCreatedAt()), commitUrl);
+	}
+
+	/**
+	 * Repo commit-link base ({@code <repo>/commit/}) for building {@code <base><sha>}
+	 * deep links, or null when there's no linkable repo. Reuses {@link #repoBase} (which
+	 * rejects non-http(s) schemes).
+	 */
+	static String repoCommitBase(String repoUrl) {
+		String base = repoBase(repoUrl);
+		return (base != null) ? (base + "/commit/") : null;
 	}
 
 	/** Assemble a by-group {@link BreakdownTable} (null when there are 0/1 groups). */

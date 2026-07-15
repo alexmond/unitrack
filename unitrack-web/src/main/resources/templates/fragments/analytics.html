@@ -19,6 +19,8 @@
 <p th:fragment="latestRunLine(line)" th:if="${line != null}" class="muted" style="margin:6px 0 0">
     Latest run
     <a th:href="@{/runs/{id}(id=${line.runId()})}" th:text="${line.label()}">abc1234</a>
+    <a th:if="${line.commitUrl() != null}" th:href="${line.commitUrl()}" target="_blank" rel="noopener"
+       title="View commit on GitHub" aria-label="View commit on GitHub"><i class="bi bi-github"></i></a>
     <span th:if="${line.branch() != null}">on <code class="mono" th:text="${line.branch()}">main</code></span>
     · <span th:text="${line.whenText()}">date</span>
 </p>
