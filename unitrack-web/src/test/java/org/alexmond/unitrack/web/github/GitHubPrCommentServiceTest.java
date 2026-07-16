@@ -98,12 +98,40 @@ class GitHubPrCommentServiceTest {
 
 		server.expect(requestTo("https://api.github.com/repos/octo/repo/commits/abc123/pulls"))
 			.andRespond(withSuccess("[{\"number\":7}]", MediaType.APPLICATION_JSON));
+		// Our own prior marked comment (author login matches GET /user) -> update it
+		// (PATCH).
 		server.expect(requestTo("https://api.github.com/repos/octo/repo/issues/7/comments"))
-			.andRespond(withSuccess("[{\"id\":42,\"body\":\"" + GitHubPrCommentService.MARKER + " old\"}]",
-					MediaType.APPLICATION_JSON));
+			.andRespond(withSuccess("[{\"id\":42,\"user\":{\"login\":\"unitrack-bot\"},\"body\":\""
+					+ GitHubPrCommentService.MARKER + " old\"}]", MediaType.APPLICATION_JSON));
+		server.expect(requestTo("https://api.github.com/user"))
+			.andRespond(withSuccess("{\"login\":\"unitrack-bot\"}", MediaType.APPLICATION_JSON));
 		server.expect(requestTo("https://api.github.com/repos/octo/repo/issues/comments/42"))
 			.andExpect(method(HttpMethod.PATCH))
 			.andRespond(withSuccess());
+
+		service.publish(run(), new QualityGateResult(true, List.of()), 1.0, 0, 0);
+		server.verify();
+	}
+
+	@Test
+	void ignoresMarkedCommentAuthoredByAnotherUser() {
+		GitHubProperties props = props();
+		RestClient.Builder builder = RestClient.builder();
+		MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+		GitHubPrCommentService service = svc(props, builder);
+
+		server.expect(requestTo("https://api.github.com/repos/octo/repo/commits/abc123/pulls"))
+			.andRespond(withSuccess("[{\"number\":7}]", MediaType.APPLICATION_JSON));
+		// A third party planted the marker (author "attacker" != our "unitrack-bot") ->
+		// don't hijack it; create our own comment instead.
+		server.expect(requestTo("https://api.github.com/repos/octo/repo/issues/7/comments"))
+			.andRespond(withSuccess("[{\"id\":99,\"user\":{\"login\":\"attacker\"},\"body\":\""
+					+ GitHubPrCommentService.MARKER + " planted\"}]", MediaType.APPLICATION_JSON));
+		server.expect(requestTo("https://api.github.com/user"))
+			.andRespond(withSuccess("{\"login\":\"unitrack-bot\"}", MediaType.APPLICATION_JSON));
+		server.expect(requestTo("https://api.github.com/repos/octo/repo/issues/7/comments"))
+			.andExpect(method(HttpMethod.POST))
+			.andRespond(withStatus(HttpStatus.CREATED));
 
 		service.publish(run(), new QualityGateResult(true, List.of()), 1.0, 0, 0);
 		server.verify();

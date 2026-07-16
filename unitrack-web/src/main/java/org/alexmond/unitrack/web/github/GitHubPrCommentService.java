@@ -3,6 +3,7 @@ package org.alexmond.unitrack.web.github;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.alexmond.unitrack.domain.PerfRun;
 import org.alexmond.unitrack.domain.TestRun;
@@ -37,6 +38,9 @@ public class GitHubPrCommentService {
 	private static final ParameterizedTypeReference<List<Map<String, Object>>> LIST_OF_MAPS = new ParameterizedTypeReference<>() {
 	};
 
+	private static final ParameterizedTypeReference<Map<String, Object>> MAP = new ParameterizedTypeReference<>() {
+	};
+
 	private final GitHubProperties props;
 
 	private final RestClient restClient;
@@ -44,6 +48,9 @@ public class GitHubPrCommentService {
 	private final GitHubConfigResolver config;
 
 	private final GitHubAuth auth;
+
+	/** Cached own comment-author login; "" = resolved-but-unknown, null = unresolved. */
+	private final AtomicReference<String> ownLogin = new AtomicReference<>();
 
 	public GitHubPrCommentService(GitHubProperties props, RestClient.Builder restClientBuilder,
 			GitHubConfigResolver config, GitHubAuth auth) {
@@ -122,6 +129,14 @@ public class GitHubPrCommentService {
 		return (number instanceof Number n) ? n.intValue() : null;
 	}
 
+	/**
+	 * The id of our existing marked comment on the PR, or null if there is none. The
+	 * marker is only trusted on a comment authored by UniTrack's own account (the PAT
+	 * user, or the App's {@code [bot]}), so a copied marker planted by a third party
+	 * can't hijack the upsert. When our identity can't be resolved, falls back to
+	 * marker-only matching so behaviour is never worse than before. Identity is resolved
+	 * lazily — only when at least one marked comment is present.
+	 */
 	private Long findExistingComment(String[] repo, int pr, String marker, String bearer) {
 		List<Map<String, Object>> comments = this.restClient.get()
 			.uri(this.props.getApiUrl() + "/repos/{owner}/{repo}/issues/{pr}/comments", repo[0], repo[1], pr)
@@ -131,14 +146,64 @@ public class GitHubPrCommentService {
 		if (comments == null) {
 			return null;
 		}
-		for (Map<String, Object> comment : comments) {
-			Object body = comment.get("body");
-			Object id = comment.get("id");
-			if (body instanceof String s && s.contains(marker) && id instanceof Number n) {
-				return n.longValue();
-			}
+		List<Map<String, Object>> marked = comments.stream().filter((c) -> isMarked(c, marker)).toList();
+		if (marked.isEmpty()) {
+			return null;
 		}
-		return null;
+		String self = ownLogin(bearer);
+		return marked.stream()
+			.filter((c) -> self == null || self.equals(commentAuthor(c)))
+			.map(GitHubPrCommentService::commentId)
+			.findFirst()
+			.orElse(null);
+	}
+
+	private static boolean isMarked(Map<String, Object> comment, String marker) {
+		return comment.get("body") instanceof String s && s.contains(marker) && comment.get("id") instanceof Number;
+	}
+
+	/** The comment author's {@code user.login}, or null when absent. */
+	private static String commentAuthor(Map<String, Object> comment) {
+		return (comment.get("user") instanceof Map<?, ?> user && user.get("login") instanceof String login) ? login
+				: null;
+	}
+
+	/** The {@code id} of a comment as a long, or null when absent/non-numeric. */
+	private static Long commentId(Map<String, Object> comment) {
+		return (comment.get("id") instanceof Number n) ? n.longValue() : null;
+	}
+
+	/**
+	 * UniTrack's own comment-author login, resolved once and cached: the App's
+	 * {@code <slug>[bot]} in App mode, else the PAT user's login ({@code GET /user}).
+	 * Null when it can't be resolved (marker matching then isn't author-scoped).
+	 */
+	private String ownLogin(String bearer) {
+		String cached = this.ownLogin.get();
+		if (cached != null) {
+			return cached.isEmpty() ? null : cached;
+		}
+		String resolved = resolveOwnLogin(bearer);
+		this.ownLogin.set((resolved != null) ? resolved : "");
+		return resolved;
+	}
+
+	private String resolveOwnLogin(String bearer) {
+		if (this.auth.isAppMode()) {
+			return this.auth.appBotLogin();
+		}
+		try {
+			Map<String, Object> me = this.restClient.get()
+				.uri(this.props.getApiUrl() + "/user")
+				.headers((h) -> authHeaders(h, bearer))
+				.retrieve()
+				.body(MAP);
+			return (me != null && me.get("login") instanceof String login) ? login : null;
+		}
+		catch (RuntimeException ex) {
+			log.debug("Could not resolve GitHub token identity: {}", ex.getMessage());
+			return null;
+		}
 	}
 
 	private void createComment(String[] repo, int pr, String body, String bearer) {

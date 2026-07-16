@@ -32,11 +32,28 @@ public class GitHubAuth {
 	 * installation token; falls back to the PAT.
 	 */
 	public String bearerToken(String owner, String repo) {
-		if (this.appTokens != null && this.appTokens.isConfigured()) {
+		if (isAppMode()) {
 			return this.appTokens.installationToken(owner, repo);
 		}
 		String token = this.props.getToken();
 		return (token != null && !token.isBlank()) ? token : null;
+	}
+
+	/**
+	 * Whether a GitHub App is configured (comments are authored by its {@code [bot]}
+	 * account).
+	 */
+	public boolean isAppMode() {
+		return this.appTokens != null && this.appTokens.isConfigured();
+	}
+
+	/**
+	 * UniTrack's comment-author login when a GitHub App is configured
+	 * ({@code <slug>[bot]}), else null — in PAT mode the author login is resolved from
+	 * the token instead.
+	 */
+	public String appBotLogin() {
+		return isAppMode() ? this.appTokens.botLogin() : null;
 	}
 
 }
