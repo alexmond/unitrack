@@ -3,6 +3,7 @@ package org.alexmond.unitrack.web.gitlab;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
@@ -10,6 +11,7 @@ import org.alexmond.unitrack.domain.TestRun;
 import org.alexmond.unitrack.report.QualityGateResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
@@ -23,7 +25,15 @@ import org.springframework.web.client.RestClient;
 @Service
 public class GitLabService {
 
+	/**
+	 * Hidden marker so the MR note is updated in place instead of duplicated each ingest.
+	 */
+	static final String MR_NOTE_MARKER = "<!-- unitrack-report -->";
+
 	private static final Logger log = LoggerFactory.getLogger(GitLabService.class);
+
+	private static final ParameterizedTypeReference<List<Map<String, Object>>> LIST_OF_MAPS = new ParameterizedTypeReference<>() {
+	};
 
 	private final GitLabProperties props;
 
@@ -66,7 +76,11 @@ public class GitLabService {
 		}
 	}
 
-	/** Posts a results note on the run's merge request, when one is associated. */
+	/**
+	 * Upserts a results note on the run's merge request, when one is associated. The note
+	 * carries a hidden marker so repeated ingests update the same note in place rather
+	 * than piling up a new note per run.
+	 */
 	public void publishMrNote(TestRun run, QualityGateResult gate, Double coverageDelta, int newFailures) {
 		if (!active(run.getProject().getId()) || !this.props.isMrNote() || run.getPrNumber() == null) {
 			return;
@@ -75,21 +89,57 @@ public class GitLabService {
 		if (path == null) {
 			return;
 		}
+		String notesBase = this.props.getApiUrl() + "/projects/" + encode(path) + "/merge_requests/" + run.getPrNumber()
+				+ "/notes";
 		Map<String, String> body = Map.of("body", note(run, gate, coverageDelta, newFailures));
 		try {
-			this.restClient.post()
-				.uri(URI.create(this.props.getApiUrl() + "/projects/" + encode(path) + "/merge_requests/"
-						+ run.getPrNumber() + "/notes"))
-				.header("PRIVATE-TOKEN", this.props.getToken())
-				.contentType(MediaType.APPLICATION_JSON)
-				.body(body)
-				.retrieve()
-				.toBodilessEntity();
-			log.info("Posted GitLab MR note for {} !{}", path, run.getPrNumber());
+			Long existing = findExistingNote(notesBase);
+			if (existing != null) {
+				this.restClient.put()
+					.uri(URI.create(notesBase + "/" + existing))
+					.header("PRIVATE-TOKEN", this.props.getToken())
+					.contentType(MediaType.APPLICATION_JSON)
+					.body(body)
+					.retrieve()
+					.toBodilessEntity();
+			}
+			else {
+				this.restClient.post()
+					.uri(URI.create(notesBase))
+					.header("PRIVATE-TOKEN", this.props.getToken())
+					.contentType(MediaType.APPLICATION_JSON)
+					.body(body)
+					.retrieve()
+					.toBodilessEntity();
+			}
+			log.info("Posted GitLab MR note for {} !{} ({})", path, run.getPrNumber(),
+					(existing != null) ? "updated" : "created");
 		}
 		catch (RuntimeException ex) {
 			log.warn("Failed to post GitLab MR note for {} !{}: {}", path, run.getPrNumber(), ex.getMessage());
 		}
+	}
+
+	/**
+	 * The id of the existing UniTrack-marked note on this MR, or null if there is none.
+	 */
+	private Long findExistingNote(String notesBase) {
+		List<Map<String, Object>> notes = this.restClient.get()
+			.uri(URI.create(notesBase + "?per_page=100"))
+			.header("PRIVATE-TOKEN", this.props.getToken())
+			.retrieve()
+			.body(LIST_OF_MAPS);
+		if (notes == null) {
+			return null;
+		}
+		for (Map<String, Object> n : notes) {
+			Object b = n.get("body");
+			Object id = n.get("id");
+			if (b instanceof String s && s.contains(MR_NOTE_MARKER) && id instanceof Number num) {
+				return num.longValue();
+			}
+		}
+		return null;
 	}
 
 	private boolean active(Long projectId) {
@@ -115,7 +165,8 @@ public class GitLabService {
 
 	private String note(TestRun run, QualityGateResult gate, Double coverageDelta, int newFailures) {
 		String gateStatus = (gate != null) ? gate.status() : "no gate";
-		StringBuilder sb = new StringBuilder("### UniTrack — ").append(gateStatus)
+		StringBuilder sb = new StringBuilder(MR_NOTE_MARKER).append("\n### UniTrack — ")
+			.append(gateStatus)
 			.append("\n\n| Metric | Value |\n|---|---|\n| Tests | ")
 			.append(run.getPassed())
 			.append(" passed, ")

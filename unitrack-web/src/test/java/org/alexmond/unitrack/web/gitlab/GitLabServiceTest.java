@@ -11,12 +11,15 @@ import org.springframework.http.HttpStatus;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
+import org.springframework.http.MediaType;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.jsonPath;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 class GitLabServiceTest {
 
@@ -60,7 +63,7 @@ class GitLabServiceTest {
 	}
 
 	@Test
-	void postsMergeRequestNoteWhenPrPresent() {
+	void createsMergeRequestNoteWhenNoneExists() {
 		GitLabProperties props = props(true);
 		RestClient.Builder builder = RestClient.builder();
 		MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
@@ -68,10 +71,38 @@ class GitLabServiceTest {
 		TestRun run = run("https://gitlab.com/octo/repo");
 		run.setPrNumber(7);
 
+		// List first (upsert): no marked note yet → create.
+		server.expect(requestTo("https://gitlab.com/api/v4/projects/octo%2Frepo/merge_requests/7/notes?per_page=100"))
+			.andExpect(method(HttpMethod.GET))
+			.andRespond(withSuccess("[]", MediaType.APPLICATION_JSON));
 		server.expect(requestTo("https://gitlab.com/api/v4/projects/octo%2Frepo/merge_requests/7/notes"))
 			.andExpect(method(HttpMethod.POST))
 			.andExpect(jsonPath("$.body").exists())
 			.andRespond(withStatus(HttpStatus.CREATED));
+
+		service.publishMrNote(run, new QualityGateResult(true, List.of()), null, 2);
+		server.verify();
+	}
+
+	@Test
+	void updatesExistingMergeRequestNoteInPlace() {
+		GitLabProperties props = props(true);
+		RestClient.Builder builder = RestClient.builder();
+		MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+		GitLabService service = new GitLabService(props, resolver(props), builder);
+		TestRun run = run("https://gitlab.com/octo/repo");
+		run.setPrNumber(7);
+
+		// A prior UniTrack-marked note exists → update it (PUT), don't create a
+		// duplicate.
+		server.expect(requestTo("https://gitlab.com/api/v4/projects/octo%2Frepo/merge_requests/7/notes?per_page=100"))
+			.andExpect(method(HttpMethod.GET))
+			.andRespond(withSuccess("[{\"id\":42,\"body\":\"" + GitLabService.MR_NOTE_MARKER + " old\"}]",
+					MediaType.APPLICATION_JSON));
+		server.expect(requestTo("https://gitlab.com/api/v4/projects/octo%2Frepo/merge_requests/7/notes/42"))
+			.andExpect(method(HttpMethod.PUT))
+			.andExpect(jsonPath("$.body").exists())
+			.andRespond(withSuccess());
 
 		service.publishMrNote(run, new QualityGateResult(true, List.of()), null, 2);
 		server.verify();
