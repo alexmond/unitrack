@@ -164,6 +164,16 @@ unitrack:
       private-key: ${UNITRACK_GITHUB_APP_PRIVATE_KEY:}
       # Optional — omit to resolve the installation per repo.
       installation-id: ${UNITRACK_GITHUB_APP_INSTALLATION_ID:}
+  # GitLab commit status + MR note (the GitLab mirror of the GitHub integration, #473).
+  # Disabled by default; set the token (api scope) and enable to turn it on. For
+  # self-hosted GitLab, override api-url.
+  gitlab:
+    enabled: ${UNITRACK_GITLAB_ENABLED:false}
+    token: ${UNITRACK_GITLAB_TOKEN:}
+    api-url: ${UNITRACK_GITLAB_API_URL:https://gitlab.com/api/v4}
+    server-base-url: ${UNITRACK_BASE_URL:http://localhost:8080}
+    context: ${UNITRACK_GITLAB_CONTEXT:unitrack/quality-gate}
+    mr-note: ${UNITRACK_GITLAB_MR_NOTE:true}
 
 # To actually deliver mail, configure an SMTP server, e.g.:
 #   spring.mail.host: smtp.example.com
