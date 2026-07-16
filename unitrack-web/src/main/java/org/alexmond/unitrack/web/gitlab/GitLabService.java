@@ -52,7 +52,7 @@ public class GitLabService {
 		if (!active(run.getProject().getId())) {
 			return;
 		}
-		String path = projectPath(run.getProject().getRepoUrl());
+		String path = projectPath(run.getProject().getRepoUrl(), hostOf(this.props.getApiUrl()));
 		String sha = run.getCommitSha();
 		if (path == null || sha == null || sha.isBlank()) {
 			return;
@@ -85,7 +85,7 @@ public class GitLabService {
 		if (!active(run.getProject().getId()) || !this.props.isMrNote() || run.getPrNumber() == null) {
 			return;
 		}
-		String path = projectPath(run.getProject().getRepoUrl());
+		String path = projectPath(run.getProject().getRepoUrl(), hostOf(this.props.getApiUrl()));
 		if (path == null) {
 			return;
 		}
@@ -196,22 +196,51 @@ public class GitLabService {
 
 	/**
 	 * Extracts a GitLab project's full path ({@code group/subgroup/project}) from its
-	 * repo URL, or null if it isn't a GitLab URL. Handles https and {@code git@} SSH
-	 * forms.
+	 * repo URL, or null if the URL's host is not {@code host} (the configured GitLab
+	 * host). Handles https and {@code git@} SSH forms, and any embedded
+	 * {@code user[:pw]@} credentials. Keying on the configured host (rather than a
+	 * substring like "gitlab") means self-hosted GitLab on a custom domain is recognised
+	 * and non-GitLab hosts are rejected.
 	 */
-	static String projectPath(String repoUrl) {
-		if (repoUrl == null || repoUrl.isBlank() || !repoUrl.toLowerCase(Locale.ROOT).contains("gitlab")) {
+	static String projectPath(String repoUrl, String host) {
+		if (repoUrl == null || repoUrl.isBlank() || host == null || host.isBlank()) {
 			return null;
 		}
-		String s = repoUrl.trim().replaceFirst("^[a-zA-Z]+://", "").replaceFirst("^git@", "");
+		// Strip scheme (https://, git+ssh://, ...) then any leading credentials (git@,
+		// oauth2:token@).
+		String s = repoUrl.trim().replaceFirst("^[a-zA-Z][a-zA-Z0-9+.-]*://", "").replaceFirst("^[^@/]+@", "");
 		int slash = s.indexOf('/');
 		int colon = s.indexOf(':');
 		int hostEnd = (colon >= 0 && (slash < 0 || colon < slash)) ? colon : slash;
 		if (hostEnd < 0) {
 			return null;
 		}
+		String urlHost = s.substring(0, hostEnd);
+		if (!urlHost.equalsIgnoreCase(host)) {
+			return null;
+		}
 		String path = s.substring(hostEnd + 1).replaceFirst("\\.git$", "").replaceAll("^/+", "").replaceAll("/+$", "");
 		return path.isBlank() ? null : path;
+	}
+
+	/**
+	 * The host of the configured GitLab API URL
+	 * ({@code https://gitlab.example.com/api/v4} -&gt; {@code gitlab.example.com}, port
+	 * stripped), used to recognise which repo URLs this integration owns. Null when the
+	 * API URL is unset.
+	 */
+	static String hostOf(String apiUrl) {
+		if (apiUrl == null || apiUrl.isBlank()) {
+			return null;
+		}
+		String s = apiUrl.trim().replaceFirst("^[a-zA-Z][a-zA-Z0-9+.-]*://", "");
+		int slash = s.indexOf('/');
+		String host = (slash >= 0) ? s.substring(0, slash) : s;
+		int port = host.indexOf(':');
+		if (port >= 0) {
+			host = host.substring(0, port);
+		}
+		return host.isBlank() ? null : host;
 	}
 
 }
