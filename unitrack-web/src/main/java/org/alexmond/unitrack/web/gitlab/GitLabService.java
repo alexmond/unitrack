@@ -3,6 +3,7 @@ package org.alexmond.unitrack.web.gitlab;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -65,9 +66,15 @@ public class GitLabService {
 			return;
 		}
 		boolean passed = (gate == null) || gate.passed();
-		Map<String, String> body = Map.of("state", passed ? "success" : "failed", "name", this.props.getContext(),
-				"description", describe(run, gate, coverageDelta), "target_url",
-				this.props.getServerBaseUrl() + "/runs/" + run.getId());
+		Map<String, Object> body = new LinkedHashMap<>();
+		body.put("state", passed ? "success" : "failed");
+		body.put("name", this.props.getContext());
+		body.put("description", describe(run, gate, coverageDelta));
+		body.put("target_url", this.props.getServerBaseUrl() + "/runs/" + run.getId());
+		// GitLab renders this on the pipeline/MR as the commit's coverage %.
+		if (run.getLineCoveragePct() != null) {
+			body.put("coverage", run.getLineCoveragePct());
+		}
 		try {
 			this.restClient.post()
 				.uri(URI.create(this.props.getApiUrl() + "/projects/" + encode(path) + "/statuses/" + sha))

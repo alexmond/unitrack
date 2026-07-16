@@ -56,6 +56,7 @@ class GitLabServiceTest {
 			.andExpect(header("PRIVATE-TOKEN", "secret"))
 			.andExpect(jsonPath("$.state").value("failed"))
 			.andExpect(jsonPath("$.name").value("unitrack/quality-gate"))
+			.andExpect(jsonPath("$.coverage").value(80.0))
 			.andRespond(withStatus(HttpStatus.CREATED));
 
 		service.publishStatus(run("https://gitlab.com/octo/repo"), new QualityGateResult(false, List.of()), 1.5);

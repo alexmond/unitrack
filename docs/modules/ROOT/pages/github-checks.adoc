@@ -163,5 +163,19 @@ xref:load-testing.adoc#_regression_gate[perf-gate verdict] per rule vs the basel
 The same exists for GitLab merge requests. Set `unitrack.gitlab.enabled=true` and a token with
 `api` scope (`UNITRACK_GITLAB_TOKEN`); for self-hosted GitLab override
 `unitrack.gitlab.api-url`. When a project's repo URL is a GitLab one, UniTrack posts a **commit
-status** (success/failed) and, when the run carries an MR number, a **results note** on that
-merge request — mirroring the GitHub commit status + PR comment.
+status** (success/failed, carrying the run's line-coverage % so GitLab shows it natively on the
+pipeline/MR) and, when the run carries an MR number, a **results note** on that merge request —
+mirroring the GitHub commit status + PR comment. The note is kept up to date in place (one
+maintained note per MR) and is only ever updated on a note UniTrack itself authored.
+
+TIP: There is no GitLab equivalent of GitHub's Checks API, so inline diff annotations aren't
+available; the commit status + MR note + deep link are the closest equivalent. GitLab's Code
+Quality widget reads a CI job artifact (`artifacts:reports:codequality`) from the MR's own
+pipeline, so it can't be driven by an external server reacting to ingests.
+
+=== Importing GitLab projects
+
+The **Import projects** page (`/import`) has a GitLab tab alongside GitHub: with a token
+configured it lists the projects you're a member of (`GET /projects?membership=true`) and
+provisions the selected ones as UniTrack projects, using each project's GitLab URL as the repo
+URL.
