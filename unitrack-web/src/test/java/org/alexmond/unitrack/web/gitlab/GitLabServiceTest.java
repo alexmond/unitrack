@@ -123,13 +123,30 @@ class GitLabServiceTest {
 	}
 
 	@Test
-	void parsesProjectPathFromVariousUrls() {
-		assertThat(GitLabService.projectPath("https://gitlab.com/group/proj")).isEqualTo("group/proj");
-		assertThat(GitLabService.projectPath("https://gitlab.com/group/sub/proj.git")).isEqualTo("group/sub/proj");
-		assertThat(GitLabService.projectPath("git@gitlab.com:group/proj.git")).isEqualTo("group/proj");
-		assertThat(GitLabService.projectPath("https://gitlab.example.com/team/app")).isEqualTo("team/app");
-		assertThat(GitLabService.projectPath("https://github.com/octo/repo")).isNull();
-		assertThat(GitLabService.projectPath(null)).isNull();
+	void parsesProjectPathScopedToConfiguredHost() {
+		assertThat(GitLabService.projectPath("https://gitlab.com/group/proj", "gitlab.com")).isEqualTo("group/proj");
+		assertThat(GitLabService.projectPath("https://gitlab.com/group/sub/proj.git", "gitlab.com"))
+			.isEqualTo("group/sub/proj");
+		assertThat(GitLabService.projectPath("git@gitlab.com:group/proj.git", "gitlab.com")).isEqualTo("group/proj");
+		// A leading userinfo (e.g. a token user) is stripped before the host is checked.
+		assertThat(GitLabService.projectPath("https://user@gitlab.com/group/proj.git", "gitlab.com"))
+			.isEqualTo("group/proj");
+		// Self-hosted: recognised only when the configured host matches it.
+		assertThat(GitLabService.projectPath("https://gitlab.example.com/team/app", "gitlab.example.com"))
+			.isEqualTo("team/app");
+		assertThat(GitLabService.projectPath("https://gitlab.example.com/team/app", "gitlab.com")).isNull();
+		// Non-GitLab host rejected even though it once matched the "gitlab" substring
+		// test.
+		assertThat(GitLabService.projectPath("https://github.com/octo/repo", "gitlab.com")).isNull();
+		assertThat(GitLabService.projectPath(null, "gitlab.com")).isNull();
+	}
+
+	@Test
+	void derivesHostFromApiUrl() {
+		assertThat(GitLabService.hostOf("https://gitlab.com/api/v4")).isEqualTo("gitlab.com");
+		assertThat(GitLabService.hostOf("https://gitlab.example.com/api/v4")).isEqualTo("gitlab.example.com");
+		assertThat(GitLabService.hostOf("https://gitlab.example.com:8443/api/v4")).isEqualTo("gitlab.example.com");
+		assertThat(GitLabService.hostOf(null)).isNull();
 	}
 
 }
