@@ -10,10 +10,11 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.alexmond.unitrack.domain.Project;
 import org.alexmond.unitrack.repository.ProjectRepository;
+import org.alexmond.unitrack.web.importing.ImportableRepo;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Provisions UniTrack {@link Project}s from selected GitHub repositories. */
+/** Provisions UniTrack {@link Project}s from selected source-control repositories. */
 @Service
 @RequiredArgsConstructor
 public class ProjectImportService {
@@ -28,15 +29,15 @@ public class ProjectImportService {
 
 	/**
 	 * Creates a project for each selected repo (matched by full name against
-	 * {@code available} so repo URLs come from GitHub, never the client). Repos whose
-	 * project name already exists are skipped.
+	 * {@code available} so repo URLs come from the provider, never the client). Repos
+	 * whose project name already exists are skipped.
 	 */
 	@Transactional
-	public Result importRepos(List<GitHubRepo> available, Collection<String> selectedFullNames) {
+	public Result importRepos(List<? extends ImportableRepo> available, Collection<String> selectedFullNames) {
 		Set<String> wanted = new HashSet<>(selectedFullNames);
 		List<String> imported = new ArrayList<>();
 		List<String> skipped = new ArrayList<>();
-		for (GitHubRepo repo : available) {
+		for (ImportableRepo repo : available) {
 			if (!wanted.contains(repo.fullName())) {
 				continue;
 			}
@@ -45,7 +46,7 @@ public class ProjectImportService {
 				skipped.add(name);
 				continue;
 			}
-			projects.save(new Project(name, repo.htmlUrl()));
+			projects.save(new Project(name, repo.webUrl()));
 			imported.add(name);
 		}
 		return new Result(imported, skipped);

@@ -1,23 +1,33 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layout}">
-<head><title th:text="'UniTrack — Import from GitHub'">UniTrack</title></head>
+<head><title th:text="'UniTrack — Import from ' + ${providerLabel}">UniTrack</title></head>
 <body>
 
 <main class="container" layout:fragment="content">
-    <h1>Import from GitHub</h1>
-    <p class="crumbs">Provision projects from your GitHub repositories.</p>
+    <h1>Import projects</h1>
+    <p class="crumbs">Provision projects from your <span th:text="${providerLabel}">GitHub</span> repositories.</p>
+
+    <div class="mb-3" style="display:flex;gap:8px" role="tablist">
+        <a th:each="t : ${tabs}" th:href="@{/import(provider=${t.id})}"
+           th:classappend="${t.active} ? 'btn-primary' : 'btn-secondary'" class="btn btn-sm" role="tab"
+           th:aria-selected="${t.active}">
+            <span th:text="${t.label}">GitHub</span>
+            <span th:unless="${t.configured}" class="muted" style="font-weight:normal">· not set up</span>
+        </a>
+    </div>
 
     <div th:if="${msg}" class="muted" th:text="${msg}">ok</div>
     <div th:if="${error}" class="empty" style="color:var(--red)" th:text="${error}">err</div>
 
     <div th:unless="${configured}" class="empty">
-        GitHub is not configured. Set <code class="mono">unitrack.github.enabled=true</code> and
-        <code class="mono">unitrack.github.token</code> (a token with <code class="mono">repo</code> scope), then reload.
+        <span th:text="${providerLabel}">GitHub</span> is not configured. Set
+        <code class="mono" th:text="${configHint}">unitrack.github.enabled=true</code>, then reload.
     </div>
 
     <form th:if="${configured}" method="get" th:action="@{/import}" class="mb-3"
           style="display:flex;gap:8px;max-width:480px">
+        <input type="hidden" name="provider" th:value="${provider}"/>
         <input type="text" name="q" class="form-control" placeholder="Filter by owner/repo…"
                th:value="${query}"/>
         <button class="btn btn-secondary" type="submit">Filter</button>
@@ -34,6 +44,7 @@
     </div>
 
     <form th:if="${configured and !repos.isEmpty()}" method="post" th:action="@{/import}">
+        <input type="hidden" name="provider" th:value="${provider}"/>
         <table class="table">
             <thead>
             <tr>
@@ -51,7 +62,7 @@
                 </td>
                 <td>
                     <label th:for="'r-' + ${r.fullName}">
-                        <a th:href="${r.htmlUrl}" rel="noopener" th:text="${r.fullName}">owner/repo</a>
+                        <a th:href="${r.webUrl}" rel="noopener" th:text="${r.fullName}">owner/repo</a>
                     </label>
                     <span th:if="${r.isPrivate}" class="badge tag">private</span>
                     <span th:if="${imported}" class="badge pass">imported</span>
