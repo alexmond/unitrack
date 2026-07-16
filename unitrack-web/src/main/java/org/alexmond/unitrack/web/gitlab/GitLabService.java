@@ -6,6 +6,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.alexmond.unitrack.domain.TestRun;
 import org.alexmond.unitrack.report.QualityGateResult;
@@ -40,6 +41,12 @@ public class GitLabService {
 	private final GitLabConfigResolver config;
 
 	private final RestClient restClient;
+
+	/**
+	 * Cached id of the token's own user (see {@link #selfUserId()}); -1 =
+	 * resolved-but-unknown, null = not yet resolved.
+	 */
+	private final AtomicReference<Long> selfUserId = new AtomicReference<>();
 
 	public GitLabService(GitLabProperties props, GitLabConfigResolver config, RestClient.Builder restClientBuilder) {
 		this.props = props;
@@ -122,8 +129,13 @@ public class GitLabService {
 
 	/**
 	 * The id of the existing UniTrack-marked note on this MR, or null if there is none.
+	 * The marker is only trusted on a note authored by the token's own account, so a note
+	 * that a third party plants with a copied marker can't hijack the upsert (the marker
+	 * is a forgeable HTML comment). When the token's identity can't be resolved, falls
+	 * back to marker-only matching so behaviour is never worse than before.
 	 */
 	private Long findExistingNote(String notesBase) {
+		Long self = selfUserId();
 		List<Map<String, Object>> notes = this.restClient.get()
 			.uri(URI.create(notesBase + "?per_page=100"))
 			.header("PRIVATE-TOKEN", this.props.getToken())
@@ -132,14 +144,62 @@ public class GitLabService {
 		if (notes == null) {
 			return null;
 		}
-		for (Map<String, Object> n : notes) {
-			Object b = n.get("body");
-			Object id = n.get("id");
-			if (b instanceof String s && s.contains(MR_NOTE_MARKER) && id instanceof Number num) {
-				return num.longValue();
-			}
+		return notes.stream()
+			.filter((n) -> isOwnMarkedNote(n, self))
+			.map(GitLabService::noteId)
+			.findFirst()
+			.orElse(null);
+	}
+
+	/**
+	 * Whether {@code note} is a UniTrack-marked note that we may update in place: it
+	 * carries the marker and is authored by the token's own account ({@code self}), or
+	 * {@code self} is unresolved (in which case the marker match is not author-scoped).
+	 */
+	private static boolean isOwnMarkedNote(Map<String, Object> note, Long self) {
+		return note.get("body") instanceof String s && s.contains(MR_NOTE_MARKER) && note.get("id") instanceof Number
+				&& (self == null || self.equals(authorId(note)));
+	}
+
+	/** The {@code id} of a note object as a long, or null when absent/non-numeric. */
+	private static Long noteId(Map<String, Object> note) {
+		return (note.get("id") instanceof Number n) ? n.longValue() : null;
+	}
+
+	/** The {@code author.id} of a note object, or null when absent. */
+	private static Long authorId(Map<String, Object> note) {
+		if (note.get("author") instanceof Map<?, ?> author && author.get("id") instanceof Number n) {
+			return n.longValue();
 		}
 		return null;
+	}
+
+	/**
+	 * The token's own GitLab user id (via {@code GET /user}), resolved once and cached,
+	 * or null when it can't be determined (e.g. a group/CI token) — in which case the
+	 * marker match is not author-scoped.
+	 */
+	private Long selfUserId() {
+		Long cached = this.selfUserId.get();
+		if (cached != null) {
+			return (cached < 0) ? null : cached;
+		}
+		Long resolved = null;
+		try {
+			Map<?, ?> me = this.restClient.get()
+				.uri(URI.create(this.props.getApiUrl() + "/user"))
+				.header("PRIVATE-TOKEN", this.props.getToken())
+				.retrieve()
+				.body(Map.class);
+			if (me != null && me.get("id") instanceof Number n) {
+				resolved = n.longValue();
+			}
+		}
+		catch (RuntimeException ex) {
+			log.debug("Could not resolve GitLab token identity: {}", ex.getMessage());
+		}
+		this.selfUserId.set((resolved != null) ? resolved : -1L);
+		return resolved;
 	}
 
 	private boolean active(Long projectId) {

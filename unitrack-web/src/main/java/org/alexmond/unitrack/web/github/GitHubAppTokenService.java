@@ -10,9 +10,11 @@ import java.time.Instant;
 import java.util.Base64;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
@@ -55,7 +57,13 @@ public class GitHubAppTokenService {
 
 	private final Map<String, Long> installationCache = new ConcurrentHashMap<>();
 
-	@org.springframework.beans.factory.annotation.Autowired
+	/**
+	 * Cached {@code <slug>[bot]} author login; "" = resolved-but-unknown, null =
+	 * unresolved.
+	 */
+	private final AtomicReference<String> botLogin = new AtomicReference<>();
+
+	@Autowired
 	public GitHubAppTokenService(GitHubAppProperties app, GitHubProperties props,
 			RestClient.Builder restClientBuilder) {
 		this(app, props, restClientBuilder, Clock.systemUTC());
@@ -97,6 +105,35 @@ public class GitHubAppTokenService {
 					ex.getMessage());
 			return null;
 		}
+	}
+
+	/**
+	 * The App's own comment-author login ({@code <slug>[bot]}, from {@code GET /app}),
+	 * resolved once and cached. Used to author-scope the marked PR comment so a copied
+	 * marker from another account can't hijack the upsert. Null when it can't be
+	 * resolved.
+	 */
+	public String botLogin() {
+		String cached = this.botLogin.get();
+		if (cached != null) {
+			return cached.isEmpty() ? null : cached;
+		}
+		String resolved = null;
+		try {
+			Map<String, Object> appInfo = this.restClient.get()
+				.uri(this.props.getApiUrl() + "/app")
+				.headers(this::jwtHeaders)
+				.retrieve()
+				.body(MAP);
+			if (appInfo != null && appInfo.get("slug") instanceof String slug && !slug.isBlank()) {
+				resolved = slug + "[bot]";
+			}
+		}
+		catch (RestClientException | IllegalStateException ex) {
+			log.debug("Could not resolve GitHub App slug: {}", ex.getMessage());
+		}
+		this.botLogin.set((resolved != null) ? resolved : "");
+		return resolved;
 	}
 
 	private long resolveInstallationId(String owner, String repo) {

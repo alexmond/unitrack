@@ -71,7 +71,9 @@ class GitLabServiceTest {
 		TestRun run = run("https://gitlab.com/octo/repo");
 		run.setPrNumber(7);
 
-		// List first (upsert): no marked note yet → create.
+		// Resolve token identity, then list notes: none marked → create.
+		server.expect(requestTo("https://gitlab.com/api/v4/user"))
+			.andRespond(withSuccess("{\"id\":100}", MediaType.APPLICATION_JSON));
 		server.expect(requestTo("https://gitlab.com/api/v4/projects/octo%2Frepo/merge_requests/7/notes?per_page=100"))
 			.andExpect(method(HttpMethod.GET))
 			.andRespond(withSuccess("[]", MediaType.APPLICATION_JSON));
@@ -93,16 +95,45 @@ class GitLabServiceTest {
 		TestRun run = run("https://gitlab.com/octo/repo");
 		run.setPrNumber(7);
 
-		// A prior UniTrack-marked note exists → update it (PUT), don't create a
-		// duplicate.
+		// Our own prior marked note (author id matches /user) → update it (PUT).
+		server.expect(requestTo("https://gitlab.com/api/v4/user"))
+			.andRespond(withSuccess("{\"id\":100}", MediaType.APPLICATION_JSON));
 		server.expect(requestTo("https://gitlab.com/api/v4/projects/octo%2Frepo/merge_requests/7/notes?per_page=100"))
 			.andExpect(method(HttpMethod.GET))
-			.andRespond(withSuccess("[{\"id\":42,\"body\":\"" + GitLabService.MR_NOTE_MARKER + " old\"}]",
+			.andRespond(withSuccess(
+					"[{\"id\":42,\"author\":{\"id\":100},\"body\":\"" + GitLabService.MR_NOTE_MARKER + " old\"}]",
 					MediaType.APPLICATION_JSON));
 		server.expect(requestTo("https://gitlab.com/api/v4/projects/octo%2Frepo/merge_requests/7/notes/42"))
 			.andExpect(method(HttpMethod.PUT))
 			.andExpect(jsonPath("$.body").exists())
 			.andRespond(withSuccess());
+
+		service.publishMrNote(run, new QualityGateResult(true, List.of()), null, 2);
+		server.verify();
+	}
+
+	@Test
+	void ignoresMarkedNoteAuthoredByAnotherUser() {
+		GitLabProperties props = props(true);
+		RestClient.Builder builder = RestClient.builder();
+		MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+		GitLabService service = new GitLabService(props, resolver(props), builder);
+		TestRun run = run("https://gitlab.com/octo/repo");
+		run.setPrNumber(7);
+
+		// A third party planted the marker (author 999 != our 100) → don't hijack it;
+		// create
+		// our own note instead.
+		server.expect(requestTo("https://gitlab.com/api/v4/user"))
+			.andRespond(withSuccess("{\"id\":100}", MediaType.APPLICATION_JSON));
+		server.expect(requestTo("https://gitlab.com/api/v4/projects/octo%2Frepo/merge_requests/7/notes?per_page=100"))
+			.andExpect(method(HttpMethod.GET))
+			.andRespond(withSuccess(
+					"[{\"id\":77,\"author\":{\"id\":999},\"body\":\"" + GitLabService.MR_NOTE_MARKER + " planted\"}]",
+					MediaType.APPLICATION_JSON));
+		server.expect(requestTo("https://gitlab.com/api/v4/projects/octo%2Frepo/merge_requests/7/notes"))
+			.andExpect(method(HttpMethod.POST))
+			.andRespond(withStatus(HttpStatus.CREATED));
 
 		service.publishMrNote(run, new QualityGateResult(true, List.of()), null, 2);
 		server.verify();
