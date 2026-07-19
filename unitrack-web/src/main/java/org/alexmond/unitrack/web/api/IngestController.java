@@ -22,9 +22,8 @@ import org.alexmond.unitrack.report.TestRegressionService;
 import org.alexmond.unitrack.web.account.AuditService;
 import org.alexmond.unitrack.web.account.MembershipService;
 import org.alexmond.unitrack.web.account.ProjectAccessService;
-import org.alexmond.unitrack.web.github.GitHubCheckRunService;
 import org.alexmond.unitrack.web.github.GitHubPrCommentService;
-import org.alexmond.unitrack.web.github.GitHubStatusService;
+import org.alexmond.unitrack.web.scm.ScmPublisher;
 import io.micrometer.observation.Observation;
 import io.micrometer.observation.ObservationRegistry;
 import org.alexmond.unitrack.web.alert.AlertEventPublisher;
@@ -91,9 +90,8 @@ public class IngestController {
 
 	private final QualityGateService qualityGate;
 
-	private final GitHubStatusService gitHubStatus;
-
-	private final GitHubCheckRunService gitHubCheckRun;
+	/** One per source-control provider, in {@code @Order}; see {@link ScmPublisher}. */
+	private final List<ScmPublisher> scmPublishers;
 
 	private final GitHubPrCommentService gitHubPrComment;
 
@@ -129,8 +127,6 @@ public class IngestController {
 	private final ObservationRegistry observationRegistry;
 
 	private final AuditService audit;
-
-	private final org.alexmond.unitrack.web.gitlab.GitLabService gitLab;
 
 	@PostMapping(path = "/ingest", consumes = "multipart/form-data")
 	public ResponseEntity<?> ingest(@RequestParam String project, @RequestParam(required = false) String repoUrl,
@@ -259,7 +255,7 @@ public class IngestController {
 					TestRun ingested = run;
 					Observation.createNotStarted("unitrack.report", observationRegistry)
 						.parentObservation(observation)
-						.observe(() -> publishGitHubStatus(ingested));
+						.observe(() -> publishScmStatus(ingested));
 				}
 				// Each perf file is its own series; the first is the "primary" returned
 				// in
@@ -355,20 +351,22 @@ public class IngestController {
 		return total;
 	}
 
-	private void publishGitHubStatus(TestRun run) {
+	private void publishScmStatus(TestRun run) {
 		QualityGateResult gate = qualityGate.evaluate(run.getId()).orElse(null);
 		Double delta = qualityGate.coverageDelta(run.getId()).orElse(null);
 		int newFailures = testRegression.diff(run.getId()).map(TestRegressionResult::newFailureCount).orElse(0);
 		int slowerTests = perfRegression.diff(run.getId()).map(PerfRegressionResult::slowerCount).orElse(0);
-		// App deployments get a rich check run (summary + inline PR annotations);
-		// PAT-only
-		// deployments fall back to the classic commit status.
-		if (!gitHubCheckRun.publish(run, gate, delta, newFailures)) {
-			gitHubStatus.publish(run, gate, delta);
+		// Each publisher decides whether the project's repo is its provider's; guard them
+		// individually so one provider misbehaving can't skip the next or fail the
+		// ingest.
+		for (ScmPublisher publisher : scmPublishers) {
+			try {
+				publisher.publishRun(run, gate, delta, newFailures, slowerTests);
+			}
+			catch (RuntimeException ex) {
+				log.warn("Failed to publish run {} to {}: {}", run.getId(), publisher.providerName(), ex.getMessage());
+			}
 		}
-		gitHubPrComment.publish(run, gate, delta, newFailures, slowerTests);
-		gitLab.publishStatus(run, gate, delta);
-		gitLab.publishMrNote(run, gate, delta, newFailures);
 		gateFailureNotifier.notifyIfFailed(run, gate);
 		ownerFailureNotifier.notifyOwners(run);
 		alertEvents.publishForRun(run, gate);
