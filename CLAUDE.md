@@ -32,7 +32,8 @@ scripts/dev-test.sh 'AuthIntegrationTest,Status*'
   (`report/`), JPA repositories (`repository/`). No web concerns.
 - **`unitrack-web`** — the runnable Spring Boot app: REST API (`web/api/`), Thymeleaf dashboard
   (`web/ui/` + `templates/`), accounts/API tokens (`web/account/`, `web/security/`), GitHub
-  commit-status + repo import (`web/github/`), MCP server (`web/mcp/`), demo seeder (`web/demo/`),
+  commit-status + repo import (`web/github/`, `web/gitlab/`, fanned out over the `ScmPublisher`
+  beans in `web/scm/` — a new provider is one bean), MCP server (`web/mcp/`), demo seeder (`web/demo/`),
   observability (`web/metrics/` MeterBinder gauges, `web/ops/` health + `/ops` dashboard; ingest is
   wrapped in one `unitrack.ingest` Observation → derived Timer + span). Audit trail in `web/account/`
   (`AuditService` + `audit_entry`); `/actuator/{health,info,metrics,prometheus}` exposed.

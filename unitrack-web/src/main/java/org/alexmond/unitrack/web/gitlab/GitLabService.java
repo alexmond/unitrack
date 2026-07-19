@@ -11,9 +11,12 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.alexmond.unitrack.domain.TestRun;
 import org.alexmond.unitrack.report.QualityGateResult;
+import org.alexmond.unitrack.web.scm.GateSummary;
+import org.alexmond.unitrack.web.scm.ScmPublisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
@@ -25,12 +28,16 @@ import org.springframework.web.client.RestClient;
  * propagated to ingest.
  */
 @Service
-public class GitLabService {
+@Order(20)
+public class GitLabService implements ScmPublisher {
 
 	/**
 	 * Hidden marker so the MR note is updated in place instead of duplicated each ingest.
 	 */
 	static final String MR_NOTE_MARKER = "<!-- unitrack-report -->";
+
+	/** GitLab rejects a commit-status description beyond this. */
+	private static final int MAX_DESCRIPTION = 255;
 
 	private static final Logger log = LoggerFactory.getLogger(GitLabService.class);
 
@@ -55,6 +62,18 @@ public class GitLabService {
 		this.restClient = restClientBuilder.build();
 	}
 
+	@Override
+	public String providerName() {
+		return "GitLab";
+	}
+
+	@Override
+	public void publishRun(TestRun run, QualityGateResult gate, Double coverageDelta, int newFailures,
+			int slowerTests) {
+		publishStatus(run, gate, coverageDelta);
+		publishMrNote(run, gate, coverageDelta, newFailures);
+	}
+
 	/** Sets the commit/pipeline status on GitLab for the run's commit. */
 	public void publishStatus(TestRun run, QualityGateResult gate, Double coverageDelta) {
 		if (!active(run.getProject().getId())) {
@@ -69,7 +88,7 @@ public class GitLabService {
 		Map<String, Object> body = new LinkedHashMap<>();
 		body.put("state", passed ? "success" : "failed");
 		body.put("name", this.props.getContext());
-		body.put("description", describe(run, gate, coverageDelta));
+		body.put("description", GateSummary.describe(run, gate, coverageDelta, MAX_DESCRIPTION));
 		body.put("target_url", this.props.getServerBaseUrl() + "/runs/" + run.getId());
 		// GitLab renders this on the pipeline/MR as the commit's coverage %.
 		if (run.getLineCoveragePct() != null) {
@@ -211,23 +230,6 @@ public class GitLabService {
 
 	private boolean active(Long projectId) {
 		return this.config.enabled(projectId) && this.props.getToken() != null && !this.props.getToken().isBlank();
-	}
-
-	private String describe(TestRun run, QualityGateResult gate, Double coverageDelta) {
-		StringBuilder sb = new StringBuilder("Gate ").append((gate != null) ? gate.status() : "n/a");
-		sb.append(" · ")
-			.append(run.getPassed())
-			.append(" passed, ")
-			.append(run.getFailed() + run.getErrors())
-			.append(" failed");
-		if (run.getLineCoveragePct() != null) {
-			sb.append(" · cov ").append(String.format(Locale.ROOT, "%.1f%%", run.getLineCoveragePct()));
-			if (coverageDelta != null) {
-				sb.append(String.format(Locale.ROOT, " (%+.1fpp)", coverageDelta));
-			}
-		}
-		String s = sb.toString();
-		return (s.length() <= 255) ? s : s.substring(0, 255);
 	}
 
 	private String note(TestRun run, QualityGateResult gate, Double coverageDelta, int newFailures) {
