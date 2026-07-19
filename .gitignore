@@ -13,5 +13,8 @@ data/
 # dev-crew transient run handoffs
 .claude/dev-crew/runs/
 
+# prompt-coach local mastery state (per-machine, not shared)
+.claude/prompt-coach/
+
 # Screenshot-tour output lands in the module dir (surefire CWD); the deck lives in /presentation
 unitrack-web/presentation/
