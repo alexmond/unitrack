@@ -10,6 +10,16 @@ spring:
       # SPRING_CONFIG_IMPORT=optional:configserver:<url> and pulls central config (unitrack.yml) normally.
       import-check:
         enabled: false
+    discovery:
+      client:
+        # spring-cloud-starter-config transitively pulls spring-cloud-commons, which registers a
+        # DiscoveryClientHealthIndicator. unitrack runs no discovery client, so it reports
+        # discoveryComposite=UNKNOWN ("Discovery Client not initialized") — harmless, but Spring Boot
+        # Admin surfaces it as an error badge on the instance even though /actuator/health is UP. The
+        # config client is optional, so disable it HERE (correct with or without a config server)
+        # rather than only in central config.
+        health-indicator:
+          enabled: false
 
   # Grace window for in-flight requests on shutdown (pairs with server.shutdown: graceful).
   lifecycle:
