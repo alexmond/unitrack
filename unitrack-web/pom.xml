@@ -47,6 +47,14 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
+        <!-- Spring Cloud Config client: lets the deploy inject SPRING_CONFIG_IMPORT=configserver:<url>
+             to pull central config (lab-config/unitrack.yml) from lab-services-config. The import is
+             OPTIONAL and import-check is disabled (see application.yml), so dev/test and any deploy
+             without a config server boot with the client inert. -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-config</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>

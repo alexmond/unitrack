@@ -2,6 +2,15 @@ spring:
   application:
     name: unitrack
 
+  cloud:
+    config:
+      # The central config server is OPTIONAL. Don't hard-require spring.config.import — so dev/test
+      # (and any deploy without a config server) start with the config client inert instead of failing
+      # with "No spring.config.import property has been defined". Prod injects
+      # SPRING_CONFIG_IMPORT=optional:configserver:<url> and pulls central config (unitrack.yml) normally.
+      import-check:
+        enabled: false
+
   # Grace window for in-flight requests on shutdown (pairs with server.shutdown: graceful).
   lifecycle:
     timeout-per-shutdown-phase: 30s
