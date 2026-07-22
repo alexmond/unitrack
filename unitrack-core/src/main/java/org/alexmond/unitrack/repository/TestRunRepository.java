@@ -133,6 +133,34 @@ public interface TestRunRepository extends JpaRepository<TestRun, Long> {
 	List<TestRun> findByProjectIdAndBranchAndFlagOrderByCreatedAtDesc(Long projectId, String branch, String flag,
 			Pageable pageable);
 
+	// Trend-chart variants: same ordering as above but with a stable {@code id}
+	// tiebreaker, so runs sharing a {@code createdAt} come back in a deterministic order.
+	// Without it the LIMIT window and its order are unstable, and the reversed series
+	// handed to the chart isn't strictly chronological — the line retraces horizontally
+	// ("back in time"). Mirrors PerfRunRepository's …CreatedAtDescIdDesc trend query.
+
+	/** All runs, newest first with a stable id tiebreaker — for {@code trendRuns}. */
+	List<TestRun> findByProjectIdOrderByCreatedAtDescIdDesc(Long projectId, Pageable pageable);
+
+	/**
+	 * Branch-scoped runs, newest first with a stable id tiebreaker — for
+	 * {@code trendRuns}.
+	 */
+	List<TestRun> findByProjectIdAndBranchOrderByCreatedAtDescIdDesc(Long projectId, String branch, Pageable pageable);
+
+	/**
+	 * Single-flag trend, newest first with a stable id tiebreaker — for
+	 * {@code trendRuns}.
+	 */
+	List<TestRun> findByProjectIdAndFlagOrderByCreatedAtDescIdDesc(Long projectId, String flag, Pageable pageable);
+
+	/**
+	 * Branch + flag trend, newest first with a stable id tiebreaker — for
+	 * {@code trendRuns}.
+	 */
+	List<TestRun> findByProjectIdAndBranchAndFlagOrderByCreatedAtDescIdDesc(Long projectId, String branch, String flag,
+			Pageable pageable);
+
 	long countByProjectId(Long projectId);
 
 	long countByProjectIdAndBranch(Long projectId, String branch);
