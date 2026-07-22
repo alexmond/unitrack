@@ -6,6 +6,12 @@ spring:
     config:
       import-check:
         enabled: false
+    # Disable the spring-cloud-commons DiscoveryClientHealthIndicator (UNKNOWN with no discovery
+    # client) so it doesn't drag aggregated /actuator/health to UNKNOWN in health-asserting tests.
+    discovery:
+      client:
+        health-indicator:
+          enabled: false
 
   datasource:
     url: jdbc:h2:mem:unitrack;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
