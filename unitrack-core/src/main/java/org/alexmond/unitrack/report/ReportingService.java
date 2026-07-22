@@ -111,15 +111,34 @@ public class ReportingService {
 		return byProject;
 	}
 
+	/**
+	 * Chronological order (createdAt, then id) — the exact order a trend chart plots its
+	 * x-axis in. The DB tiebreaker (…CreatedAtDescIdDesc) already makes the fetched
+	 * window deterministic; this re-sort is the defensive belt so the series handed to
+	 * the chart is strictly monotonic in time regardless of how the query rows came back,
+	 * and the line can never retrace horizontally on same-timestamp runs.
+	 */
+	private static final Comparator<TestRun> CHRONOLOGICAL = Comparator.comparing(TestRun::getCreatedAt)
+		.thenComparing(TestRun::getId);
+
+	private static List<TestRun> chronological(List<TestRun> recent) {
+		List<TestRun> ordered = new ArrayList<>(recent);
+		ordered.sort(CHRONOLOGICAL);
+		return ordered;
+	}
+
 	/** Oldest first — for trend charts. */
 	public List<TestRun> trendRuns(Long projectId, int limit) {
-		List<TestRun> recent = runs.findByProjectIdOrderByCreatedAtDesc(projectId, PageRequest.ofSize(limit));
-		return recent.reversed();
+		return chronological(runs.findByProjectIdOrderByCreatedAtDescIdDesc(projectId, PageRequest.ofSize(limit)));
 	}
 
 	/** Oldest first, optionally scoped to one branch (null/blank = all branches). */
 	public List<TestRun> trendRuns(Long projectId, String branch, int limit) {
-		return recentRuns(projectId, branch, limit).reversed();
+		PageRequest page = PageRequest.ofSize(limit);
+		List<TestRun> recent = (branch == null || branch.isBlank())
+				? runs.findByProjectIdOrderByCreatedAtDescIdDesc(projectId, page)
+				: runs.findByProjectIdAndBranchOrderByCreatedAtDescIdDesc(projectId, branch, page);
+		return chronological(recent);
 	}
 
 	/**
@@ -130,9 +149,9 @@ public class ReportingService {
 	public List<TestRun> trendRuns(Long projectId, String branch, String flag, int limit) {
 		PageRequest page = PageRequest.ofSize(limit);
 		List<TestRun> recent = (branch == null || branch.isBlank())
-				? runs.findByProjectIdAndFlagOrderByCreatedAtDesc(projectId, flag, page)
-				: runs.findByProjectIdAndBranchAndFlagOrderByCreatedAtDesc(projectId, branch, flag, page);
-		return recent.reversed();
+				? runs.findByProjectIdAndFlagOrderByCreatedAtDescIdDesc(projectId, flag, page)
+				: runs.findByProjectIdAndBranchAndFlagOrderByCreatedAtDescIdDesc(projectId, branch, flag, page);
+		return chronological(recent);
 	}
 
 	public Optional<TestRun> findRun(Long id) {
