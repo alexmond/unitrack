@@ -66,6 +66,8 @@
         <central-publishing-maven-plugin.version>0.11.0</central-publishing-maven-plugin.version>
 
         <spring-ai.version>2.0.0</spring-ai.version>
+        <!-- Boot-4.0-aligned train (same combo builder runs on Boot 4.0.6) — for the config-server client. -->
+        <spring-cloud.version>2025.1.2</spring-cloud.version>
         <bootstrap.version>5.3.8</bootstrap.version>
         <chartjs.version>4.4.1</chartjs.version>
         <bootstrap-icons.version>1.11.3</bootstrap-icons.version>
@@ -113,6 +115,14 @@
                 <groupId>org.springframework.ai</groupId>
                 <artifactId>spring-ai-bom</artifactId>
                 <version>${spring-ai.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <!-- Spring Cloud BOM — import scope only; the config-server client is the only starter pulled. -->
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>${spring-cloud.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
