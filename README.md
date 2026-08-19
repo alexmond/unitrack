@@ -3,6 +3,7 @@
 [![coverage](https://unitrack.alexmond.org/badge/36/coverage.svg)](https://unitrack.alexmond.org/projects/36)
 [![tests](https://unitrack.alexmond.org/badge/36/pass.svg)](https://unitrack.alexmond.org/projects/36)
 [![flaky](https://unitrack.alexmond.org/badge/36/flaky.svg)](https://unitrack.alexmond.org/projects/36)
+[![Docs](https://img.shields.io/badge/docs-alexmond.org-blue)](https://www.alexmond.org/unitrack/)
 
 A self-hosted, **language-agnostic** server for tracking and reporting **test execution** and
 **code coverage** over time — think Allure Report meets Codecov, for *any* stack (JVM, .NET, Go,
@@ -15,6 +16,8 @@ Built with **Spring Boot 4** and **Java 21**, as a multi-module Maven project (`
 > See [`doc/competitor-analysis.md`](doc/competitor-analysis.md) for the feature comparison against
 > Allure, Codecov, ReportPortal, SonarQube, Datadog Test Optimization, Trunk, and others, plus the
 > prioritized roadmap of features worth adopting.
+
+📖 **Documentation:** <https://www.alexmond.org/unitrack/>
 
 ## Screenshots
 
